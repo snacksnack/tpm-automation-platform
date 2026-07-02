@@ -125,11 +125,17 @@ class JiraClient:
         self._req("PUT", f"/issue/{key}", json={"fields": {"duedate": due}})
 
     def create_blocks_link(self, blocker: str, blocked: str) -> None:
-        """`blocker` blocks `blocked` (outwardIssue blocks inwardIssue)."""
+        """Make `blocker` block `blocked`.
+
+        Jira's convention here is the reverse of the intuitive reading: the
+        POST ``outwardIssue`` becomes the *blocked* party ("is blocked by") and
+        ``inwardIssue`` becomes the *blocker*. Verified empirically against RC1
+        — see the direction check in seed_demo.verify_link_directions().
+        """
         body = {
             "type": {"name": BLOCKS_LINK},
-            "outwardIssue": {"key": blocker},
-            "inwardIssue": {"key": blocked},
+            "inwardIssue": {"key": blocker},
+            "outwardIssue": {"key": blocked},
         }
         self._req("POST", "/issueLink", json=body)
 

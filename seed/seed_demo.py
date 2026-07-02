@@ -133,15 +133,23 @@ def seed(jira: JiraClient, *, dry_run: bool) -> None:
             jira.set_duedate(keys[t.slug], t.slip_due_to)
             print(f"slipped  {t.slug} due -> {t.slip_due_to}")
 
-    # 6. verify one link direction (epic warns this is easy to get backwards)
+    # 6. strict direction check across ALL links (raises — never silently wrong)
     if not dry_run:
-        inv_up, inv_down = keys["inv-up"], keys["inv-down"]
-        if inv_down in jira.outward_blocks(inv_up):
-            print(f"verify   OK: {inv_up} outward-blocks {inv_down}")
-        else:
-            print(f"verify   WARN: expected {inv_up} to block {inv_down} — check direction!")
+        verify_link_directions(jira, keys)
 
     write_manifest(keys, dry_run=dry_run)
+
+
+def verify_link_directions(jira: JiraClient, keys: dict[str, str]) -> None:
+    """Assert every scenario link points upstream -> downstream; raise if not."""
+    wrong = [
+        f"{blocker}->{blocked}"
+        for blocker, blocked in scenario.links()
+        if keys[blocked] not in jira.outward_blocks(keys[blocker])
+    ]
+    if wrong:
+        raise JiraError(f"Backwards/missing Blocks links: {', '.join(wrong)}")
+    print(f"verify   OK: all {len(scenario.links())} links point upstream -> downstream")
 
 
 def write_manifest(keys: dict[str, str], *, dry_run: bool) -> None:

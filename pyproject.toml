@@ -32,6 +32,9 @@ build-backend = "setuptools.build_meta"
 packages = ["collectors", "store", "narrative", "drift"]
 py-modules = ["main", "config"]
 
+[tool.setuptools.package-data]
+narrative = ["templates/*.md"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"

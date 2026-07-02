@@ -1,0 +1,38 @@
+# Fly.io config for the Dependency Drift Detector.
+# First run:  fly launch --no-deploy   (creates the app + volume)
+#             fly volume create drift_data --size 1
+#             fly secrets set JIRA_BASE_URL=... JIRA_EMAIL=... JIRA_API_TOKEN=... \
+#                             ANTHROPIC_API_KEY=... SLACK_WEBHOOK_URL=... DRIFT_RUN_TOKEN=...
+#             fly deploy
+app = "tpm-drift-detector"
+primary_region = "iad"
+
+[build]
+
+[env]
+  DB_PATH = "/data/drift.db"
+  DRY_RUN = "false"
+  PROJECT_KEY = "RC1"
+
+# SQLite snapshot store persists across restarts on this volume.
+[mounts]
+  source = "drift_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  # The daily cron POST wakes the machine; it stops again when idle (cheap).
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/healthz"
+    interval = "30s"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

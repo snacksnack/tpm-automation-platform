@@ -1,0 +1,26 @@
+# Daily scheduler for the drift detector: a cron that POSTs /drift/run on the
+# deployed Fly app. Enable by setting repo secrets DRIFT_URL
+# (e.g. https://tpm-drift-detector.fly.dev) and DRIFT_RUN_TOKEN.
+name: Daily drift run
+
+on:
+  schedule:
+    - cron: "0 13 * * *" # 13:00 UTC daily
+  workflow_dispatch: {}
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST /drift/run
+        env:
+          DRIFT_URL: ${{ secrets.DRIFT_URL }}
+          DRIFT_RUN_TOKEN: ${{ secrets.DRIFT_RUN_TOKEN }}
+        run: |
+          if [ -z "$DRIFT_URL" ]; then
+            echo "DRIFT_URL secret not set — skipping (set DRIFT_URL to enable the daily run)."
+            exit 0
+          fi
+          curl -fsS -X POST "$DRIFT_URL/drift/run" \
+            -H "X-Drift-Token: $DRIFT_RUN_TOKEN" \
+            -w '\nHTTP %{http_code}\n'

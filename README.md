@@ -18,10 +18,11 @@ writes the narrative.
 - **The limit.** Drift detection needs a dependency graph, changelog diffing,
   per-run snapshots, and scored rules. That's application logic, not
   drag-and-drop nodes.
-- **v2 — this platform.** A typed, tested Python codebase. Scheduling still
-  lives in n8n (the hybrid architecture is intentional — see
-  `V2-ARCHITECTURE-NOTES.md`), but the logic moves into a real repo with CI,
-  Pydantic models, and pytest.
+- **v2 — this platform.** A typed, tested Python codebase deployed on Fly.io,
+  with the logic in a real repo (CI, Pydantic models, pytest). Scheduling is a
+  plain GitHub Actions cron that pokes the service — n8n was dropped once the
+  logic left it; keeping a whole SaaS around just to fire a daily HTTP request
+  wasn't worth the moving part.
 
 > _Evolved from the v1 n8n status-email project. Links: TODO — add the v1 repo
 > URL(s) here once public._
@@ -50,7 +51,9 @@ drift/
   graph.py      networkx dependency DAG                              [5/9]
   rules.py      deterministic detection + severity scoring           [6/9]
   notify.py     Slack owner DMs + program-channel rollup             [8/9]
+  pipeline.py   collect -> ... -> notify, one run + JSON log         [9/9]
 narrative/      findings -> TPM-voiced digest via Anthropic SDK      [7/9]
+seed/           idempotent RC1 demo-data seeder                      [2/9]
 tests/          pytest, fixture-driven (no live API calls)
 ```
 
@@ -60,7 +63,7 @@ status-email v2 service.
 ## Pipeline
 
 ```
-Scheduler (n8n cron / GitHub Actions daily)
+Scheduler (GitHub Actions daily cron -> POST /drift/run)
   -> collector   httpx  -> Jira search + changelog API
   -> graph       networkx dependency DAG
   -> store       SQLite snapshot per run  (drift = diff vs. last run)
@@ -86,7 +89,53 @@ ruff check .                   # lint
 Targets **Python 3.12**. Secrets are all optional at boot — the health check
 and import graph work with no credentials, so CI runs green without them.
 
+## Run a drift cycle
+
+```bash
+python -m drift.pipeline          # one run: collect -> ... -> notify + JSON summary
+# or hit the API:
+uvicorn main:app --reload
+curl -X POST localhost:8000/drift/run -H "X-Drift-Token: $DRIFT_RUN_TOKEN"
+```
+
+Set `DRY_RUN=true` to log notifications instead of posting to Slack. Each run
+emits one structured JSON line (counts per rule, buckets, notify outcomes,
+duration) for logs/observability.
+
+## Deploy (Fly.io)
+
+Containerized (`Dockerfile`, slim Python 3.12) with SQLite on a mounted volume:
+
+```bash
+fly launch --no-deploy
+fly volume create drift_data --size 1
+fly secrets set JIRA_BASE_URL=... JIRA_EMAIL=... JIRA_API_TOKEN=... \
+                ANTHROPIC_API_KEY=... SLACK_WEBHOOK_URL=... DRIFT_RUN_TOKEN=...
+fly deploy
+```
+
+**Scheduling:** `.github/workflows/drift-daily.yml` is a GitHub Actions cron
+that POSTs `/drift/run` daily — set repo secrets `DRIFT_URL` and
+`DRIFT_RUN_TOKEN` to enable it. The Fly machine auto-stops when idle and the
+cron wakes it.
+
+## Demo
+
+A live run against the seeded RC1 scenario posts this to Slack (📸
+`docs/slack-digest.png`):
+
+```
+*RC1: checkout API timeline inversion threatens web client integration*
+This run has 2 red, 1 yellow, and 2 white findings, all new; none resolved.
+🔴 RC1-158 (Integrate checkout API) due 2026-07-16 but upstream RC1-157 due
+   2026-07-20 — a 12d overlap; owner Reid Collins.
+🔴 RC1-160 (Launch readiness) unchanged despite RC1-159 slipping 14d.
+🟡 RC1-162 starts 2026-07-04 with ~1 working day lead; upstream not started.
+⚪ RC1-164 / RC1-165 downstream of Blocked RC1-163.
+```
+
 ## Status
 
-Bootstrapped under epic **RC1-131**. Child stories `[1/9]`–`[9/9]` are executed
-in order; `[2/9]` (seed demo data) runs in parallel with `[1/9]`.
+Complete — epic **RC1-131**, stories `[1/9]`–`[9/9]`. Deterministic detection
+(4 rules, fixture-tested), Claude narrative, Slack delivery, and a daily
+scheduled run against RC1. Evolved from the v1 n8n status-email prototype.

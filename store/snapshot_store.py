@@ -155,6 +155,15 @@ class SnapshotStore:
         ]
         return ProjectSnapshot(project_key=project_key, issues=issues, links=links)
 
+    def previous_run_id(self, project_key: str, before_run: int) -> int | None:
+        """The most recent run for the project strictly before `before_run`."""
+        row = self._conn.execute(
+            "SELECT run_id FROM runs WHERE project_key = ? AND run_id < ? "
+            "ORDER BY run_id DESC LIMIT 1",
+            (project_key, before_run),
+        ).fetchone()
+        return int(row["run_id"]) if row else None
+
     # --- findings -----------------------------------------------------------
     def save_findings(self, run_id: int, findings: list[Finding]) -> list[Finding]:
         """Persist findings, stamping first_seen_run (carried forward by identity)."""

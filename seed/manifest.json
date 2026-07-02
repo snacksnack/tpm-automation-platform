@@ -1,0 +1,205 @@
+{
+  "project": "RC1",
+  "today_reference": "2026-07-01",
+  "demo_label": "drift-demo",
+  "epic": {
+    "key": "RC1-156",
+    "summary": "Drift Demo Data (seeded \u2014 safe to delete)"
+  },
+  "tickets": [
+    {
+      "slug": "inv-up",
+      "key": "RC1-157",
+      "summary": "Finalize checkout API contract",
+      "rule": "timeline_inversion",
+      "role": "upstream",
+      "priority": "High",
+      "start": null,
+      "due": "2026-07-20",
+      "due_initial": null,
+      "status": "In Progress",
+      "blocks": [
+        "RC1-158"
+      ],
+      "note": "Upstream due 07-20 lands after downstream start 07-08 / due 07-16."
+    },
+    {
+      "slug": "inv-down",
+      "key": "RC1-158",
+      "summary": "Integrate checkout API in web client",
+      "rule": "timeline_inversion",
+      "role": "downstream",
+      "priority": "High",
+      "start": "2026-07-08",
+      "due": "2026-07-16",
+      "due_initial": null,
+      "status": "Idea (default, not started)",
+      "blocks": [],
+      "note": ""
+    },
+    {
+      "slug": "slip-up",
+      "key": "RC1-159",
+      "summary": "Vendor security review",
+      "rule": "unabsorbed_slip",
+      "role": "upstream",
+      "priority": "High",
+      "start": null,
+      "due": "2026-07-23",
+      "due_initial": "2026-07-09",
+      "status": "In Progress",
+      "blocks": [
+        "RC1-160"
+      ],
+      "note": "Due slips 07-09 -> 07-23 (14d); downstream never reacts. Kept non-inverting (down start 07-24) so only rule 2 fires."
+    },
+    {
+      "slug": "slip-down",
+      "key": "RC1-160",
+      "summary": "Production launch readiness sign-off",
+      "rule": "unabsorbed_slip",
+      "role": "downstream",
+      "priority": "High",
+      "start": "2026-07-24",
+      "due": "2026-07-29",
+      "due_initial": null,
+      "status": "Idea (default, not started)",
+      "blocks": [],
+      "note": ""
+    },
+    {
+      "slug": "lead-up",
+      "key": "RC1-161",
+      "summary": "Provision staging Kubernetes cluster",
+      "rule": "lead_time_risk",
+      "role": "upstream",
+      "priority": "High",
+      "start": null,
+      "due": null,
+      "due_initial": null,
+      "status": "Idea (default, not started)",
+      "blocks": [
+        "RC1-162"
+      ],
+      "note": "Upstream not started; downstream starts 07-04 (~3 days out)."
+    },
+    {
+      "slug": "lead-down",
+      "key": "RC1-162",
+      "summary": "Execute staging load & soak tests",
+      "rule": "lead_time_risk",
+      "role": "downstream",
+      "priority": "High",
+      "start": "2026-07-04",
+      "due": null,
+      "due_initial": null,
+      "status": "Idea (default, not started)",
+      "blocks": [],
+      "note": ""
+    },
+    {
+      "slug": "trans-a",
+      "key": "RC1-163",
+      "summary": "Obtain DPA legal approval",
+      "rule": "transitive_risk",
+      "role": "blocked_source",
+      "priority": "High",
+      "start": null,
+      "due": null,
+      "due_initial": null,
+      "status": "Blocked",
+      "blocks": [
+        "RC1-164"
+      ],
+      "note": "Transitive blocker of trans-c; entered Blocked."
+    },
+    {
+      "slug": "trans-b",
+      "key": "RC1-164",
+      "summary": "Build customer data pipeline",
+      "rule": "transitive_risk",
+      "role": "chain_middle",
+      "priority": "Medium",
+      "start": null,
+      "due": null,
+      "due_initial": null,
+      "status": "In Progress",
+      "blocks": [
+        "RC1-165"
+      ],
+      "note": ""
+    },
+    {
+      "slug": "trans-c",
+      "key": "RC1-165",
+      "summary": "Ship analytics dashboard",
+      "rule": "transitive_risk",
+      "role": "downstream",
+      "priority": "High",
+      "start": "2026-07-30",
+      "due": "2026-08-15",
+      "due_initial": null,
+      "status": "Idea (default, not started)",
+      "blocks": [],
+      "note": ""
+    },
+    {
+      "slug": "ok-up",
+      "key": "RC1-166",
+      "summary": "Write API design doc",
+      "rule": "healthy_control",
+      "role": "upstream",
+      "priority": "Medium",
+      "start": null,
+      "due": "2026-07-04",
+      "due_initial": null,
+      "status": "In Progress",
+      "blocks": [
+        "RC1-167"
+      ],
+      "note": "Finishes before downstream starts; nothing slipped; started."
+    },
+    {
+      "slug": "ok-down",
+      "key": "RC1-167",
+      "summary": "Implement API per design doc",
+      "rule": "healthy_control",
+      "role": "downstream",
+      "priority": "Medium",
+      "start": "2026-07-08",
+      "due": "2026-07-18",
+      "due_initial": null,
+      "status": "Idea (default, not started)",
+      "blocks": [],
+      "note": ""
+    }
+  ],
+  "expected_findings": [
+    {
+      "rule": "timeline_inversion",
+      "on": "inv-down",
+      "via": "inv-up"
+    },
+    {
+      "rule": "unabsorbed_slip",
+      "on": "slip-down",
+      "via": "slip-up"
+    },
+    {
+      "rule": "lead_time_risk",
+      "on": "lead-down",
+      "via": "lead-up"
+    },
+    {
+      "rule": "transitive_risk",
+      "on": "trans-c",
+      "via": "trans-a (Blocked)"
+    },
+    {
+      "rule": "none",
+      "on": "ok-down",
+      "via": "ok-up",
+      "note": "negative control"
+    }
+  ]
+}

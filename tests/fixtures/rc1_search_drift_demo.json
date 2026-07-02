@@ -1,0 +1,1180 @@
+{
+  "issues": [
+    {
+      "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations",
+      "id": "11117",
+      "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11117",
+      "key": "RC1-156",
+      "fields": {
+        "summary": "Drift Demo Data (seeded \u2014 safe to delete)",
+        "duedate": null,
+        "issuelinks": [],
+        "assignee": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/user?accountId=712020%3A88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "accountId": "712020:88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "emailAddress": "hire.reid.collins@gmail.com",
+          "avatarUrls": {
+            "48x48": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "24x24": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "16x16": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "32x32": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png"
+          },
+          "displayName": "Reid Collins",
+          "active": true,
+          "timeZone": "America/New_York",
+          "accountType": "atlassian"
+        },
+        "priority": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/3",
+          "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/medium_new.svg",
+          "name": "Medium",
+          "id": "3"
+        },
+        "status": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10005",
+          "description": "",
+          "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/statuses/generic.png",
+          "name": "Idea",
+          "id": "10005",
+          "statusCategory": {
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/2",
+            "id": 2,
+            "key": "new",
+            "colorName": "blue-gray",
+            "name": "To Do"
+          }
+        },
+        "customfield_10015": null
+      }
+    },
+    {
+      "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations",
+      "id": "11118",
+      "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11118",
+      "key": "RC1-157",
+      "fields": {
+        "summary": "Finalize checkout API contract",
+        "duedate": "2026-07-20",
+        "issuelinks": [
+          {
+            "id": "10065",
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLink/10065",
+            "type": {
+              "id": "10000",
+              "name": "Blocks",
+              "inward": "is blocked by",
+              "outward": "blocks",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLinkType/10000"
+            },
+            "outwardIssue": {
+              "id": "11119",
+              "key": "RC1-158",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11119",
+              "fields": {
+                "summary": "Integrate checkout API in web client",
+                "status": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10005",
+                  "description": "",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/statuses/generic.png",
+                  "name": "Idea",
+                  "id": "10005",
+                  "statusCategory": {
+                    "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/2",
+                    "id": 2,
+                    "key": "new",
+                    "colorName": "blue-gray",
+                    "name": "To Do"
+                  }
+                },
+                "priority": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/2",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/high_new.svg",
+                  "name": "High",
+                  "id": "2"
+                },
+                "issuetype": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/issuetype/10009",
+                  "id": "10009",
+                  "description": "Stories track functionality or features expressed as user goals.",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10315?size=medium",
+                  "name": "Story",
+                  "subtask": false,
+                  "avatarId": 10315,
+                  "entityId": "ef80aac2-a85e-4161-8346-162594f05a15",
+                  "hierarchyLevel": 0
+                }
+              }
+            }
+          }
+        ],
+        "assignee": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/user?accountId=712020%3A88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "accountId": "712020:88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "emailAddress": "hire.reid.collins@gmail.com",
+          "avatarUrls": {
+            "48x48": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "24x24": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "16x16": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "32x32": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png"
+          },
+          "displayName": "Reid Collins",
+          "active": true,
+          "timeZone": "America/New_York",
+          "accountType": "atlassian"
+        },
+        "priority": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/2",
+          "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/high_new.svg",
+          "name": "High",
+          "id": "2"
+        },
+        "status": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10007",
+          "description": "",
+          "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/statuses/generic.png",
+          "name": "In Progress",
+          "id": "10007",
+          "statusCategory": {
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/4",
+            "id": 4,
+            "key": "indeterminate",
+            "colorName": "yellow",
+            "name": "In Progress"
+          }
+        },
+        "customfield_10015": null
+      }
+    },
+    {
+      "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations",
+      "id": "11119",
+      "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11119",
+      "key": "RC1-158",
+      "fields": {
+        "summary": "Integrate checkout API in web client",
+        "duedate": "2026-07-16",
+        "issuelinks": [
+          {
+            "id": "10065",
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLink/10065",
+            "type": {
+              "id": "10000",
+              "name": "Blocks",
+              "inward": "is blocked by",
+              "outward": "blocks",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLinkType/10000"
+            },
+            "inwardIssue": {
+              "id": "11118",
+              "key": "RC1-157",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11118",
+              "fields": {
+                "summary": "Finalize checkout API contract",
+                "status": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10007",
+                  "description": "",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/statuses/generic.png",
+                  "name": "In Progress",
+                  "id": "10007",
+                  "statusCategory": {
+                    "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/4",
+                    "id": 4,
+                    "key": "indeterminate",
+                    "colorName": "yellow",
+                    "name": "In Progress"
+                  }
+                },
+                "priority": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/2",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/high_new.svg",
+                  "name": "High",
+                  "id": "2"
+                },
+                "issuetype": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/issuetype/10009",
+                  "id": "10009",
+                  "description": "Stories track functionality or features expressed as user goals.",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10315?size=medium",
+                  "name": "Story",
+                  "subtask": false,
+                  "avatarId": 10315,
+                  "entityId": "ef80aac2-a85e-4161-8346-162594f05a15",
+                  "hierarchyLevel": 0
+                }
+              }
+            }
+          }
+        ],
+        "assignee": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/user?accountId=712020%3A88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "accountId": "712020:88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "emailAddress": "hire.reid.collins@gmail.com",
+          "avatarUrls": {
+            "48x48": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "24x24": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "16x16": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "32x32": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png"
+          },
+          "displayName": "Reid Collins",
+          "active": true,
+          "timeZone": "America/New_York",
+          "accountType": "atlassian"
+        },
+        "priority": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/2",
+          "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/high_new.svg",
+          "name": "High",
+          "id": "2"
+        },
+        "status": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10005",
+          "description": "",
+          "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/statuses/generic.png",
+          "name": "Idea",
+          "id": "10005",
+          "statusCategory": {
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/2",
+            "id": 2,
+            "key": "new",
+            "colorName": "blue-gray",
+            "name": "To Do"
+          }
+        },
+        "customfield_10015": "2026-07-08"
+      }
+    },
+    {
+      "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations",
+      "id": "11120",
+      "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11120",
+      "key": "RC1-159",
+      "fields": {
+        "summary": "Vendor security review",
+        "duedate": "2026-07-23",
+        "issuelinks": [
+          {
+            "id": "10066",
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLink/10066",
+            "type": {
+              "id": "10000",
+              "name": "Blocks",
+              "inward": "is blocked by",
+              "outward": "blocks",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLinkType/10000"
+            },
+            "outwardIssue": {
+              "id": "11121",
+              "key": "RC1-160",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11121",
+              "fields": {
+                "summary": "Production launch readiness sign-off",
+                "status": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10005",
+                  "description": "",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/statuses/generic.png",
+                  "name": "Idea",
+                  "id": "10005",
+                  "statusCategory": {
+                    "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/2",
+                    "id": 2,
+                    "key": "new",
+                    "colorName": "blue-gray",
+                    "name": "To Do"
+                  }
+                },
+                "priority": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/2",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/high_new.svg",
+                  "name": "High",
+                  "id": "2"
+                },
+                "issuetype": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/issuetype/10009",
+                  "id": "10009",
+                  "description": "Stories track functionality or features expressed as user goals.",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10315?size=medium",
+                  "name": "Story",
+                  "subtask": false,
+                  "avatarId": 10315,
+                  "entityId": "ef80aac2-a85e-4161-8346-162594f05a15",
+                  "hierarchyLevel": 0
+                }
+              }
+            }
+          }
+        ],
+        "assignee": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/user?accountId=712020%3A88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "accountId": "712020:88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "emailAddress": "hire.reid.collins@gmail.com",
+          "avatarUrls": {
+            "48x48": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "24x24": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "16x16": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "32x32": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png"
+          },
+          "displayName": "Reid Collins",
+          "active": true,
+          "timeZone": "America/New_York",
+          "accountType": "atlassian"
+        },
+        "priority": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/2",
+          "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/high_new.svg",
+          "name": "High",
+          "id": "2"
+        },
+        "status": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10007",
+          "description": "",
+          "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/statuses/generic.png",
+          "name": "In Progress",
+          "id": "10007",
+          "statusCategory": {
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/4",
+            "id": 4,
+            "key": "indeterminate",
+            "colorName": "yellow",
+            "name": "In Progress"
+          }
+        },
+        "customfield_10015": null
+      }
+    },
+    {
+      "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations",
+      "id": "11121",
+      "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11121",
+      "key": "RC1-160",
+      "fields": {
+        "summary": "Production launch readiness sign-off",
+        "duedate": "2026-07-29",
+        "issuelinks": [
+          {
+            "id": "10066",
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLink/10066",
+            "type": {
+              "id": "10000",
+              "name": "Blocks",
+              "inward": "is blocked by",
+              "outward": "blocks",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLinkType/10000"
+            },
+            "inwardIssue": {
+              "id": "11120",
+              "key": "RC1-159",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11120",
+              "fields": {
+                "summary": "Vendor security review",
+                "status": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10007",
+                  "description": "",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/statuses/generic.png",
+                  "name": "In Progress",
+                  "id": "10007",
+                  "statusCategory": {
+                    "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/4",
+                    "id": 4,
+                    "key": "indeterminate",
+                    "colorName": "yellow",
+                    "name": "In Progress"
+                  }
+                },
+                "priority": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/2",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/high_new.svg",
+                  "name": "High",
+                  "id": "2"
+                },
+                "issuetype": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/issuetype/10009",
+                  "id": "10009",
+                  "description": "Stories track functionality or features expressed as user goals.",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10315?size=medium",
+                  "name": "Story",
+                  "subtask": false,
+                  "avatarId": 10315,
+                  "entityId": "ef80aac2-a85e-4161-8346-162594f05a15",
+                  "hierarchyLevel": 0
+                }
+              }
+            }
+          }
+        ],
+        "assignee": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/user?accountId=712020%3A88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "accountId": "712020:88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "emailAddress": "hire.reid.collins@gmail.com",
+          "avatarUrls": {
+            "48x48": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "24x24": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "16x16": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "32x32": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png"
+          },
+          "displayName": "Reid Collins",
+          "active": true,
+          "timeZone": "America/New_York",
+          "accountType": "atlassian"
+        },
+        "priority": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/2",
+          "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/high_new.svg",
+          "name": "High",
+          "id": "2"
+        },
+        "status": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10005",
+          "description": "",
+          "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/statuses/generic.png",
+          "name": "Idea",
+          "id": "10005",
+          "statusCategory": {
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/2",
+            "id": 2,
+            "key": "new",
+            "colorName": "blue-gray",
+            "name": "To Do"
+          }
+        },
+        "customfield_10015": "2026-07-24"
+      }
+    },
+    {
+      "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations",
+      "id": "11122",
+      "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11122",
+      "key": "RC1-161",
+      "fields": {
+        "summary": "Provision staging Kubernetes cluster",
+        "duedate": null,
+        "issuelinks": [
+          {
+            "id": "10067",
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLink/10067",
+            "type": {
+              "id": "10000",
+              "name": "Blocks",
+              "inward": "is blocked by",
+              "outward": "blocks",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLinkType/10000"
+            },
+            "outwardIssue": {
+              "id": "11123",
+              "key": "RC1-162",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11123",
+              "fields": {
+                "summary": "Execute staging load & soak tests",
+                "status": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10005",
+                  "description": "",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/statuses/generic.png",
+                  "name": "Idea",
+                  "id": "10005",
+                  "statusCategory": {
+                    "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/2",
+                    "id": 2,
+                    "key": "new",
+                    "colorName": "blue-gray",
+                    "name": "To Do"
+                  }
+                },
+                "priority": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/2",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/high_new.svg",
+                  "name": "High",
+                  "id": "2"
+                },
+                "issuetype": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/issuetype/10009",
+                  "id": "10009",
+                  "description": "Stories track functionality or features expressed as user goals.",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10315?size=medium",
+                  "name": "Story",
+                  "subtask": false,
+                  "avatarId": 10315,
+                  "entityId": "ef80aac2-a85e-4161-8346-162594f05a15",
+                  "hierarchyLevel": 0
+                }
+              }
+            }
+          }
+        ],
+        "assignee": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/user?accountId=712020%3A88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "accountId": "712020:88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "emailAddress": "hire.reid.collins@gmail.com",
+          "avatarUrls": {
+            "48x48": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "24x24": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "16x16": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "32x32": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png"
+          },
+          "displayName": "Reid Collins",
+          "active": true,
+          "timeZone": "America/New_York",
+          "accountType": "atlassian"
+        },
+        "priority": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/2",
+          "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/high_new.svg",
+          "name": "High",
+          "id": "2"
+        },
+        "status": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10005",
+          "description": "",
+          "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/statuses/generic.png",
+          "name": "Idea",
+          "id": "10005",
+          "statusCategory": {
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/2",
+            "id": 2,
+            "key": "new",
+            "colorName": "blue-gray",
+            "name": "To Do"
+          }
+        },
+        "customfield_10015": null
+      }
+    },
+    {
+      "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations",
+      "id": "11123",
+      "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11123",
+      "key": "RC1-162",
+      "fields": {
+        "summary": "Execute staging load & soak tests",
+        "duedate": null,
+        "issuelinks": [
+          {
+            "id": "10067",
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLink/10067",
+            "type": {
+              "id": "10000",
+              "name": "Blocks",
+              "inward": "is blocked by",
+              "outward": "blocks",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLinkType/10000"
+            },
+            "inwardIssue": {
+              "id": "11122",
+              "key": "RC1-161",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11122",
+              "fields": {
+                "summary": "Provision staging Kubernetes cluster",
+                "status": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10005",
+                  "description": "",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/statuses/generic.png",
+                  "name": "Idea",
+                  "id": "10005",
+                  "statusCategory": {
+                    "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/2",
+                    "id": 2,
+                    "key": "new",
+                    "colorName": "blue-gray",
+                    "name": "To Do"
+                  }
+                },
+                "priority": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/2",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/high_new.svg",
+                  "name": "High",
+                  "id": "2"
+                },
+                "issuetype": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/issuetype/10009",
+                  "id": "10009",
+                  "description": "Stories track functionality or features expressed as user goals.",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10315?size=medium",
+                  "name": "Story",
+                  "subtask": false,
+                  "avatarId": 10315,
+                  "entityId": "ef80aac2-a85e-4161-8346-162594f05a15",
+                  "hierarchyLevel": 0
+                }
+              }
+            }
+          }
+        ],
+        "assignee": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/user?accountId=712020%3A88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "accountId": "712020:88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "emailAddress": "hire.reid.collins@gmail.com",
+          "avatarUrls": {
+            "48x48": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "24x24": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "16x16": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "32x32": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png"
+          },
+          "displayName": "Reid Collins",
+          "active": true,
+          "timeZone": "America/New_York",
+          "accountType": "atlassian"
+        },
+        "priority": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/2",
+          "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/high_new.svg",
+          "name": "High",
+          "id": "2"
+        },
+        "status": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10005",
+          "description": "",
+          "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/statuses/generic.png",
+          "name": "Idea",
+          "id": "10005",
+          "statusCategory": {
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/2",
+            "id": 2,
+            "key": "new",
+            "colorName": "blue-gray",
+            "name": "To Do"
+          }
+        },
+        "customfield_10015": "2026-07-04"
+      }
+    },
+    {
+      "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations",
+      "id": "11124",
+      "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11124",
+      "key": "RC1-163",
+      "fields": {
+        "summary": "Obtain DPA legal approval",
+        "duedate": null,
+        "issuelinks": [
+          {
+            "id": "10068",
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLink/10068",
+            "type": {
+              "id": "10000",
+              "name": "Blocks",
+              "inward": "is blocked by",
+              "outward": "blocks",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLinkType/10000"
+            },
+            "outwardIssue": {
+              "id": "11125",
+              "key": "RC1-164",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11125",
+              "fields": {
+                "summary": "Build customer data pipeline",
+                "status": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10007",
+                  "description": "",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/statuses/generic.png",
+                  "name": "In Progress",
+                  "id": "10007",
+                  "statusCategory": {
+                    "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/4",
+                    "id": 4,
+                    "key": "indeterminate",
+                    "colorName": "yellow",
+                    "name": "In Progress"
+                  }
+                },
+                "priority": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/3",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/medium_new.svg",
+                  "name": "Medium",
+                  "id": "3"
+                },
+                "issuetype": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/issuetype/10009",
+                  "id": "10009",
+                  "description": "Stories track functionality or features expressed as user goals.",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10315?size=medium",
+                  "name": "Story",
+                  "subtask": false,
+                  "avatarId": 10315,
+                  "entityId": "ef80aac2-a85e-4161-8346-162594f05a15",
+                  "hierarchyLevel": 0
+                }
+              }
+            }
+          }
+        ],
+        "assignee": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/user?accountId=712020%3A88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "accountId": "712020:88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "emailAddress": "hire.reid.collins@gmail.com",
+          "avatarUrls": {
+            "48x48": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "24x24": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "16x16": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "32x32": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png"
+          },
+          "displayName": "Reid Collins",
+          "active": true,
+          "timeZone": "America/New_York",
+          "accountType": "atlassian"
+        },
+        "priority": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/2",
+          "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/high_new.svg",
+          "name": "High",
+          "id": "2"
+        },
+        "status": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10113",
+          "description": "",
+          "iconUrl": "https://hirereidcollins.atlassian.net/",
+          "name": "Blocked",
+          "id": "10113",
+          "statusCategory": {
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/4",
+            "id": 4,
+            "key": "indeterminate",
+            "colorName": "yellow",
+            "name": "In Progress"
+          }
+        },
+        "customfield_10015": null
+      }
+    },
+    {
+      "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations",
+      "id": "11125",
+      "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11125",
+      "key": "RC1-164",
+      "fields": {
+        "summary": "Build customer data pipeline",
+        "duedate": null,
+        "issuelinks": [
+          {
+            "id": "10068",
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLink/10068",
+            "type": {
+              "id": "10000",
+              "name": "Blocks",
+              "inward": "is blocked by",
+              "outward": "blocks",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLinkType/10000"
+            },
+            "inwardIssue": {
+              "id": "11124",
+              "key": "RC1-163",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11124",
+              "fields": {
+                "summary": "Obtain DPA legal approval",
+                "status": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10113",
+                  "description": "",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/",
+                  "name": "Blocked",
+                  "id": "10113",
+                  "statusCategory": {
+                    "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/4",
+                    "id": 4,
+                    "key": "indeterminate",
+                    "colorName": "yellow",
+                    "name": "In Progress"
+                  }
+                },
+                "priority": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/2",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/high_new.svg",
+                  "name": "High",
+                  "id": "2"
+                },
+                "issuetype": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/issuetype/10009",
+                  "id": "10009",
+                  "description": "Stories track functionality or features expressed as user goals.",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10315?size=medium",
+                  "name": "Story",
+                  "subtask": false,
+                  "avatarId": 10315,
+                  "entityId": "ef80aac2-a85e-4161-8346-162594f05a15",
+                  "hierarchyLevel": 0
+                }
+              }
+            }
+          },
+          {
+            "id": "10069",
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLink/10069",
+            "type": {
+              "id": "10000",
+              "name": "Blocks",
+              "inward": "is blocked by",
+              "outward": "blocks",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLinkType/10000"
+            },
+            "outwardIssue": {
+              "id": "11126",
+              "key": "RC1-165",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11126",
+              "fields": {
+                "summary": "Ship analytics dashboard",
+                "status": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10005",
+                  "description": "",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/statuses/generic.png",
+                  "name": "Idea",
+                  "id": "10005",
+                  "statusCategory": {
+                    "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/2",
+                    "id": 2,
+                    "key": "new",
+                    "colorName": "blue-gray",
+                    "name": "To Do"
+                  }
+                },
+                "priority": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/2",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/high_new.svg",
+                  "name": "High",
+                  "id": "2"
+                },
+                "issuetype": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/issuetype/10009",
+                  "id": "10009",
+                  "description": "Stories track functionality or features expressed as user goals.",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10315?size=medium",
+                  "name": "Story",
+                  "subtask": false,
+                  "avatarId": 10315,
+                  "entityId": "ef80aac2-a85e-4161-8346-162594f05a15",
+                  "hierarchyLevel": 0
+                }
+              }
+            }
+          }
+        ],
+        "assignee": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/user?accountId=712020%3A88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "accountId": "712020:88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "emailAddress": "hire.reid.collins@gmail.com",
+          "avatarUrls": {
+            "48x48": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "24x24": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "16x16": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "32x32": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png"
+          },
+          "displayName": "Reid Collins",
+          "active": true,
+          "timeZone": "America/New_York",
+          "accountType": "atlassian"
+        },
+        "priority": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/3",
+          "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/medium_new.svg",
+          "name": "Medium",
+          "id": "3"
+        },
+        "status": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10007",
+          "description": "",
+          "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/statuses/generic.png",
+          "name": "In Progress",
+          "id": "10007",
+          "statusCategory": {
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/4",
+            "id": 4,
+            "key": "indeterminate",
+            "colorName": "yellow",
+            "name": "In Progress"
+          }
+        },
+        "customfield_10015": null
+      }
+    },
+    {
+      "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations",
+      "id": "11126",
+      "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11126",
+      "key": "RC1-165",
+      "fields": {
+        "summary": "Ship analytics dashboard",
+        "duedate": "2026-08-15",
+        "issuelinks": [
+          {
+            "id": "10069",
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLink/10069",
+            "type": {
+              "id": "10000",
+              "name": "Blocks",
+              "inward": "is blocked by",
+              "outward": "blocks",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLinkType/10000"
+            },
+            "inwardIssue": {
+              "id": "11125",
+              "key": "RC1-164",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11125",
+              "fields": {
+                "summary": "Build customer data pipeline",
+                "status": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10007",
+                  "description": "",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/statuses/generic.png",
+                  "name": "In Progress",
+                  "id": "10007",
+                  "statusCategory": {
+                    "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/4",
+                    "id": 4,
+                    "key": "indeterminate",
+                    "colorName": "yellow",
+                    "name": "In Progress"
+                  }
+                },
+                "priority": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/3",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/medium_new.svg",
+                  "name": "Medium",
+                  "id": "3"
+                },
+                "issuetype": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/issuetype/10009",
+                  "id": "10009",
+                  "description": "Stories track functionality or features expressed as user goals.",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10315?size=medium",
+                  "name": "Story",
+                  "subtask": false,
+                  "avatarId": 10315,
+                  "entityId": "ef80aac2-a85e-4161-8346-162594f05a15",
+                  "hierarchyLevel": 0
+                }
+              }
+            }
+          }
+        ],
+        "assignee": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/user?accountId=712020%3A88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "accountId": "712020:88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "emailAddress": "hire.reid.collins@gmail.com",
+          "avatarUrls": {
+            "48x48": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "24x24": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "16x16": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "32x32": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png"
+          },
+          "displayName": "Reid Collins",
+          "active": true,
+          "timeZone": "America/New_York",
+          "accountType": "atlassian"
+        },
+        "priority": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/2",
+          "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/high_new.svg",
+          "name": "High",
+          "id": "2"
+        },
+        "status": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10005",
+          "description": "",
+          "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/statuses/generic.png",
+          "name": "Idea",
+          "id": "10005",
+          "statusCategory": {
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/2",
+            "id": 2,
+            "key": "new",
+            "colorName": "blue-gray",
+            "name": "To Do"
+          }
+        },
+        "customfield_10015": "2026-07-30"
+      }
+    },
+    {
+      "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations",
+      "id": "11127",
+      "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11127",
+      "key": "RC1-166",
+      "fields": {
+        "summary": "Write API design doc",
+        "duedate": "2026-07-04",
+        "issuelinks": [
+          {
+            "id": "10070",
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLink/10070",
+            "type": {
+              "id": "10000",
+              "name": "Blocks",
+              "inward": "is blocked by",
+              "outward": "blocks",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLinkType/10000"
+            },
+            "outwardIssue": {
+              "id": "11128",
+              "key": "RC1-167",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11128",
+              "fields": {
+                "summary": "Implement API per design doc",
+                "status": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10005",
+                  "description": "",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/statuses/generic.png",
+                  "name": "Idea",
+                  "id": "10005",
+                  "statusCategory": {
+                    "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/2",
+                    "id": 2,
+                    "key": "new",
+                    "colorName": "blue-gray",
+                    "name": "To Do"
+                  }
+                },
+                "priority": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/3",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/medium_new.svg",
+                  "name": "Medium",
+                  "id": "3"
+                },
+                "issuetype": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/issuetype/10009",
+                  "id": "10009",
+                  "description": "Stories track functionality or features expressed as user goals.",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10315?size=medium",
+                  "name": "Story",
+                  "subtask": false,
+                  "avatarId": 10315,
+                  "entityId": "ef80aac2-a85e-4161-8346-162594f05a15",
+                  "hierarchyLevel": 0
+                }
+              }
+            }
+          }
+        ],
+        "assignee": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/user?accountId=712020%3A88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "accountId": "712020:88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "emailAddress": "hire.reid.collins@gmail.com",
+          "avatarUrls": {
+            "48x48": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "24x24": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "16x16": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "32x32": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png"
+          },
+          "displayName": "Reid Collins",
+          "active": true,
+          "timeZone": "America/New_York",
+          "accountType": "atlassian"
+        },
+        "priority": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/3",
+          "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/medium_new.svg",
+          "name": "Medium",
+          "id": "3"
+        },
+        "status": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10007",
+          "description": "",
+          "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/statuses/generic.png",
+          "name": "In Progress",
+          "id": "10007",
+          "statusCategory": {
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/4",
+            "id": 4,
+            "key": "indeterminate",
+            "colorName": "yellow",
+            "name": "In Progress"
+          }
+        },
+        "customfield_10015": null
+      }
+    },
+    {
+      "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations",
+      "id": "11128",
+      "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11128",
+      "key": "RC1-167",
+      "fields": {
+        "summary": "Implement API per design doc",
+        "duedate": "2026-07-18",
+        "issuelinks": [
+          {
+            "id": "10070",
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLink/10070",
+            "type": {
+              "id": "10000",
+              "name": "Blocks",
+              "inward": "is blocked by",
+              "outward": "blocks",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issueLinkType/10000"
+            },
+            "inwardIssue": {
+              "id": "11127",
+              "key": "RC1-166",
+              "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/11127",
+              "fields": {
+                "summary": "Write API design doc",
+                "status": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10007",
+                  "description": "",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/statuses/generic.png",
+                  "name": "In Progress",
+                  "id": "10007",
+                  "statusCategory": {
+                    "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/4",
+                    "id": 4,
+                    "key": "indeterminate",
+                    "colorName": "yellow",
+                    "name": "In Progress"
+                  }
+                },
+                "priority": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/3",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/medium_new.svg",
+                  "name": "Medium",
+                  "id": "3"
+                },
+                "issuetype": {
+                  "self": "https://hirereidcollins.atlassian.net/rest/api/3/issuetype/10009",
+                  "id": "10009",
+                  "description": "Stories track functionality or features expressed as user goals.",
+                  "iconUrl": "https://hirereidcollins.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10315?size=medium",
+                  "name": "Story",
+                  "subtask": false,
+                  "avatarId": 10315,
+                  "entityId": "ef80aac2-a85e-4161-8346-162594f05a15",
+                  "hierarchyLevel": 0
+                }
+              }
+            }
+          }
+        ],
+        "assignee": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/user?accountId=712020%3A88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "accountId": "712020:88f6cb3c-5310-4640-af9c-e38874a5f566",
+          "emailAddress": "hire.reid.collins@gmail.com",
+          "avatarUrls": {
+            "48x48": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "24x24": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "16x16": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+            "32x32": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png"
+          },
+          "displayName": "Reid Collins",
+          "active": true,
+          "timeZone": "America/New_York",
+          "accountType": "atlassian"
+        },
+        "priority": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/priority/3",
+          "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/priorities/medium_new.svg",
+          "name": "Medium",
+          "id": "3"
+        },
+        "status": {
+          "self": "https://hirereidcollins.atlassian.net/rest/api/3/status/10005",
+          "description": "",
+          "iconUrl": "https://hirereidcollins.atlassian.net/images/icons/statuses/generic.png",
+          "name": "Idea",
+          "id": "10005",
+          "statusCategory": {
+            "self": "https://hirereidcollins.atlassian.net/rest/api/3/statuscategory/2",
+            "id": 2,
+            "key": "new",
+            "colorName": "blue-gray",
+            "name": "To Do"
+          }
+        },
+        "customfield_10015": "2026-07-08"
+      }
+    }
+  ],
+  "isLast": true
+}

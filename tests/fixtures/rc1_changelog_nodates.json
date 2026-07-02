@@ -1,0 +1,97 @@
+{
+  "self": "https://hirereidcollins.atlassian.net/rest/api/3/issue/RC1-158/changelog?maxResults=100&startAt=0",
+  "maxResults": 100,
+  "startAt": 0,
+  "total": 3,
+  "isLast": true,
+  "values": [
+    {
+      "id": "12512",
+      "author": {
+        "self": "https://hirereidcollins.atlassian.net/rest/api/3/user?accountId=712020%3A88f6cb3c-5310-4640-af9c-e38874a5f566",
+        "accountId": "712020:88f6cb3c-5310-4640-af9c-e38874a5f566",
+        "emailAddress": "hire.reid.collins@gmail.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+          "24x24": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+          "16x16": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+          "32x32": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png"
+        },
+        "displayName": "Reid Collins",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-07-02T08:44:50.380-0400",
+      "items": [
+        {
+          "field": "IssueParentAssociation",
+          "fieldtype": "jira",
+          "from": null,
+          "fromString": null,
+          "to": "11117",
+          "toString": "RC1-156"
+        }
+      ]
+    },
+    {
+      "id": "12533",
+      "author": {
+        "self": "https://hirereidcollins.atlassian.net/rest/api/3/user?accountId=712020%3A88f6cb3c-5310-4640-af9c-e38874a5f566",
+        "accountId": "712020:88f6cb3c-5310-4640-af9c-e38874a5f566",
+        "emailAddress": "hire.reid.collins@gmail.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+          "24x24": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+          "16x16": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+          "32x32": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png"
+        },
+        "displayName": "Reid Collins",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-07-02T08:44:59.451-0400",
+      "items": [
+        {
+          "field": "priority",
+          "fieldtype": "jira",
+          "fieldId": "priority",
+          "from": "3",
+          "fromString": "Medium",
+          "to": "2",
+          "toString": "High"
+        }
+      ]
+    },
+    {
+      "id": "12541",
+      "author": {
+        "self": "https://hirereidcollins.atlassian.net/rest/api/3/user?accountId=712020%3A88f6cb3c-5310-4640-af9c-e38874a5f566",
+        "accountId": "712020:88f6cb3c-5310-4640-af9c-e38874a5f566",
+        "emailAddress": "hire.reid.collins@gmail.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+          "24x24": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+          "16x16": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png",
+          "32x32": "https://secure.gravatar.com/avatar/2b3d2996bb26177846c9bd20577a77b1?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRC-2.png"
+        },
+        "displayName": "Reid Collins",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-07-02T08:45:03.173-0400",
+      "items": [
+        {
+          "field": "Link",
+          "fieldtype": "jira",
+          "from": null,
+          "fromString": null,
+          "to": "RC1-157",
+          "toString": "This work item is blocked by RC1-157"
+        }
+      ]
+    }
+  ]
+}

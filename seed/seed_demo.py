@@ -23,6 +23,7 @@ from seed import scenario
 from seed.jira_client import JiraClient, JiraError
 
 DEMO_LABEL = "drift-demo"
+EPIC_SLUG = "epic"  # ds-epic label marks the dedicated demo epic
 MANIFEST = Path(__file__).with_name("manifest.json")
 
 
@@ -46,7 +47,9 @@ def teardown(jira: JiraClient, *, dry_run: bool) -> None:
     if not existing:
         print("Nothing to tear down — no drift-demo tickets found.")
         return
-    for slug, key in sorted(existing.items()):
+    # Delete stories first, the epic last (an epic with children can't be removed).
+    ordered = sorted(existing.items(), key=lambda kv: (kv[0] == EPIC_SLUG, kv[0]))
+    for slug, key in ordered:
         if dry_run:
             print(f"[dry-run] would delete {key} ({slug})")
         else:
@@ -61,7 +64,19 @@ def seed(jira: JiraClient, *, dry_run: bool) -> None:
     account_id = None if dry_run else jira.my_account_id()
     keys = find_existing(jira)
 
-    # 1. create any missing tickets (with create-time dates + labels)
+    # 0. dedicated demo epic — all stories are parented under it
+    if EPIC_SLUG in keys:
+        epic_key = keys[EPIC_SLUG]
+        print(f"exists  {epic_key:>8}  epic")
+    elif dry_run:
+        epic_key = "<epic>"
+        print(f"[dry-run] create epic: '{scenario.EPIC_SUMMARY}'")
+    else:
+        epic_key = jira.create_epic(scenario.EPIC_SUMMARY, [DEMO_LABEL, slug_label(EPIC_SLUG)])
+        keys[EPIC_SLUG] = epic_key
+        print(f"created {epic_key:>8}  epic")
+
+    # 1. create any missing tickets (parented under the epic, with create-time fields)
     for t in scenario.TICKETS:
         if t.slug in keys:
             print(f"exists  {keys[t.slug]:>8}  {t.slug}")
@@ -72,7 +87,7 @@ def seed(jira: JiraClient, *, dry_run: bool) -> None:
             keys[t.slug] = f"<{t.slug}>"
             continue
         key = jira.create_story(
-            t.summary, labels, due=t.due, start=t.start, assignee_id=account_id
+            t.summary, labels, due=t.due, start=t.start, assignee_id=account_id, parent=epic_key
         )
         keys[t.slug] = key
         print(f"created {key:>8}  {t.slug}")
@@ -134,6 +149,7 @@ def write_manifest(keys: dict[str, str], *, dry_run: bool) -> None:
         "project": "RC1",
         "today_reference": "2026-07-01",
         "demo_label": DEMO_LABEL,
+        "epic": {"key": keys.get(EPIC_SLUG), "summary": scenario.EPIC_SUMMARY},
         "tickets": [
             {
                 "slug": t.slug,

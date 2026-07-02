@@ -14,6 +14,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+# All demo stories are parented under this dedicated epic to keep them grouped
+# and trivially filterable/deletable — separate from the build epic (RC1-131).
+EPIC_SUMMARY = "Drift Demo Data (seeded — safe to delete)"
+
 
 @dataclass(frozen=True)
 class Ticket:

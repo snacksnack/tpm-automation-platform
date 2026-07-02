@@ -10,6 +10,7 @@ import httpx
 
 # Static IDs for the RC1 instance (verified during [2/9] pre-flight).
 STORY_TYPE_ID = "10009"
+EPIC_TYPE_ID = "10005"
 START_DATE_FIELD = "customfield_10015"
 BLOCKS_LINK = "Blocks"
 
@@ -81,6 +82,15 @@ class JiraClient:
         return out
 
     # --- writes ---
+    def create_epic(self, summary: str, labels: list[str], *, project: str = "RC1") -> str:
+        fields = {
+            "project": {"key": project},
+            "issuetype": {"id": EPIC_TYPE_ID},
+            "summary": summary,
+            "labels": labels,
+        }
+        return self._req("POST", "/issue", json={"fields": fields}).json()["key"]
+
     def create_story(
         self,
         summary: str,
@@ -89,6 +99,7 @@ class JiraClient:
         due: str | None = None,
         start: str | None = None,
         assignee_id: str | None = None,
+        parent: str | None = None,
         project: str = "RC1",
     ) -> str:
         fields: dict[str, object] = {
@@ -103,6 +114,8 @@ class JiraClient:
             fields[START_DATE_FIELD] = start
         if assignee_id:
             fields["assignee"] = {"id": assignee_id}
+        if parent:
+            fields["parent"] = {"key": parent}
         return self._req("POST", "/issue", json={"fields": fields}).json()["key"]
 
     def set_priority(self, key: str, name: str) -> None:

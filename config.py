@@ -26,6 +26,11 @@ class Settings(BaseSettings):
 
     # Runtime
     dry_run: bool = True
+    project_key: str = "RC1"
+    db_path: str = "data/drift.db"  # on Fly, point at the mounted volume: /data/drift.db
+    # Shared secret to gate POST /drift/run (the GitHub Actions cron sends it as
+    # X-Drift-Token). Unset => endpoint is open (local dev only).
+    drift_run_token: str | None = None
 
 
 settings = Settings()

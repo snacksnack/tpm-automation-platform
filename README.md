@@ -24,8 +24,8 @@ writes the narrative.
   logic left it; keeping a whole SaaS around just to fire a daily HTTP request
   wasn't worth the moving part.
 
-> _Evolved from the v1 n8n status-email project. Links: TODO — add the v1 repo
-> URL(s) here once public._
+> _Evolved from the v1 n8n status-email prototype:
+> [n8n-stakeholder-status-email](https://github.com/snacksnack/n8n-stakeholder-status-email)._
 
 ## What it detects
 

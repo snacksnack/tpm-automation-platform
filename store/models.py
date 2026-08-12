@@ -10,7 +10,23 @@ maps to the same finding across runs, which is what dedup / first-seen rely on.
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from pydantic import BaseModel
+
+
+class RunInfo(BaseModel):
+    """A recorded run, as a reader sees it.
+
+    Carried on every read-only findings response so a caller can state which run
+    the data came from and when — findings describe the last *stored* run, not
+    live Jira, and a response that omits that invites a reader to assume it is
+    current (RC1-244).
+    """
+
+    run_id: int
+    project_key: str
+    created_at: datetime
 
 
 class Finding(BaseModel):

@@ -20,7 +20,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 
 from collectors.models import DependencyLink, Issue, ProjectSnapshot
-from store.models import Finding
+from store.models import Finding, RunInfo
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS runs (
@@ -154,6 +154,27 @@ class SnapshotStore:
             )
         ]
         return ProjectSnapshot(project_key=project_key, issues=issues, links=links)
+
+    def latest_run(self, project_key: str) -> RunInfo | None:
+        """The most recent run for a project, or None if it has never run.
+
+        Every other run lookup here assumes the caller already holds a run id —
+        `create_run` mints one, `previous_run_id` needs one to look behind. A
+        read-only consumer has neither, so this is the entry point for "what is
+        the current state of drift?" (RC1-244).
+        """
+        row = self._conn.execute(
+            "SELECT run_id, project_key, created_at FROM runs WHERE project_key = ? "
+            "ORDER BY run_id DESC LIMIT 1",
+            (project_key,),
+        ).fetchone()
+        if row is None:
+            return None
+        return RunInfo(
+            run_id=int(row["run_id"]),
+            project_key=row["project_key"],
+            created_at=datetime.fromisoformat(row["created_at"]),
+        )
 
     def previous_run_id(self, project_key: str, before_run: int) -> int | None:
         """The most recent run for the project strictly before `before_run`."""

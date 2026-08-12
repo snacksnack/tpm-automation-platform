@@ -42,7 +42,8 @@ bucketed 🔴 collision imminent / 🟡 at risk / ⚪ watch.
 ## Module map
 
 ```
-main.py         FastAPI entrypoint — GET /healthz, POST /drift/run
+main.py         FastAPI entrypoint — GET /healthz, POST /drift/run,
+                GET /drift/findings (read-only, no side effects)
 config.py       env-backed settings (pydantic-settings)
 
 collectors/     data acquisition (Jira issues, links, changelog)    [3/9]
@@ -101,6 +102,35 @@ curl -X POST localhost:8000/drift/run -H "X-Drift-Token: $DRIFT_RUN_TOKEN"
 Set `DRY_RUN=true` to log notifications instead of posting to Slack. Each run
 emits one structured JSON line (counts per rule, buckets, notify outcomes,
 duration) for logs/observability.
+
+## Read findings without running a cycle
+
+`POST /drift/run` is not a read — it collects from Jira, writes rows, calls
+Anthropic, and posts to Slack. Anything that only wants to *look* at drift (a
+dashboard, a digest, the [launch-planner MCP
+server](https://github.com/snacksnack/launch-planner-agent)) uses these instead.
+They only ever SELECT, so they can be polled freely without sending a single
+Slack message.
+
+```bash
+curl localhost:8000/drift/findings                      # the last stored run
+curl "localhost:8000/drift/findings?bucket=red"         # red | yellow | white
+curl "localhost:8000/drift/findings?rule=unabsorbed_slip"
+curl "localhost:8000/drift/findings?since_run=12"       # first seen at/after run 12
+
+# one finding, with its evidence
+curl "localhost:8000/drift/findings/timeline_inversion/RC1-158?upstream=RC1-157"
+```
+
+Every response carries `run_id` and `run_at`: these report the **last scheduled
+run**, not a fresh scan. No run yet is a valid state — an empty list with a null
+`run_id`, which is different from "no drift".
+
+A finding is addressed by its identity, `(rule_type, upstream, downstream)` —
+the same triple the store uses to carry `first_seen_run` across runs — rather
+than by a row id. Findings are re-derived on every run, so a row id would point
+at a different finding as soon as the scheduler fired again, and a caller that
+listed findings and then asked about one would silently get the wrong answer.
 
 ## Deploy (Fly.io)
 

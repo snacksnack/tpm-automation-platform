@@ -31,3 +31,6 @@ data/
 *.swp
 .idea/
 .vscode/
+
+# Eval run records — local measurements, not artifacts of the repo.
+eval-runs/

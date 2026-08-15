@@ -54,12 +54,59 @@ drift/
   notify.py     Slack owner DMs + program-channel rollup             [8/9]
   pipeline.py   collect -> ... -> notify, one run + JSON log         [9/9]
 narrative/      findings -> TPM-voiced digest via Anthropic SDK      [7/9]
+evals/          drift-digest goldens — frozen cases, scored        [RC1-261]
 seed/           idempotent RC1 demo-data seeder                      [2/9]
 tests/          pytest, fixture-driven (no live API calls)
 ```
 
 `collectors/`, `store/`, and `narrative/` are shared with the planned
 status-email v2 service.
+
+## How we know the digest is any good
+
+The digest is the one part of this system a model writes, so it is the one part
+that needs measuring rather than asserting. `evals/` scores it against frozen
+finding sets, using the shared harness
+[`agent-evals`](https://github.com/snacksnack/agent-evals) (pinned by tag).
+
+```bash
+python -m evals run drift-digest-allclear   # free, deterministic — runs in CI
+python -m evals run drift-digest            # billed, needs ANTHROPIC_API_KEY
+python -m evals degrade                     # billed — are the checks awake?
+python -m evals template-drift              # declared prompt version vs its hash
+```
+
+**Nothing here uses an LLM judge.** The prompt template states its rules as
+absolutes — never invent, never re-rank, one line per finding, this order, that
+glyph — and almost all of them are exactly checkable. On this subject a regex is
+*more* accurate than a judge and free, so all six gating characteristics are
+deterministic. The only advisory one is whether the summary spells its bucket
+counts as digits, because "two red" is a correct answer a checker cannot read.
+
+The split between the two subjects is by cost, not by importance. The
+empty-findings all-clear path never calls the API, so it is scored on every push
+— and it is checked with a client that raises if touched, because "did not call
+the model" is the actual promise, and asserting the cost was zero would also
+pass if the call were made and discarded.
+
+### The checks are tested against bad output, not just good
+
+A suite that passes on its first run has said either "the subject is good" or
+"the checks are asleep", and cannot tell you which. Two things settle it:
+
+* `tests/test_evals_checks.py` hands each check a digest that is wrong in
+  exactly one way and asserts it says so. Free, and in CI.
+* `python -m evals degrade` removes one rule from the prompt template and reruns
+  the same cases, to see whether the matching characteristic goes red.
+
+The degrade run says **2 of 5 rules are load-bearing**: without the glyph rule
+the model stops emitting 🔴/🟡/⚪, and without the ordering rule it leaves a
+stale red ahead of a new one. The other three — never re-rank, one line each,
+never invent — hold up with the rule removed, because the output schema already
+forces them: `bucket` and `downstream` are fields copied from the payload.
+
+That is a finding about the *prompt*, not the checks, and it only became
+readable once the checks were independently known to fail on bad output.
 
 ## Pipeline
 

@@ -28,3 +28,10 @@ jobs:
 
       - name: Test (pytest)
         run: pytest
+
+      # RC1-261. The free half of the drift-digest goldens: the empty-findings
+      # path never reaches a model, so it needs no key and costs nothing. The
+      # billed half (`python -m evals run drift-digest`) is run by hand — see
+      # evals/subjects.py for why the split is by cost rather than by coverage.
+      - name: Evals (free subjects only)
+        run: python -m evals run drift-digest-allclear

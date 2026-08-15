@@ -21,6 +21,10 @@ dependencies = [
 dev = [
     "pytest>=8.3",
     "ruff>=0.7",
+    # RC1-261: the eval harness. Pinned by tag — if the ruler can move under a
+    # run, a changed score no longer says whether the digest drifted or the
+    # measurement did.
+    "agent-evals @ git+https://github.com/snacksnack/agent-evals@v0.1.2",
 ]
 
 [build-system]
@@ -29,7 +33,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 # Flat module layout: the domain packages plus the FastAPI entrypoint modules.
-packages = ["collectors", "store", "narrative", "drift"]
+packages = ["collectors", "store", "narrative", "drift", "evals"]
 py-modules = ["main", "config"]
 
 [tool.setuptools.package-data]

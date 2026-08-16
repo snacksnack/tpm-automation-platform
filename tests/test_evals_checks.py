@@ -157,3 +157,53 @@ def test_the_all_clear_summary_is_not_read_as_inventing_drift():
         "No dependency drift detected in RC1.", ["drift detected"], negation_aware=True
     )
     assert not said
+
+
+# --- RC1-255: the template contract, free and gating ----------------------
+
+
+def test_every_rule_the_checks_depend_on_is_still_in_the_template():
+    """Degrading the prompt must fail CI, and before this it did not.
+
+    The gating characteristics are scored by the billed subject, which by design
+    never runs in CI (ADR-0031). So removing the glyph rule — which
+    `evals degrade` measured as genuinely load-bearing — passed ruff, passed
+    pytest, and passed the free eval. The regression was real and invisible.
+
+    `evals/degrade.py` already declares, for each characteristic, the exact
+    template text it depends on. That catalogue is the contract: this test
+    asserts every entry is still present verbatim. It costs nothing, runs on
+    every push, and names the rule that moved rather than reporting a vague
+    failure.
+    """
+    from evals import degrade
+
+    missing = []
+    for degradation in degrade.DEGRADATIONS:
+        try:
+            degrade.degraded_prompt(degradation)
+        except ValueError:
+            missing.append(f"{degradation.name} (protects {degradation.expect_breaks})")
+    assert not missing, (
+        "the drift-digest template no longer contains: "
+        + "; ".join(missing)
+        + ". Either restore the rule, or update evals/degrade.py — but a rule "
+        "removed without updating the catalogue means the eval silently stops "
+        "testing the characteristic it protects."
+    )
+
+
+def test_the_glyphs_the_checker_requires_are_the_glyphs_the_template_mandates():
+    """`checks.GLYPHS` and the template have to agree.
+
+    The checker asserts a red line opens with 🔴. If the template were edited to
+    ask for a different marker, every red line would fail a check that looks
+    like it is about the model — when it is really about two files disagreeing.
+    """
+    from narrative import drift_digest
+
+    template = drift_digest.load_prompt()
+    for bucket, glyph in checks.GLYPHS.items():
+        assert glyph in template, (
+            f"checks.GLYPHS maps {bucket!r} to {glyph}, which the template no longer mentions"
+        )

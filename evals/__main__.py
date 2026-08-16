@@ -21,6 +21,24 @@ from evals import subjects
 
 RUNS_PATH = Path(os.environ.get("EVAL_RUNS_PATH", "./eval-runs/runs.jsonl"))
 
+
+def _store():
+    """The shared Postgres store when `EVAL_DATABASE_URL` is set, else the
+    local JSONL default (RC1-263).
+
+    Read from the process environment, never `.env` — the credential lives in
+    one place outside every repo. An unreachable store fails the run loudly:
+    a silent fallback to the file would fork the record history.
+    """
+    dsn = os.environ.get("EVAL_DATABASE_URL")
+    if dsn:
+        from agent_evals.sql_store import SqlRunStore
+
+        store = SqlRunStore(dsn)
+        store.ensure_schema()
+        return store
+    return RunStore(RUNS_PATH)
+
 #: The template carries a hand-maintained version in an HTML comment. The eval
 #: records a hash. `template-drift` is what notices when the two disagree.
 _VERSION_COMMENT = re.compile(r"version\s+(\d+)", re.IGNORECASE)
@@ -85,7 +103,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         finished_at=datetime.now(UTC),
         results=results,
     )
-    RunStore(RUNS_PATH).append(record)
+    _store().append(record)
     print(f"\nrun {record.run_id} recorded")
 
     if any(r.error for r in results):

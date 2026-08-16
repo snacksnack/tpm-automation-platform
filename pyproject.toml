@@ -24,7 +24,7 @@ dev = [
     # RC1-261: the eval harness. Pinned by tag — if the ruler can move under a
     # run, a changed score no longer says whether the digest drifted or the
     # measurement did.
-    "agent-evals @ git+https://github.com/snacksnack/agent-evals@v0.1.2",
+    "agent-evals[sql] @ git+https://github.com/snacksnack/agent-evals@v0.2.0",
 ]
 
 [build-system]

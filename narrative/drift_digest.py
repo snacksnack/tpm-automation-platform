@@ -16,6 +16,7 @@ Design notes:
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
 
 from collectors.models import ProjectSnapshot
@@ -138,13 +139,33 @@ def _default_client():
     )
 
 
+@dataclass(frozen=True)
+class CallUsage:
+    """Token counts of the most recent API call, for callers that meter spend."""
+
+    input_tokens: int
+    output_tokens: int
+
+
+#: Side channel for the last `build_digest` call's token usage, in the same
+#: shape the planner repo's agents expose (RC1-269). The digest object itself
+#: stays a pure narrative artifact; spend is the caller's concern.
+last_usage: CallUsage | None = None
+
+
 def _generate(client, model: str, system: str, payload: dict) -> dict:
+    global last_usage
     resp = client.messages.create(
         model=model,
         max_tokens=2048,
         system=system,
         messages=[{"role": "user", "content": json.dumps(payload)}],
         output_config={"format": {"type": "json_schema", "schema": _SCHEMA}},
+    )
+    usage = getattr(resp, "usage", None)
+    last_usage = CallUsage(
+        input_tokens=getattr(usage, "input_tokens", 0) or 0,
+        output_tokens=getattr(usage, "output_tokens", 0) or 0,
     )
     text = next((b.text for b in resp.content if getattr(b, "type", None) == "text"), None)
     if text is None:
@@ -161,6 +182,8 @@ def build_digest(
     model: str = MODEL,
 ) -> DriftDigest:
     """Findings -> TPM-voiced digest. Empty findings never call the API."""
+    global last_usage
+    last_usage = None
     if not findings:
         return _all_clear(snapshot, resolved)
 

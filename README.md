@@ -67,7 +67,11 @@ status-email v2 service.
 The digest is the one part of this system a model writes, so it is the one part
 that needs measuring rather than asserting. `evals/` scores it against frozen
 finding sets, using the shared harness
-[`agent-evals`](https://github.com/snacksnack/agent-evals) (pinned by tag).
+[`agent-evals`](https://github.com/snacksnack/agent-evals) (pinned by tag) —
+its README is the methodology. Billed runs publish to the shared
+**[quality trend page](https://snacksnack.github.io/agent-evals/)**; taking a
+measurement end to end (keys, store, publish step) is the library's
+[runbook](https://github.com/snacksnack/agent-evals/blob/main/docs/measuring.md).
 
 ```bash
 python -m evals run drift-digest-allclear   # free, deterministic — runs in CI

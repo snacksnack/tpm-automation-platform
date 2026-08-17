@@ -9,53 +9,17 @@ different problem from producing something wrong.
 from __future__ import annotations
 
 import argparse
-import os
 import re
 import sys
 from datetime import UTC, datetime
-from pathlib import Path
 
-from agent_evals.record import RunRecord, RunStore, new_run_id
+from agent_evals.runner import exit_code, print_result, record_run
 
 from evals import subjects
-
-RUNS_PATH = Path(os.environ.get("EVAL_RUNS_PATH", "./eval-runs/runs.jsonl"))
-
-
-def _store():
-    """The shared Postgres store when `EVAL_DATABASE_URL` is set, else the
-    local JSONL default (RC1-263).
-
-    Read from the process environment, never `.env` — the credential lives in
-    one place outside every repo. An unreachable store fails the run loudly:
-    a silent fallback to the file would fork the record history.
-    """
-    dsn = os.environ.get("EVAL_DATABASE_URL")
-    if dsn:
-        from agent_evals.sql_store import SqlRunStore
-
-        store = SqlRunStore(dsn)
-        store.ensure_schema()
-        return store
-    return RunStore(RUNS_PATH)
 
 #: The template carries a hand-maintained version in an HTML comment. The eval
 #: records a hash. `template-drift` is what notices when the two disagree.
 _VERSION_COMMENT = re.compile(r"version\s+(\d+)", re.IGNORECASE)
-
-
-def _print(result) -> None:
-    if result.error:
-        print(f"  ERROR {result.case_id}: {result.error}")
-        return
-    status = "pass" if result.passed else "FAIL"
-    print(f"  {status} {result.case_id}  ({result.usage.latency_ms:.0f} ms)")
-    for characteristic in result.characteristics:
-        if characteristic.passed and not characteristic.advisory:
-            continue
-        mark = "~" if characteristic.advisory else "✗"
-        tag = " [advisory]" if characteristic.advisory else ""
-        print(f"    {mark} {characteristic.name}{tag}: {characteristic.detail}")
 
 
 def cmd_run(args: argparse.Namespace) -> int:
@@ -94,21 +58,10 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     print(f"\n{args.subject}")
     for result in results:
-        _print(result)
+        print_result(result)
 
-    record = RunRecord(
-        run_id=new_run_id(args.subject),
-        subject_version=version,
-        started_at=started,
-        finished_at=datetime.now(UTC),
-        results=results,
-    )
-    _store().append(record)
-    print(f"\nrun {record.run_id} recorded")
-
-    if any(r.error for r in results):
-        return 2
-    return 0 if all(r.passed for r in results) else 1
+    record_run(version, started, results)
+    return exit_code(results)
 
 
 def cmd_template_drift(_: argparse.Namespace) -> int:

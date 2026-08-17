@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import time
 
-from agent_evals import groundedness
+from agent_evals import groundedness, pricing
 from agent_evals.case import Case
 from agent_evals.record import CaseResult, CharacteristicResult, SubjectVersion, Usage
 
@@ -183,15 +183,22 @@ def run_billed(case: Case, client, model: str) -> CaseResult:
 
 
 def _usage(latency_ms: float, model: str) -> Usage:
-    """Cost is left unpriced rather than guessed.
+    """Priced from the digest module's side channel (RC1-269).
 
-    `agent_evals.pricing` raises on a model it has no price for, and this
-    subject's spend is small and run by hand. Recording latency truthfully and
-    cost as unknown beats recording a number nobody measured — the planner repo
-    is where the priced ceilings live because that is where the runs are
-    frequent enough for a ceiling to mean something.
+    Until v0.3.2 the harness had no price for this subject's model and cost was
+    deliberately left unrecorded; a billed run reporting $0 is RC1-254's exact
+    finding, so now that a price exists the omission would be the bug. The
+    fallback branch keeps the old honesty: no measured tokens, no invented cost.
     """
-    return Usage(latency_ms=latency_ms)
+    used = drift_digest.last_usage
+    if used is None:
+        return Usage(latency_ms=latency_ms)
+    return Usage(
+        input_tokens=used.input_tokens,
+        output_tokens=used.output_tokens,
+        cost_usd=pricing.cost_usd(model, used.input_tokens, used.output_tokens),
+        latency_ms=latency_ms,
+    )
 
 
 def run_free(case: Case) -> CaseResult:

@@ -33,7 +33,10 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 # Flat module layout: the domain packages plus the FastAPI entrypoint modules.
-packages = ["collectors", "store", "narrative", "drift", "evals"]
+# `evals` deliberately stays out: the Docker image never copies it (its
+# agent-evals dependency is in the [dev] extra), and CI's
+# `python -m evals` runs from the repo root, not the installed package (RC1-265).
+packages = ["collectors", "store", "narrative", "drift"]
 py-modules = ["main", "config"]
 
 [tool.setuptools.package-data]

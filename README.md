@@ -58,6 +58,8 @@ evals/          drift-digest goldens — frozen cases, scored        [RC1-261]
 kpi/            Program KPI agent — define stage: brief + rubric ->
                 reviewable KPI tree (docs/kpi/)                       [RC1-302]
 seed/           idempotent RC1 demo-data seeder                      [2/9]
+simulate/       scripted 10-week program in PMA, one sim-day per
+                tick; the KPI agent's test fixture                   [RC1-299]
 tests/          pytest, fixture-driven (no live API calls)
 ```
 
@@ -141,6 +143,40 @@ docs/kpi/trees/<program>.md         hand-written baseline, written first
 docs/kpi/trees/<program>.agent.md   the agent's draft (+ .json twin)
 docs/kpi/trees/<program>.review.md  where they disagree, and who was right
 ```
+
+### The simulated program (RC1-299)
+
+The KPI agent is verified against a program whose every number is known in
+advance: thirty-four stories in four workstreams under a dedicated PMA epic,
+advancing one simulated day per tick, with four planted events — a scope add
+in week 3, an upstream slip in week 5, a cost spike in week 6, and a silent
+source break in week 7 (the label the collector keys on is dropped for five
+days, and nobody comments). `simulate/scenario.py` is the program as data;
+`state_at(day)` is the exact Jira state for any day, and the ground-truth
+ledger (RC1-300) derives from the same function the simulator converges to.
+
+```bash
+python -m simulate seed              # create / converge to day 0
+python -m simulate tick [--days N]   # advance the clock and converge
+python -m simulate to-day 45         # jump (development)
+python -m simulate verify            # Jira == scenario for the current day?
+python -m simulate status
+python -m simulate teardown          # delete every simulated issue, forget the clock
+```
+
+Seed, tick and verify are one computation — a diff between `state_at(day)`
+and what Jira shows — so a converged day always verifies, and converging day
+by day is the same as jumping. The clock, a manifest of keys, and the weekly
+cloud-spend line live in `data/kpi-sim/` (gitignored); the collector reads the
+sim-date from there. `scripts/launchd/` has the daily-tick plist for the
+three-week run; it is not installed automatically.
+
+Three PMA prerequisites, all configured on 2026-08-22: story points go through
+the Agile estimation endpoint for board 68 (the board-correct route, and it
+works whether or not the field is on a screen — it now is); the workflow has
+a global **Blocked** status, which the KPI tree's blocked-share reads
+directly; and teardown needs *Delete Issues*, which the default software
+scheme grants only to the project's Administrators role.
 
 ## Pipeline
 

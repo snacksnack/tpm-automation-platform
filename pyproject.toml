@@ -36,11 +36,12 @@ build-backend = "setuptools.build_meta"
 # `evals` deliberately stays out: the Docker image never copies it (its
 # agent-evals dependency is in the [dev] extra), and CI's
 # `python -m evals` runs from the repo root, not the installed package (RC1-265).
-packages = ["collectors", "store", "narrative", "drift"]
+packages = ["collectors", "store", "narrative", "drift", "kpi"]
 py-modules = ["main", "config"]
 
 [tool.setuptools.package-data]
 narrative = ["templates/*.md"]
+kpi = ["templates/*.md"]
 
 [tool.ruff]
 line-length = 100

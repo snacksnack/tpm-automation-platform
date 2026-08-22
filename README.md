@@ -55,6 +55,8 @@ drift/
   pipeline.py   collect -> ... -> notify, one run + JSON log         [9/9]
 narrative/      findings -> TPM-voiced digest via Anthropic SDK      [7/9]
 evals/          drift-digest goldens — frozen cases, scored        [RC1-261]
+kpi/            Program KPI agent — define stage: brief + rubric ->
+                reviewable KPI tree (docs/kpi/)                       [RC1-302]
 seed/           idempotent RC1 demo-data seeder                      [2/9]
 simulate/       scripted 10-week program in PMA, one sim-day per
                 tick; the KPI agent's test fixture                   [RC1-299]
@@ -113,6 +115,34 @@ forces them: `bucket` and `downstream` are fields copied from the payload.
 
 That is a finding about the *prompt*, not the checks, and it only became
 readable once the checks were independently known to fail on bad output.
+
+## Program KPI agent (RC1-298)
+
+The second service, landing one stage at a time. Where the drift detector
+answers "what is about to slip", this answers "which numbers should the SVP
+be looking at, and are they real". The judgment is made under a versioned
+rubric — [`docs/kpi/rubric.md`](docs/kpi/rubric.md) — and every stage records
+which version it applied.
+
+The define stage is in: a program brief plus the rubric go to the model, a
+KPI tree comes back as structured output, and the code refuses any draft
+that breaks the rubric's shape (1–2 outcomes, 3–4 leading indicators, every
+leading indicator naming its outcome, every Goodhart risk above low paired
+with a counter-metric). The model never sees the hand-written baseline; the
+two are compared afterwards in a review document.
+
+```bash
+python -m kpi.define --program docs/kpi/programs/simulated-program.md \
+    --out docs/kpi/trees/simulated-program.agent.md     # billed, one call
+```
+
+```
+docs/kpi/rubric.md                  the rubric, versioned
+docs/kpi/programs/<program>.md      what the agent is given
+docs/kpi/trees/<program>.md         hand-written baseline, written first
+docs/kpi/trees/<program>.agent.md   the agent's draft (+ .json twin)
+docs/kpi/trees/<program>.review.md  where they disagree, and who was right
+```
 
 ### The simulated program (RC1-299)
 

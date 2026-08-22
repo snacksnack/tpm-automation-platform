@@ -7,12 +7,15 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Install the project (deps + package data, incl. the narrative prompt template).
+# Install the project (deps + package data, incl. the narrative and kpi prompt
+# templates). Every package in pyproject's [tool.setuptools] packages must be
+# copied here, or `pip install .` fails in the image (RC1-309).
 COPY pyproject.toml README.md ./
 COPY collectors ./collectors
 COPY store ./store
 COPY narrative ./narrative
 COPY drift ./drift
+COPY kpi ./kpi
 COPY main.py config.py ./
 RUN pip install --upgrade pip && pip install .
 

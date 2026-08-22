@@ -15,7 +15,7 @@ from datetime import UTC, datetime
 
 from agent_evals.runner import exit_code, print_result, record_run
 
-from evals import subjects
+from evals import kpi_ledger, subjects
 
 #: The template carries a hand-maintained version in an HTML comment. The eval
 #: records a hash. `template-drift` is what notices when the two disagree.
@@ -24,6 +24,7 @@ _VERSION_COMMENT = re.compile(r"version\s+(\d+)", re.IGNORECASE)
 
 def cmd_run(args: argparse.Namespace) -> int:
     started = datetime.now(UTC)
+    record = True
     if args.subject == subjects.FREE_NAME:
         cases = subjects.FREE_CASES
         version = subjects.free_version()
@@ -52,6 +53,23 @@ def cmd_run(args: argparse.Namespace) -> int:
         version = subjects.billed_version(model)
         print(f"{len(cases)} case(s) against {model} — this spends money.")
         results = [subjects.run_billed(case, client, model) for case in cases]
+    elif args.subject == kpi_ledger.NAME:
+        impl = args.impl or kpi_ledger.REFERENCE
+        if impl not in kpi_ledger.IMPLEMENTATIONS:
+            print(
+                f"unknown implementation {impl!r}; one of "
+                f"{', '.join(kpi_ledger.IMPLEMENTATIONS)}",
+                file=sys.stderr,
+            )
+            return 2
+        cases = kpi_ledger.CASES
+        version = kpi_ledger.version(impl)
+        results = kpi_ledger.run(impl, cases)
+        if impl != kpi_ledger.REFERENCE:
+            # A deliberately wrong implementation is a demonstration that the
+            # suite can fail, not a measurement of anything — it stays out of
+            # the store so the trend page never shows a planted regression.
+            record = False
     else:
         print(f"unknown subject {args.subject!r}", file=sys.stderr)
         return 2
@@ -59,8 +77,15 @@ def cmd_run(args: argparse.Namespace) -> int:
     print(f"\n{args.subject}")
     for result in results:
         print_result(result)
+    print(
+        f"\n{sum(1 for r in results if r.passed)}/{len(results)} passed, "
+        f"{sum(1 for r in results if r.error)} errored"
+    )
 
-    record_run(version, started, results)
+    if record:
+        record_run(version, started, results)
+    else:
+        print(f"\nnot recorded: {impl!r} is a deliberately wrong implementation")
     return exit_code(results)
 
 
@@ -163,8 +188,16 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
 
     run = sub.add_parser("run", help="run a subject against the frozen corpus")
-    run.add_argument("subject", choices=[subjects.FREE_NAME, subjects.BILLED_NAME])
+    run.add_argument(
+        "subject", choices=[subjects.FREE_NAME, subjects.BILLED_NAME, kpi_ledger.NAME]
+    )
     run.add_argument("--model", default=None, help="override the model (billed subject only)")
+    run.add_argument(
+        "--impl",
+        default=None,
+        help=f"kpi-ledger only: the implementation to score "
+        f"({', '.join(kpi_ledger.IMPLEMENTATIONS)}); non-reference runs are not recorded",
+    )
     run.set_defaults(func=cmd_run)
 
     drift = sub.add_parser("template-drift", help="declared template version vs content hash")

@@ -3,8 +3,11 @@
 `clock.json` holds the current sim-day and its sim-date — what the collector
 (RC1-301) stamps snapshots with. `manifest.json` maps slug -> Jira key for the
 issues the last converge saw. `spend.csv` is the cloud-spend line as of the
-current day: only the weeks that have landed. All three live in a gitignored
-data directory; they are machine state, not repo artifacts.
+current day: only the weeks that have landed. `ledger.csv` is the ground-truth
+ledger (RC1-300) for the whole program — it is a function of the scenario, not
+of the day, and is rewritten on every converge so a scenario edit cannot leave
+a stale copy behind. All four live in a gitignored data directory; they are
+machine state, not repo artifacts.
 """
 
 from __future__ import annotations
@@ -15,7 +18,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from simulate import scenario
+from simulate import ledger, scenario
 
 
 @dataclass(frozen=True)
@@ -34,6 +37,7 @@ class SimState:
         self.clock_path = self.dir / "clock.json"
         self.manifest_path = self.dir / "manifest.json"
         self.spend_path = self.dir / "spend.csv"
+        self.ledger_path = self.dir / "ledger.csv"
 
     def read_clock(self) -> Clock | None:
         if not self.clock_path.exists():
@@ -87,9 +91,10 @@ class SimState:
                         row.lands_on_day,
                     ]
                 )
+        self.ledger_path.write_text(ledger.to_csv(ledger.derive()))
 
     def forget(self) -> None:
-        for p in (self.clock_path, self.manifest_path, self.spend_path):
+        for p in (self.clock_path, self.manifest_path, self.spend_path, self.ledger_path):
             if p.exists():
                 p.unlink()
         if self.dir.exists() and not any(self.dir.iterdir()):

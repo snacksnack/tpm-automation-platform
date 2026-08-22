@@ -1,0 +1,421 @@
+sim_day,sim_date,kpi_id,expected_value,unit,tolerance,state,tripped,as_of,active_events,reason,detail
+0,2026-09-07,forecast-slip-days,3,days,1,ok,false,2026-09-07,,,135 pts remaining at 1.929 pts/day (plan rate 135 pts / 70 days (under 14 days of history)) -> day 70.0
+0,2026-09-07,cost-vs-envelope,,USD over plan-to-date,1,stale,false,,,no spend row has landed yet; week 1 lands on day 7,
+0,2026-09-07,scope-change-pct,0,% of baseline points,0.5,ok,false,2026-09-07,,,+0 / -0 pts against a 135-pt baseline
+0,2026-09-07,critical-path-slack-days,3,days,0.5,ok,false,2026-09-07,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+0,2026-09-07,blocked-share-pct,0,% of open points,1,ok,false,2026-09-07,,,direct 0 + transitive 0 of 135 open pts on GA chains
+0,2026-09-07,weekly-spend-burn-ratio,,"actual / plan, latest week",0.01,stale,false,,,no spend row has landed yet; week 1 lands on day 7,
+1,2026-09-08,forecast-slip-days,4,days,1,ok,false,2026-09-08,,,135 pts remaining at 1.929 pts/day (plan rate 135 pts / 70 days (under 14 days of history)) -> day 71.0
+1,2026-09-08,cost-vs-envelope,,USD over plan-to-date,1,stale,false,,,no spend row has landed yet; week 1 lands on day 7,
+1,2026-09-08,scope-change-pct,0,% of baseline points,0.5,ok,false,2026-09-08,,,+0 / -0 pts against a 135-pt baseline
+1,2026-09-08,critical-path-slack-days,3,days,0.5,ok,false,2026-09-08,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+1,2026-09-08,blocked-share-pct,0,% of open points,1,ok,false,2026-09-08,,,direct 0 + transitive 0 of 135 open pts on GA chains
+1,2026-09-08,weekly-spend-burn-ratio,,"actual / plan, latest week",0.01,stale,false,,,no spend row has landed yet; week 1 lands on day 7,
+2,2026-09-09,forecast-slip-days,5,days,1,ok,false,2026-09-09,,,135 pts remaining at 1.929 pts/day (plan rate 135 pts / 70 days (under 14 days of history)) -> day 72.0
+2,2026-09-09,cost-vs-envelope,,USD over plan-to-date,1,stale,false,,,no spend row has landed yet; week 1 lands on day 7,
+2,2026-09-09,scope-change-pct,0,% of baseline points,0.5,ok,false,2026-09-09,,,+0 / -0 pts against a 135-pt baseline
+2,2026-09-09,critical-path-slack-days,3,days,0.5,ok,false,2026-09-09,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+2,2026-09-09,blocked-share-pct,0,% of open points,1,ok,false,2026-09-09,,,direct 0 + transitive 0 of 135 open pts on GA chains
+2,2026-09-09,weekly-spend-burn-ratio,,"actual / plan, latest week",0.01,stale,false,,,no spend row has landed yet; week 1 lands on day 7,
+3,2026-09-10,forecast-slip-days,6,days,1,ok,true,2026-09-10,,,135 pts remaining at 1.929 pts/day (plan rate 135 pts / 70 days (under 14 days of history)) -> day 73.0
+3,2026-09-10,cost-vs-envelope,,USD over plan-to-date,1,stale,false,,,no spend row has landed yet; week 1 lands on day 7,
+3,2026-09-10,scope-change-pct,0,% of baseline points,0.5,ok,false,2026-09-10,,,+0 / -0 pts against a 135-pt baseline
+3,2026-09-10,critical-path-slack-days,3,days,0.5,ok,false,2026-09-10,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+3,2026-09-10,blocked-share-pct,0,% of open points,1,ok,false,2026-09-10,,,direct 0 + transitive 0 of 135 open pts on GA chains
+3,2026-09-10,weekly-spend-burn-ratio,,"actual / plan, latest week",0.01,stale,false,,,no spend row has landed yet; week 1 lands on day 7,
+4,2026-09-11,forecast-slip-days,7,days,1,ok,true,2026-09-11,,,135 pts remaining at 1.929 pts/day (plan rate 135 pts / 70 days (under 14 days of history)) -> day 74.0
+4,2026-09-11,cost-vs-envelope,,USD over plan-to-date,1,stale,false,,,no spend row has landed yet; week 1 lands on day 7,
+4,2026-09-11,scope-change-pct,0,% of baseline points,0.5,ok,false,2026-09-11,,,+0 / -0 pts against a 135-pt baseline
+4,2026-09-11,critical-path-slack-days,3,days,0.5,ok,false,2026-09-11,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+4,2026-09-11,blocked-share-pct,0,% of open points,1,ok,false,2026-09-11,,,direct 0 + transitive 0 of 135 open pts on GA chains
+4,2026-09-11,weekly-spend-burn-ratio,,"actual / plan, latest week",0.01,stale,false,,,no spend row has landed yet; week 1 lands on day 7,
+5,2026-09-12,forecast-slip-days,2.81,days,1,ok,false,2026-09-12,,,125 pts remaining at 1.929 pts/day (plan rate 135 pts / 70 days (under 14 days of history)) -> day 69.8
+5,2026-09-12,cost-vs-envelope,,USD over plan-to-date,1,stale,false,,,no spend row has landed yet; week 1 lands on day 7,
+5,2026-09-12,scope-change-pct,0,% of baseline points,0.5,ok,false,2026-09-12,,,+0 / -0 pts against a 135-pt baseline
+5,2026-09-12,critical-path-slack-days,3,days,0.5,ok,false,2026-09-12,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+5,2026-09-12,blocked-share-pct,0,% of open points,1,ok,false,2026-09-12,,,direct 0 + transitive 0 of 125 open pts on GA chains
+5,2026-09-12,weekly-spend-burn-ratio,,"actual / plan, latest week",0.01,stale,false,,,no spend row has landed yet; week 1 lands on day 7,
+6,2026-09-13,forecast-slip-days,3.81,days,1,ok,false,2026-09-13,,,125 pts remaining at 1.929 pts/day (plan rate 135 pts / 70 days (under 14 days of history)) -> day 70.8
+6,2026-09-13,cost-vs-envelope,,USD over plan-to-date,1,stale,false,,,no spend row has landed yet; week 1 lands on day 7,
+6,2026-09-13,scope-change-pct,0,% of baseline points,0.5,ok,false,2026-09-13,,,+0 / -0 pts against a 135-pt baseline
+6,2026-09-13,critical-path-slack-days,3,days,0.5,ok,false,2026-09-13,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+6,2026-09-13,blocked-share-pct,0,% of open points,1,ok,false,2026-09-13,,,direct 0 + transitive 0 of 125 open pts on GA chains
+6,2026-09-13,weekly-spend-burn-ratio,,"actual / plan, latest week",0.01,stale,false,,,no spend row has landed yet; week 1 lands on day 7,
+7,2026-09-14,forecast-slip-days,4.81,days,1,ok,false,2026-09-14,,,125 pts remaining at 1.929 pts/day (plan rate 135 pts / 70 days (under 14 days of history)) -> day 71.8
+7,2026-09-14,cost-vs-envelope,-50,USD over plan-to-date,1,ok,false,2026-09-14,,,"$1,150 actual vs $1,200 plan through week 1 (95.8 % of plan-to-date)"
+7,2026-09-14,scope-change-pct,0,% of baseline points,0.5,ok,false,2026-09-14,,,+0 / -0 pts against a 135-pt baseline
+7,2026-09-14,critical-path-slack-days,3,days,0.5,ok,false,2026-09-14,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+7,2026-09-14,blocked-share-pct,0,% of open points,1,ok,false,2026-09-14,,,direct 0 + transitive 0 of 125 open pts on GA chains
+7,2026-09-14,weekly-spend-burn-ratio,0.9583,"actual / plan, latest week",0.01,ok,false,2026-09-14,,,"week 1: $1,150 actual vs $1,200 plan"
+8,2026-09-15,forecast-slip-days,5.81,days,1,ok,true,2026-09-15,,,125 pts remaining at 1.929 pts/day (plan rate 135 pts / 70 days (under 14 days of history)) -> day 72.8
+8,2026-09-15,cost-vs-envelope,-50,USD over plan-to-date,1,ok,false,2026-09-14,,,"$1,150 actual vs $1,200 plan through week 1 (95.8 % of plan-to-date)"
+8,2026-09-15,scope-change-pct,0,% of baseline points,0.5,ok,false,2026-09-15,,,+0 / -0 pts against a 135-pt baseline
+8,2026-09-15,critical-path-slack-days,3,days,0.5,ok,false,2026-09-15,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+8,2026-09-15,blocked-share-pct,0,% of open points,1,ok,false,2026-09-15,,,direct 0 + transitive 0 of 125 open pts on GA chains
+8,2026-09-15,weekly-spend-burn-ratio,0.9583,"actual / plan, latest week",0.01,ok,false,2026-09-14,,,"week 1: $1,150 actual vs $1,200 plan"
+9,2026-09-16,forecast-slip-days,4.22,days,1,ok,false,2026-09-16,,,120 pts remaining at 1.929 pts/day (plan rate 135 pts / 70 days (under 14 days of history)) -> day 71.2
+9,2026-09-16,cost-vs-envelope,-50,USD over plan-to-date,1,ok,false,2026-09-14,,,"$1,150 actual vs $1,200 plan through week 1 (95.8 % of plan-to-date)"
+9,2026-09-16,scope-change-pct,0,% of baseline points,0.5,ok,false,2026-09-16,,,+0 / -0 pts against a 135-pt baseline
+9,2026-09-16,critical-path-slack-days,3,days,0.5,ok,false,2026-09-16,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+9,2026-09-16,blocked-share-pct,0,% of open points,1,ok,false,2026-09-16,,,direct 0 + transitive 0 of 120 open pts on GA chains
+9,2026-09-16,weekly-spend-burn-ratio,0.9583,"actual / plan, latest week",0.01,ok,false,2026-09-14,,,"week 1: $1,150 actual vs $1,200 plan"
+10,2026-09-17,forecast-slip-days,5.22,days,1,ok,true,2026-09-17,,,120 pts remaining at 1.929 pts/day (plan rate 135 pts / 70 days (under 14 days of history)) -> day 72.2
+10,2026-09-17,cost-vs-envelope,-50,USD over plan-to-date,1,ok,false,2026-09-14,,,"$1,150 actual vs $1,200 plan through week 1 (95.8 % of plan-to-date)"
+10,2026-09-17,scope-change-pct,0,% of baseline points,0.5,ok,false,2026-09-17,,,+0 / -0 pts against a 135-pt baseline
+10,2026-09-17,critical-path-slack-days,3,days,0.5,ok,false,2026-09-17,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+10,2026-09-17,blocked-share-pct,0,% of open points,1,ok,false,2026-09-17,,,direct 0 + transitive 0 of 120 open pts on GA chains
+10,2026-09-17,weekly-spend-burn-ratio,0.9583,"actual / plan, latest week",0.01,ok,false,2026-09-14,,,"week 1: $1,150 actual vs $1,200 plan"
+11,2026-09-18,forecast-slip-days,6.22,days,1,ok,true,2026-09-18,,,120 pts remaining at 1.929 pts/day (plan rate 135 pts / 70 days (under 14 days of history)) -> day 73.2
+11,2026-09-18,cost-vs-envelope,-50,USD over plan-to-date,1,ok,false,2026-09-14,,,"$1,150 actual vs $1,200 plan through week 1 (95.8 % of plan-to-date)"
+11,2026-09-18,scope-change-pct,0,% of baseline points,0.5,ok,false,2026-09-18,,,+0 / -0 pts against a 135-pt baseline
+11,2026-09-18,critical-path-slack-days,3,days,0.5,ok,false,2026-09-18,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+11,2026-09-18,blocked-share-pct,0,% of open points,1,ok,false,2026-09-18,,,direct 0 + transitive 0 of 120 open pts on GA chains
+11,2026-09-18,weekly-spend-burn-ratio,0.9583,"actual / plan, latest week",0.01,ok,false,2026-09-14,,,"week 1: $1,150 actual vs $1,200 plan"
+12,2026-09-19,forecast-slip-days,5.67,days,1,ok,true,2026-09-19,,,117 pts remaining at 1.929 pts/day (plan rate 135 pts / 70 days (under 14 days of history)) -> day 72.7
+12,2026-09-19,cost-vs-envelope,-50,USD over plan-to-date,1,ok,false,2026-09-14,,,"$1,150 actual vs $1,200 plan through week 1 (95.8 % of plan-to-date)"
+12,2026-09-19,scope-change-pct,0,% of baseline points,0.5,ok,false,2026-09-19,,,+0 / -0 pts against a 135-pt baseline
+12,2026-09-19,critical-path-slack-days,3,days,0.5,ok,false,2026-09-19,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+12,2026-09-19,blocked-share-pct,0,% of open points,1,ok,false,2026-09-19,,,direct 0 + transitive 0 of 117 open pts on GA chains
+12,2026-09-19,weekly-spend-burn-ratio,0.9583,"actual / plan, latest week",0.01,ok,false,2026-09-14,,,"week 1: $1,150 actual vs $1,200 plan"
+13,2026-09-20,forecast-slip-days,6.67,days,1,ok,true,2026-09-20,,,117 pts remaining at 1.929 pts/day (plan rate 135 pts / 70 days (under 14 days of history)) -> day 73.7
+13,2026-09-20,cost-vs-envelope,-50,USD over plan-to-date,1,ok,false,2026-09-14,,,"$1,150 actual vs $1,200 plan through week 1 (95.8 % of plan-to-date)"
+13,2026-09-20,scope-change-pct,0,% of baseline points,0.5,ok,false,2026-09-20,,,+0 / -0 pts against a 135-pt baseline
+13,2026-09-20,critical-path-slack-days,3,days,0.5,ok,false,2026-09-20,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+13,2026-09-20,blocked-share-pct,0,% of open points,1,ok,false,2026-09-20,,,direct 0 + transitive 0 of 117 open pts on GA chains
+13,2026-09-20,weekly-spend-burn-ratio,0.9583,"actual / plan, latest week",0.01,ok,false,2026-09-14,,,"week 1: $1,150 actual vs $1,200 plan"
+14,2026-09-21,forecast-slip-days,-6.03,days,1,ok,false,2026-09-21,,,104 pts remaining at 2.214 pts/day (31 pts Done in the last 14 days) -> day 61.0
+14,2026-09-21,cost-vs-envelope,-10,USD over plan-to-date,1,ok,false,2026-09-21,,,"$2,390 actual vs $2,400 plan through week 2 (99.6 % of plan-to-date)"
+14,2026-09-21,scope-change-pct,0,% of baseline points,0.5,ok,false,2026-09-21,,,+0 / -0 pts against a 135-pt baseline
+14,2026-09-21,critical-path-slack-days,3,days,0.5,ok,false,2026-09-21,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+14,2026-09-21,blocked-share-pct,0,% of open points,1,ok,false,2026-09-21,,,direct 0 + transitive 0 of 104 open pts on GA chains
+14,2026-09-21,weekly-spend-burn-ratio,1.0333,"actual / plan, latest week",0.01,ok,false,2026-09-21,,,"week 2: $1,240 actual vs $1,200 plan"
+15,2026-09-22,forecast-slip-days,-5.03,days,1,ok,false,2026-09-22,,,104 pts remaining at 2.214 pts/day (31 pts Done in the last 14 days) -> day 62.0
+15,2026-09-22,cost-vs-envelope,-10,USD over plan-to-date,1,ok,false,2026-09-21,,,"$2,390 actual vs $2,400 plan through week 2 (99.6 % of plan-to-date)"
+15,2026-09-22,scope-change-pct,0,% of baseline points,0.5,ok,false,2026-09-22,,,+0 / -0 pts against a 135-pt baseline
+15,2026-09-22,critical-path-slack-days,3,days,0.5,ok,false,2026-09-22,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+15,2026-09-22,blocked-share-pct,0,% of open points,1,ok,false,2026-09-22,,,direct 0 + transitive 0 of 104 open pts on GA chains
+15,2026-09-22,weekly-spend-burn-ratio,1.0333,"actual / plan, latest week",0.01,ok,false,2026-09-21,,,"week 2: $1,240 actual vs $1,200 plan"
+16,2026-09-23,forecast-slip-days,1.84,days,1,ok,false,2026-09-23,scope-add,,117 pts remaining at 2.214 pts/day (31 pts Done in the last 14 days) -> day 68.8
+16,2026-09-23,cost-vs-envelope,-10,USD over plan-to-date,1,ok,false,2026-09-21,scope-add,,"$2,390 actual vs $2,400 plan through week 2 (99.6 % of plan-to-date)"
+16,2026-09-23,scope-change-pct,9.63,% of baseline points,0.5,ok,false,2026-09-23,scope-add,,+13 / -0 pts against a 135-pt baseline
+16,2026-09-23,critical-path-slack-days,3,days,0.5,ok,false,2026-09-23,scope-add,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+16,2026-09-23,blocked-share-pct,0,% of open points,1,ok,false,2026-09-23,scope-add,,direct 0 + transitive 0 of 117 open pts on GA chains
+16,2026-09-23,weekly-spend-burn-ratio,1.0333,"actual / plan, latest week",0.01,ok,false,2026-09-21,scope-add,,"week 2: $1,240 actual vs $1,200 plan"
+17,2026-09-24,forecast-slip-days,-5.28,days,1,ok,false,2026-09-24,scope-add,,115 pts remaining at 2.571 pts/day (36 pts Done in the last 14 days) -> day 61.7
+17,2026-09-24,cost-vs-envelope,-10,USD over plan-to-date,1,ok,false,2026-09-21,scope-add,,"$2,390 actual vs $2,400 plan through week 2 (99.6 % of plan-to-date)"
+17,2026-09-24,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-09-24,scope-add,,+16 / -0 pts against a 135-pt baseline
+17,2026-09-24,critical-path-slack-days,3,days,0.5,ok,false,2026-09-24,scope-add,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+17,2026-09-24,blocked-share-pct,0,% of open points,1,ok,false,2026-09-24,scope-add,,direct 0 + transitive 0 of 115 open pts on GA chains
+17,2026-09-24,weekly-spend-burn-ratio,1.0333,"actual / plan, latest week",0.01,ok,false,2026-09-21,scope-add,,"week 2: $1,240 actual vs $1,200 plan"
+18,2026-09-25,forecast-slip-days,-4.28,days,1,ok,false,2026-09-25,,,115 pts remaining at 2.571 pts/day (36 pts Done in the last 14 days) -> day 62.7
+18,2026-09-25,cost-vs-envelope,-10,USD over plan-to-date,1,ok,false,2026-09-21,,,"$2,390 actual vs $2,400 plan through week 2 (99.6 % of plan-to-date)"
+18,2026-09-25,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-09-25,,,+16 / -0 pts against a 135-pt baseline
+18,2026-09-25,critical-path-slack-days,3,days,0.5,ok,false,2026-09-25,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+18,2026-09-25,blocked-share-pct,0,% of open points,1,ok,false,2026-09-25,,,direct 0 + transitive 0 of 115 open pts on GA chains
+18,2026-09-25,weekly-spend-burn-ratio,1.0333,"actual / plan, latest week",0.01,ok,false,2026-09-21,,,"week 2: $1,240 actual vs $1,200 plan"
+19,2026-09-26,forecast-slip-days,6.07,days,1,ok,true,2026-09-26,,,112 pts remaining at 2.071 pts/day (29 pts Done in the last 14 days) -> day 73.1
+19,2026-09-26,cost-vs-envelope,-10,USD over plan-to-date,1,ok,false,2026-09-21,,,"$2,390 actual vs $2,400 plan through week 2 (99.6 % of plan-to-date)"
+19,2026-09-26,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-09-26,,,+16 / -0 pts against a 135-pt baseline
+19,2026-09-26,critical-path-slack-days,3,days,0.5,ok,false,2026-09-26,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+19,2026-09-26,blocked-share-pct,0,% of open points,1,ok,false,2026-09-26,,,direct 0 + transitive 0 of 112 open pts on GA chains
+19,2026-09-26,weekly-spend-burn-ratio,1.0333,"actual / plan, latest week",0.01,ok,false,2026-09-21,,,"week 2: $1,240 actual vs $1,200 plan"
+20,2026-09-27,forecast-slip-days,0.69,days,1,ok,false,2026-09-27,,,109 pts remaining at 2.286 pts/day (32 pts Done in the last 14 days) -> day 67.7
+20,2026-09-27,cost-vs-envelope,-10,USD over plan-to-date,1,ok,false,2026-09-21,,,"$2,390 actual vs $2,400 plan through week 2 (99.6 % of plan-to-date)"
+20,2026-09-27,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-09-27,,,+16 / -0 pts against a 135-pt baseline
+20,2026-09-27,critical-path-slack-days,3,days,0.5,ok,false,2026-09-27,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+20,2026-09-27,blocked-share-pct,0,% of open points,1,ok,false,2026-09-27,,,direct 0 + transitive 0 of 109 open pts on GA chains
+20,2026-09-27,weekly-spend-burn-ratio,1.0333,"actual / plan, latest week",0.01,ok,false,2026-09-21,,,"week 2: $1,240 actual vs $1,200 plan"
+21,2026-09-28,forecast-slip-days,1.69,days,1,ok,false,2026-09-28,,,109 pts remaining at 2.286 pts/day (32 pts Done in the last 14 days) -> day 68.7
+21,2026-09-28,cost-vs-envelope,-20,USD over plan-to-date,1,ok,false,2026-09-28,,,"$3,580 actual vs $3,600 plan through week 3 (99.4 % of plan-to-date)"
+21,2026-09-28,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-09-28,,,+16 / -0 pts against a 135-pt baseline
+21,2026-09-28,critical-path-slack-days,3,days,0.5,ok,false,2026-09-28,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+21,2026-09-28,blocked-share-pct,0,% of open points,1,ok,false,2026-09-28,,,direct 0 + transitive 0 of 109 open pts on GA chains
+21,2026-09-28,weekly-spend-burn-ratio,0.9917,"actual / plan, latest week",0.01,ok,false,2026-09-28,,,"week 3: $1,190 actual vs $1,200 plan"
+22,2026-09-29,forecast-slip-days,2.69,days,1,ok,false,2026-09-29,,,109 pts remaining at 2.286 pts/day (32 pts Done in the last 14 days) -> day 69.7
+22,2026-09-29,cost-vs-envelope,-20,USD over plan-to-date,1,ok,false,2026-09-28,,,"$3,580 actual vs $3,600 plan through week 3 (99.4 % of plan-to-date)"
+22,2026-09-29,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-09-29,,,+16 / -0 pts against a 135-pt baseline
+22,2026-09-29,critical-path-slack-days,3,days,0.5,ok,false,2026-09-29,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+22,2026-09-29,blocked-share-pct,0,% of open points,1,ok,false,2026-09-29,,,direct 0 + transitive 0 of 109 open pts on GA chains
+22,2026-09-29,weekly-spend-burn-ratio,0.9917,"actual / plan, latest week",0.01,ok,false,2026-09-28,,,"week 3: $1,190 actual vs $1,200 plan"
+23,2026-09-30,forecast-slip-days,12.52,days,1,ok,true,2026-09-30,,,109 pts remaining at 1.929 pts/day (27 pts Done in the last 14 days) -> day 79.5
+23,2026-09-30,cost-vs-envelope,-20,USD over plan-to-date,1,ok,false,2026-09-28,,,"$3,580 actual vs $3,600 plan through week 3 (99.4 % of plan-to-date)"
+23,2026-09-30,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-09-30,,,+16 / -0 pts against a 135-pt baseline
+23,2026-09-30,critical-path-slack-days,3,days,0.5,ok,false,2026-09-30,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+23,2026-09-30,blocked-share-pct,0,% of open points,1,ok,false,2026-09-30,,,direct 0 + transitive 0 of 109 open pts on GA chains
+23,2026-09-30,weekly-spend-burn-ratio,0.9917,"actual / plan, latest week",0.01,ok,false,2026-09-28,,,"week 3: $1,190 actual vs $1,200 plan"
+24,2026-10-01,forecast-slip-days,13.52,days,1,ok,true,2026-10-01,,,109 pts remaining at 1.929 pts/day (27 pts Done in the last 14 days) -> day 80.5
+24,2026-10-01,cost-vs-envelope,-20,USD over plan-to-date,1,ok,false,2026-09-28,,,"$3,580 actual vs $3,600 plan through week 3 (99.4 % of plan-to-date)"
+24,2026-10-01,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-01,,,+16 / -0 pts against a 135-pt baseline
+24,2026-10-01,critical-path-slack-days,3,days,0.5,ok,false,2026-10-01,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+24,2026-10-01,blocked-share-pct,0,% of open points,1,ok,false,2026-10-01,,,direct 0 + transitive 0 of 109 open pts on GA chains
+24,2026-10-01,weekly-spend-burn-ratio,0.9917,"actual / plan, latest week",0.01,ok,false,2026-09-28,,,"week 3: $1,190 actual vs $1,200 plan"
+25,2026-10-02,forecast-slip-days,14.52,days,1,ok,true,2026-10-02,,,109 pts remaining at 1.929 pts/day (27 pts Done in the last 14 days) -> day 81.5
+25,2026-10-02,cost-vs-envelope,-20,USD over plan-to-date,1,ok,false,2026-09-28,,,"$3,580 actual vs $3,600 plan through week 3 (99.4 % of plan-to-date)"
+25,2026-10-02,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-02,,,+16 / -0 pts against a 135-pt baseline
+25,2026-10-02,critical-path-slack-days,3,days,0.5,ok,false,2026-10-02,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+25,2026-10-02,blocked-share-pct,0,% of open points,1,ok,false,2026-10-02,,,direct 0 + transitive 0 of 109 open pts on GA chains
+25,2026-10-02,weekly-spend-burn-ratio,0.9917,"actual / plan, latest week",0.01,ok,false,2026-09-28,,,"week 3: $1,190 actual vs $1,200 plan"
+26,2026-10-03,forecast-slip-days,3.19,days,1,ok,false,2026-10-03,,,101 pts remaining at 2.286 pts/day (32 pts Done in the last 14 days) -> day 70.2
+26,2026-10-03,cost-vs-envelope,-20,USD over plan-to-date,1,ok,false,2026-09-28,,,"$3,580 actual vs $3,600 plan through week 3 (99.4 % of plan-to-date)"
+26,2026-10-03,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-03,,,+16 / -0 pts against a 135-pt baseline
+26,2026-10-03,critical-path-slack-days,3,days,0.5,ok,false,2026-10-03,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+26,2026-10-03,blocked-share-pct,0,% of open points,1,ok,false,2026-10-03,,,direct 0 + transitive 0 of 101 open pts on GA chains
+26,2026-10-03,weekly-spend-burn-ratio,0.9917,"actual / plan, latest week",0.01,ok,false,2026-09-28,,,"week 3: $1,190 actual vs $1,200 plan"
+27,2026-10-04,forecast-slip-days,4.19,days,1,ok,false,2026-10-04,,,101 pts remaining at 2.286 pts/day (32 pts Done in the last 14 days) -> day 71.2
+27,2026-10-04,cost-vs-envelope,-20,USD over plan-to-date,1,ok,false,2026-09-28,,,"$3,580 actual vs $3,600 plan through week 3 (99.4 % of plan-to-date)"
+27,2026-10-04,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-04,,,+16 / -0 pts against a 135-pt baseline
+27,2026-10-04,critical-path-slack-days,3,days,0.5,ok,false,2026-10-04,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+27,2026-10-04,blocked-share-pct,0,% of open points,1,ok,false,2026-10-04,,,direct 0 + transitive 0 of 101 open pts on GA chains
+27,2026-10-04,weekly-spend-burn-ratio,0.9917,"actual / plan, latest week",0.01,ok,false,2026-09-28,,,"week 3: $1,190 actual vs $1,200 plan"
+28,2026-10-05,forecast-slip-days,35.42,days,1,ok,true,2026-10-05,,,101 pts remaining at 1.357 pts/day (19 pts Done in the last 14 days) -> day 102.4
+28,2026-10-05,cost-vs-envelope,90,USD over plan-to-date,1,ok,false,2026-10-05,,,"$4,890 actual vs $4,800 plan through week 4 (101.9 % of plan-to-date)"
+28,2026-10-05,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-05,,,+16 / -0 pts against a 135-pt baseline
+28,2026-10-05,critical-path-slack-days,3,days,0.5,ok,false,2026-10-05,,,s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains
+28,2026-10-05,blocked-share-pct,16.83,% of open points,1,ok,false,2026-10-05,,,direct 0 + transitive 17 of 101 open pts on GA chains
+28,2026-10-05,weekly-spend-burn-ratio,1.0917,"actual / plan, latest week",0.01,ok,false,2026-10-05,,,"week 4: $1,310 actual vs $1,200 plan"
+29,2026-10-06,forecast-slip-days,5.93,days,1,ok,true,2026-10-06,upstream-slip,,91 pts remaining at 2.071 pts/day (29 pts Done in the last 14 days) -> day 72.9
+29,2026-10-06,cost-vs-envelope,90,USD over plan-to-date,1,ok,false,2026-10-05,upstream-slip,,"$4,890 actual vs $4,800 plan through week 4 (101.9 % of plan-to-date)"
+29,2026-10-06,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-06,upstream-slip,,+16 / -0 pts against a 135-pt baseline
+29,2026-10-06,critical-path-slack-days,-11,days,0.5,ok,true,2026-10-06,upstream-slip,,t-context due -> s-latency start; 6 open link(s) on GA chains
+29,2026-10-06,blocked-share-pct,0,% of open points,1,ok,false,2026-10-06,upstream-slip,,direct 0 + transitive 0 of 91 open pts on GA chains
+29,2026-10-06,weekly-spend-burn-ratio,1.0917,"actual / plan, latest week",0.01,ok,false,2026-10-05,upstream-slip,,"week 4: $1,310 actual vs $1,200 plan"
+30,2026-10-07,forecast-slip-days,6.93,days,1,ok,true,2026-10-07,upstream-slip,,91 pts remaining at 2.071 pts/day (29 pts Done in the last 14 days) -> day 73.9
+30,2026-10-07,cost-vs-envelope,90,USD over plan-to-date,1,ok,false,2026-10-05,upstream-slip,,"$4,890 actual vs $4,800 plan through week 4 (101.9 % of plan-to-date)"
+30,2026-10-07,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-07,upstream-slip,,+16 / -0 pts against a 135-pt baseline
+30,2026-10-07,critical-path-slack-days,-11,days,0.5,ok,true,2026-10-07,upstream-slip,,t-context due -> s-latency start; 6 open link(s) on GA chains
+30,2026-10-07,blocked-share-pct,18.68,% of open points,1,ok,false,2026-10-07,upstream-slip,,direct 5 + transitive 12 of 91 open pts on GA chains
+30,2026-10-07,weekly-spend-burn-ratio,1.0917,"actual / plan, latest week",0.01,ok,false,2026-10-05,upstream-slip,,"week 4: $1,310 actual vs $1,200 plan"
+31,2026-10-08,forecast-slip-days,17.08,days,1,ok,true,2026-10-08,upstream-slip,,91 pts remaining at 1.714 pts/day (24 pts Done in the last 14 days) -> day 84.1
+31,2026-10-08,cost-vs-envelope,90,USD over plan-to-date,1,ok,false,2026-10-05,upstream-slip,,"$4,890 actual vs $4,800 plan through week 4 (101.9 % of plan-to-date)"
+31,2026-10-08,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-08,upstream-slip,,+16 / -0 pts against a 135-pt baseline
+31,2026-10-08,critical-path-slack-days,-11,days,0.5,ok,true,2026-10-08,upstream-slip,,t-context due -> s-latency start; 6 open link(s) on GA chains
+31,2026-10-08,blocked-share-pct,18.68,% of open points,1,ok,false,2026-10-08,upstream-slip,,direct 5 + transitive 12 of 91 open pts on GA chains
+31,2026-10-08,weekly-spend-burn-ratio,1.0917,"actual / plan, latest week",0.01,ok,false,2026-10-05,upstream-slip,,"week 4: $1,310 actual vs $1,200 plan"
+32,2026-10-09,forecast-slip-days,18.08,days,1,ok,true,2026-10-09,upstream-slip,,91 pts remaining at 1.714 pts/day (24 pts Done in the last 14 days) -> day 85.1
+32,2026-10-09,cost-vs-envelope,90,USD over plan-to-date,1,ok,false,2026-10-05,upstream-slip,,"$4,890 actual vs $4,800 plan through week 4 (101.9 % of plan-to-date)"
+32,2026-10-09,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-09,upstream-slip,,+16 / -0 pts against a 135-pt baseline
+32,2026-10-09,critical-path-slack-days,-11,days,0.5,ok,true,2026-10-09,upstream-slip,,t-context due -> s-latency start; 6 open link(s) on GA chains
+32,2026-10-09,blocked-share-pct,18.68,% of open points,1,ok,false,2026-10-09,upstream-slip,,direct 5 + transitive 12 of 91 open pts on GA chains
+32,2026-10-09,weekly-spend-burn-ratio,1.0917,"actual / plan, latest week",0.01,ok,false,2026-10-05,upstream-slip,,"week 4: $1,310 actual vs $1,200 plan"
+33,2026-10-10,forecast-slip-days,17.33,days,1,ok,true,2026-10-10,upstream-slip,,88 pts remaining at 1.714 pts/day (24 pts Done in the last 14 days) -> day 84.3
+33,2026-10-10,cost-vs-envelope,90,USD over plan-to-date,1,ok,false,2026-10-05,upstream-slip,,"$4,890 actual vs $4,800 plan through week 4 (101.9 % of plan-to-date)"
+33,2026-10-10,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-10,upstream-slip,,+16 / -0 pts against a 135-pt baseline
+33,2026-10-10,critical-path-slack-days,-11,days,0.5,ok,true,2026-10-10,upstream-slip,,t-context due -> s-latency start; 6 open link(s) on GA chains
+33,2026-10-10,blocked-share-pct,19.32,% of open points,1,ok,false,2026-10-10,upstream-slip,,direct 5 + transitive 12 of 88 open pts on GA chains
+33,2026-10-10,weekly-spend-burn-ratio,1.0917,"actual / plan, latest week",0.01,ok,false,2026-10-05,upstream-slip,,"week 4: $1,310 actual vs $1,200 plan"
+34,2026-10-11,forecast-slip-days,25.67,days,1,ok,true,2026-10-11,upstream-slip,,88 pts remaining at 1.500 pts/day (21 pts Done in the last 14 days) -> day 92.7
+34,2026-10-11,cost-vs-envelope,90,USD over plan-to-date,1,ok,false,2026-10-05,upstream-slip,,"$4,890 actual vs $4,800 plan through week 4 (101.9 % of plan-to-date)"
+34,2026-10-11,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-11,upstream-slip,,+16 / -0 pts against a 135-pt baseline
+34,2026-10-11,critical-path-slack-days,-11,days,0.5,ok,true,2026-10-11,upstream-slip,,t-context due -> s-latency start; 6 open link(s) on GA chains
+34,2026-10-11,blocked-share-pct,19.32,% of open points,1,ok,false,2026-10-11,upstream-slip,,direct 5 + transitive 12 of 88 open pts on GA chains
+34,2026-10-11,weekly-spend-burn-ratio,1.0917,"actual / plan, latest week",0.01,ok,false,2026-10-05,upstream-slip,,"week 4: $1,310 actual vs $1,200 plan"
+35,2026-10-12,forecast-slip-days,12.69,days,1,ok,true,2026-10-12,upstream-slip,,83 pts remaining at 1.857 pts/day (26 pts Done in the last 14 days) -> day 79.7
+35,2026-10-12,cost-vs-envelope,170,USD over plan-to-date,1,ok,false,2026-10-12,upstream-slip,,"$6,170 actual vs $6,000 plan through week 5 (102.8 % of plan-to-date)"
+35,2026-10-12,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-12,upstream-slip,,+16 / -0 pts against a 135-pt baseline
+35,2026-10-12,critical-path-slack-days,-11,days,0.5,ok,true,2026-10-12,upstream-slip,,t-context due -> s-latency start; 6 open link(s) on GA chains
+35,2026-10-12,blocked-share-pct,20.48,% of open points,1,ok,false,2026-10-12,upstream-slip,,direct 5 + transitive 12 of 83 open pts on GA chains
+35,2026-10-12,weekly-spend-burn-ratio,1.0667,"actual / plan, latest week",0.01,ok,false,2026-10-12,upstream-slip,,"week 5: $1,280 actual vs $1,200 plan"
+36,2026-10-13,forecast-slip-days,4.23,days,1,ok,false,2026-10-13,upstream-slip,,78 pts remaining at 2.214 pts/day (31 pts Done in the last 14 days) -> day 71.2
+36,2026-10-13,cost-vs-envelope,170,USD over plan-to-date,1,ok,false,2026-10-12,upstream-slip,,"$6,170 actual vs $6,000 plan through week 5 (102.8 % of plan-to-date)"
+36,2026-10-13,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-13,upstream-slip,,+16 / -0 pts against a 135-pt baseline
+36,2026-10-13,critical-path-slack-days,-11,days,0.5,ok,true,2026-10-13,upstream-slip,,t-context due -> s-latency start; 6 open link(s) on GA chains
+36,2026-10-13,blocked-share-pct,21.79,% of open points,1,ok,false,2026-10-13,upstream-slip,,direct 5 + transitive 12 of 78 open pts on GA chains
+36,2026-10-13,weekly-spend-burn-ratio,1.0667,"actual / plan, latest week",0.01,ok,false,2026-10-12,upstream-slip,,"week 5: $1,280 actual vs $1,200 plan"
+37,2026-10-14,forecast-slip-days,-1.61,days,1,ok,false,2026-10-14,upstream-slip,,73 pts remaining at 2.571 pts/day (36 pts Done in the last 14 days) -> day 65.4
+37,2026-10-14,cost-vs-envelope,170,USD over plan-to-date,1,ok,false,2026-10-12,upstream-slip,,"$6,170 actual vs $6,000 plan through week 5 (102.8 % of plan-to-date)"
+37,2026-10-14,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-14,upstream-slip,,+16 / -0 pts against a 135-pt baseline
+37,2026-10-14,critical-path-slack-days,-11,days,0.5,ok,true,2026-10-14,upstream-slip,,t-context due -> s-latency start; 6 open link(s) on GA chains
+37,2026-10-14,blocked-share-pct,23.29,% of open points,1,ok,false,2026-10-14,upstream-slip,,direct 5 + transitive 12 of 73 open pts on GA chains
+37,2026-10-14,weekly-spend-burn-ratio,1.0667,"actual / plan, latest week",0.01,ok,false,2026-10-12,upstream-slip,,"week 5: $1,280 actual vs $1,200 plan"
+38,2026-10-15,forecast-slip-days,-0.61,days,1,ok,false,2026-10-15,upstream-slip,,73 pts remaining at 2.571 pts/day (36 pts Done in the last 14 days) -> day 66.4
+38,2026-10-15,cost-vs-envelope,170,USD over plan-to-date,1,ok,false,2026-10-12,upstream-slip,,"$6,170 actual vs $6,000 plan through week 5 (102.8 % of plan-to-date)"
+38,2026-10-15,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-15,upstream-slip,,+16 / -0 pts against a 135-pt baseline
+38,2026-10-15,critical-path-slack-days,-11,days,0.5,ok,true,2026-10-15,upstream-slip,,t-context due -> s-latency start; 6 open link(s) on GA chains
+38,2026-10-15,blocked-share-pct,23.29,% of open points,1,ok,false,2026-10-15,upstream-slip,,direct 5 + transitive 12 of 73 open pts on GA chains
+38,2026-10-15,weekly-spend-burn-ratio,1.0667,"actual / plan, latest week",0.01,ok,false,2026-10-12,upstream-slip,,"week 5: $1,280 actual vs $1,200 plan"
+39,2026-10-16,forecast-slip-days,-4.78,days,1,ok,false,2026-10-16,upstream-slip,,68 pts remaining at 2.929 pts/day (41 pts Done in the last 14 days) -> day 62.2
+39,2026-10-16,cost-vs-envelope,170,USD over plan-to-date,1,ok,false,2026-10-12,upstream-slip,,"$6,170 actual vs $6,000 plan through week 5 (102.8 % of plan-to-date)"
+39,2026-10-16,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-16,upstream-slip,,+16 / -0 pts against a 135-pt baseline
+39,2026-10-16,critical-path-slack-days,-11,days,0.5,ok,true,2026-10-16,upstream-slip,,t-context due -> s-latency start; 6 open link(s) on GA chains
+39,2026-10-16,blocked-share-pct,25,% of open points,1,ok,false,2026-10-16,upstream-slip,,direct 5 + transitive 12 of 68 open pts on GA chains
+39,2026-10-16,weekly-spend-burn-ratio,1.0667,"actual / plan, latest week",0.01,ok,false,2026-10-12,upstream-slip,,"week 5: $1,280 actual vs $1,200 plan"
+40,2026-10-17,forecast-slip-days,-3.79,days,1,ok,false,2026-10-17,upstream-slip,,63 pts remaining at 2.714 pts/day (38 pts Done in the last 14 days) -> day 63.2
+40,2026-10-17,cost-vs-envelope,170,USD over plan-to-date,1,ok,false,2026-10-12,upstream-slip,,"$6,170 actual vs $6,000 plan through week 5 (102.8 % of plan-to-date)"
+40,2026-10-17,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-17,upstream-slip,,+16 / -0 pts against a 135-pt baseline
+40,2026-10-17,critical-path-slack-days,-11,days,0.5,ok,true,2026-10-17,upstream-slip,,t-context due -> s-latency start; 6 open link(s) on GA chains
+40,2026-10-17,blocked-share-pct,26.98,% of open points,1,ok,false,2026-10-17,upstream-slip,,direct 5 + transitive 12 of 63 open pts on GA chains
+40,2026-10-17,weekly-spend-burn-ratio,1.0667,"actual / plan, latest week",0.01,ok,false,2026-10-12,upstream-slip,,"week 5: $1,280 actual vs $1,200 plan"
+41,2026-10-18,forecast-slip-days,-9.26,days,1,ok,false,2026-10-18,upstream-slip,,55 pts remaining at 3.286 pts/day (46 pts Done in the last 14 days) -> day 57.7
+41,2026-10-18,cost-vs-envelope,170,USD over plan-to-date,1,ok,false,2026-10-12,upstream-slip,,"$6,170 actual vs $6,000 plan through week 5 (102.8 % of plan-to-date)"
+41,2026-10-18,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-18,upstream-slip,,+16 / -0 pts against a 135-pt baseline
+41,2026-10-18,critical-path-slack-days,3,days,0.5,ok,false,2026-10-18,upstream-slip,,s-dash-checkout due -> a-checkout-alerts start; 5 open link(s) on GA chains
+41,2026-10-18,blocked-share-pct,30.91,% of open points,1,ok,false,2026-10-18,upstream-slip,,direct 5 + transitive 12 of 55 open pts on GA chains
+41,2026-10-18,weekly-spend-burn-ratio,1.0667,"actual / plan, latest week",0.01,ok,false,2026-10-12,upstream-slip,,"week 5: $1,280 actual vs $1,200 plan"
+42,2026-10-19,forecast-slip-days,-8.26,days,1,ok,false,2026-10-19,upstream-slip cost-spike,,55 pts remaining at 3.286 pts/day (46 pts Done in the last 14 days) -> day 58.7
+42,2026-10-19,cost-vs-envelope,1420,USD over plan-to-date,1,ok,false,2026-10-19,upstream-slip cost-spike,,"$8,620 actual vs $7,200 plan through week 6 (119.7 % of plan-to-date)"
+42,2026-10-19,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-19,upstream-slip cost-spike,,+16 / -0 pts against a 135-pt baseline
+42,2026-10-19,critical-path-slack-days,3,days,0.5,ok,false,2026-10-19,upstream-slip cost-spike,,s-dash-checkout due -> a-checkout-alerts start; 5 open link(s) on GA chains
+42,2026-10-19,blocked-share-pct,21.82,% of open points,1,ok,false,2026-10-19,upstream-slip cost-spike,,direct 0 + transitive 12 of 55 open pts on GA chains
+42,2026-10-19,weekly-spend-burn-ratio,2.0417,"actual / plan, latest week",0.01,ok,true,2026-10-19,upstream-slip cost-spike,,"week 6: $2,450 actual vs $1,200 plan"
+43,2026-10-20,forecast-slip-days,-8.26,days,1,broken,false,2026-10-19,upstream-slip cost-spike source-break,"source broken since day 43: 34 issues under the program label on day 42, 0 today; carrying day 42",55 pts remaining at 3.286 pts/day (46 pts Done in the last 14 days) -> day 58.7
+43,2026-10-20,cost-vs-envelope,1420,USD over plan-to-date,1,ok,false,2026-10-19,upstream-slip cost-spike source-break,,"$8,620 actual vs $7,200 plan through week 6 (119.7 % of plan-to-date)"
+43,2026-10-20,scope-change-pct,11.85,% of baseline points,0.5,broken,true,2026-10-19,upstream-slip cost-spike source-break,"source broken since day 43: 34 issues under the program label on day 42, 0 today; carrying day 42",+16 / -0 pts against a 135-pt baseline
+43,2026-10-20,critical-path-slack-days,3,days,0.5,broken,false,2026-10-19,upstream-slip cost-spike source-break,"source broken since day 43: 34 issues under the program label on day 42, 0 today; carrying day 42",s-dash-checkout due -> a-checkout-alerts start; 5 open link(s) on GA chains
+43,2026-10-20,blocked-share-pct,21.82,% of open points,1,broken,false,2026-10-19,upstream-slip cost-spike source-break,"source broken since day 43: 34 issues under the program label on day 42, 0 today; carrying day 42",direct 0 + transitive 12 of 55 open pts on GA chains
+43,2026-10-20,weekly-spend-burn-ratio,2.0417,"actual / plan, latest week",0.01,ok,true,2026-10-19,upstream-slip cost-spike source-break,,"week 6: $2,450 actual vs $1,200 plan"
+44,2026-10-21,forecast-slip-days,-8.26,days,1,broken,false,2026-10-19,upstream-slip cost-spike source-break,"source broken since day 43: 34 issues under the program label on day 42, 0 today; carrying day 42",55 pts remaining at 3.286 pts/day (46 pts Done in the last 14 days) -> day 58.7
+44,2026-10-21,cost-vs-envelope,1420,USD over plan-to-date,1,ok,false,2026-10-19,upstream-slip cost-spike source-break,,"$8,620 actual vs $7,200 plan through week 6 (119.7 % of plan-to-date)"
+44,2026-10-21,scope-change-pct,11.85,% of baseline points,0.5,broken,true,2026-10-19,upstream-slip cost-spike source-break,"source broken since day 43: 34 issues under the program label on day 42, 0 today; carrying day 42",+16 / -0 pts against a 135-pt baseline
+44,2026-10-21,critical-path-slack-days,3,days,0.5,broken,false,2026-10-19,upstream-slip cost-spike source-break,"source broken since day 43: 34 issues under the program label on day 42, 0 today; carrying day 42",s-dash-checkout due -> a-checkout-alerts start; 5 open link(s) on GA chains
+44,2026-10-21,blocked-share-pct,21.82,% of open points,1,broken,false,2026-10-19,upstream-slip cost-spike source-break,"source broken since day 43: 34 issues under the program label on day 42, 0 today; carrying day 42",direct 0 + transitive 12 of 55 open pts on GA chains
+44,2026-10-21,weekly-spend-burn-ratio,2.0417,"actual / plan, latest week",0.01,ok,true,2026-10-19,upstream-slip cost-spike source-break,,"week 6: $2,450 actual vs $1,200 plan"
+45,2026-10-22,forecast-slip-days,-8.26,days,1,broken,false,2026-10-19,upstream-slip cost-spike source-break,"source broken since day 43: 34 issues under the program label on day 42, 0 today; carrying day 42",55 pts remaining at 3.286 pts/day (46 pts Done in the last 14 days) -> day 58.7
+45,2026-10-22,cost-vs-envelope,1420,USD over plan-to-date,1,ok,false,2026-10-19,upstream-slip cost-spike source-break,,"$8,620 actual vs $7,200 plan through week 6 (119.7 % of plan-to-date)"
+45,2026-10-22,scope-change-pct,11.85,% of baseline points,0.5,broken,true,2026-10-19,upstream-slip cost-spike source-break,"source broken since day 43: 34 issues under the program label on day 42, 0 today; carrying day 42",+16 / -0 pts against a 135-pt baseline
+45,2026-10-22,critical-path-slack-days,3,days,0.5,broken,false,2026-10-19,upstream-slip cost-spike source-break,"source broken since day 43: 34 issues under the program label on day 42, 0 today; carrying day 42",s-dash-checkout due -> a-checkout-alerts start; 5 open link(s) on GA chains
+45,2026-10-22,blocked-share-pct,21.82,% of open points,1,broken,false,2026-10-19,upstream-slip cost-spike source-break,"source broken since day 43: 34 issues under the program label on day 42, 0 today; carrying day 42",direct 0 + transitive 12 of 55 open pts on GA chains
+45,2026-10-22,weekly-spend-burn-ratio,2.0417,"actual / plan, latest week",0.01,ok,true,2026-10-19,upstream-slip cost-spike source-break,,"week 6: $2,450 actual vs $1,200 plan"
+46,2026-10-23,forecast-slip-days,-8.26,days,1,broken,false,2026-10-19,upstream-slip cost-spike source-break,"source broken since day 43: 34 issues under the program label on day 42, 0 today; carrying day 42",55 pts remaining at 3.286 pts/day (46 pts Done in the last 14 days) -> day 58.7
+46,2026-10-23,cost-vs-envelope,1420,USD over plan-to-date,1,ok,false,2026-10-19,upstream-slip cost-spike source-break,,"$8,620 actual vs $7,200 plan through week 6 (119.7 % of plan-to-date)"
+46,2026-10-23,scope-change-pct,11.85,% of baseline points,0.5,broken,true,2026-10-19,upstream-slip cost-spike source-break,"source broken since day 43: 34 issues under the program label on day 42, 0 today; carrying day 42",+16 / -0 pts against a 135-pt baseline
+46,2026-10-23,critical-path-slack-days,3,days,0.5,broken,false,2026-10-19,upstream-slip cost-spike source-break,"source broken since day 43: 34 issues under the program label on day 42, 0 today; carrying day 42",s-dash-checkout due -> a-checkout-alerts start; 5 open link(s) on GA chains
+46,2026-10-23,blocked-share-pct,21.82,% of open points,1,broken,false,2026-10-19,upstream-slip cost-spike source-break,"source broken since day 43: 34 issues under the program label on day 42, 0 today; carrying day 42",direct 0 + transitive 12 of 55 open pts on GA chains
+46,2026-10-23,weekly-spend-burn-ratio,2.0417,"actual / plan, latest week",0.01,ok,true,2026-10-19,upstream-slip cost-spike source-break,,"week 6: $2,450 actual vs $1,200 plan"
+47,2026-10-24,forecast-slip-days,-8.26,days,1,broken,false,2026-10-19,upstream-slip cost-spike source-break,"source broken since day 43: 34 issues under the program label on day 42, 0 today; carrying day 42",55 pts remaining at 3.286 pts/day (46 pts Done in the last 14 days) -> day 58.7
+47,2026-10-24,cost-vs-envelope,1420,USD over plan-to-date,1,ok,false,2026-10-19,upstream-slip cost-spike source-break,,"$8,620 actual vs $7,200 plan through week 6 (119.7 % of plan-to-date)"
+47,2026-10-24,scope-change-pct,11.85,% of baseline points,0.5,broken,true,2026-10-19,upstream-slip cost-spike source-break,"source broken since day 43: 34 issues under the program label on day 42, 0 today; carrying day 42",+16 / -0 pts against a 135-pt baseline
+47,2026-10-24,critical-path-slack-days,3,days,0.5,broken,false,2026-10-19,upstream-slip cost-spike source-break,"source broken since day 43: 34 issues under the program label on day 42, 0 today; carrying day 42",s-dash-checkout due -> a-checkout-alerts start; 5 open link(s) on GA chains
+47,2026-10-24,blocked-share-pct,21.82,% of open points,1,broken,false,2026-10-19,upstream-slip cost-spike source-break,"source broken since day 43: 34 issues under the program label on day 42, 0 today; carrying day 42",direct 0 + transitive 12 of 55 open pts on GA chains
+47,2026-10-24,weekly-spend-burn-ratio,2.0417,"actual / plan, latest week",0.01,ok,true,2026-10-19,upstream-slip cost-spike source-break,,"week 6: $2,450 actual vs $1,200 plan"
+48,2026-10-25,forecast-slip-days,-8.84,days,1,ok,false,2026-10-25,upstream-slip cost-spike,,37 pts remaining at 3.643 pts/day (51 pts Done in the last 14 days) -> day 58.2
+48,2026-10-25,cost-vs-envelope,1420,USD over plan-to-date,1,ok,false,2026-10-19,upstream-slip cost-spike,,"$8,620 actual vs $7,200 plan through week 6 (119.7 % of plan-to-date)"
+48,2026-10-25,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-25,upstream-slip cost-spike,,+16 / -0 pts against a 135-pt baseline
+48,2026-10-25,critical-path-slack-days,3,days,0.5,ok,false,2026-10-25,upstream-slip cost-spike,,s-dash-checkout due -> a-checkout-alerts start; 4 open link(s) on GA chains
+48,2026-10-25,blocked-share-pct,18.92,% of open points,1,ok,false,2026-10-25,upstream-slip cost-spike,,direct 0 + transitive 7 of 37 open pts on GA chains
+48,2026-10-25,weekly-spend-burn-ratio,2.0417,"actual / plan, latest week",0.01,ok,true,2026-10-19,upstream-slip cost-spike,,"week 6: $2,450 actual vs $1,200 plan"
+49,2026-10-26,forecast-slip-days,-9.22,days,1,ok,false,2026-10-26,upstream-slip cost-spike,,32 pts remaining at 3.643 pts/day (51 pts Done in the last 14 days) -> day 57.8
+49,2026-10-26,cost-vs-envelope,1610,USD over plan-to-date,1,ok,true,2026-10-26,upstream-slip cost-spike,,"$10,010 actual vs $8,400 plan through week 7 (119.2 % of plan-to-date)"
+49,2026-10-26,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-26,upstream-slip cost-spike,,+16 / -0 pts against a 135-pt baseline
+49,2026-10-26,critical-path-slack-days,3,days,0.5,ok,false,2026-10-26,upstream-slip cost-spike,,s-dash-checkout due -> a-checkout-alerts start; 4 open link(s) on GA chains
+49,2026-10-26,blocked-share-pct,21.88,% of open points,1,ok,false,2026-10-26,upstream-slip cost-spike,,direct 0 + transitive 7 of 32 open pts on GA chains
+49,2026-10-26,weekly-spend-burn-ratio,1.1583,"actual / plan, latest week",0.01,ok,false,2026-10-26,upstream-slip cost-spike,,"week 7: $1,390 actual vs $1,200 plan"
+50,2026-10-27,forecast-slip-days,-7.26,days,1,ok,false,2026-10-27,upstream-slip cost-spike,,32 pts remaining at 3.286 pts/day (46 pts Done in the last 14 days) -> day 59.7
+50,2026-10-27,cost-vs-envelope,1610,USD over plan-to-date,1,ok,true,2026-10-26,upstream-slip cost-spike,,"$10,010 actual vs $8,400 plan through week 7 (119.2 % of plan-to-date)"
+50,2026-10-27,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-27,upstream-slip cost-spike,,+16 / -0 pts against a 135-pt baseline
+50,2026-10-27,critical-path-slack-days,3,days,0.5,ok,false,2026-10-27,upstream-slip cost-spike,,s-dash-checkout due -> a-checkout-alerts start; 4 open link(s) on GA chains
+50,2026-10-27,blocked-share-pct,21.88,% of open points,1,ok,false,2026-10-27,upstream-slip cost-spike,,direct 0 + transitive 7 of 32 open pts on GA chains
+50,2026-10-27,weekly-spend-burn-ratio,1.1583,"actual / plan, latest week",0.01,ok,false,2026-10-26,upstream-slip cost-spike,,"week 7: $1,390 actual vs $1,200 plan"
+51,2026-10-28,forecast-slip-days,-5.07,days,1,ok,false,2026-10-28,upstream-slip cost-spike,,32 pts remaining at 2.929 pts/day (41 pts Done in the last 14 days) -> day 61.9
+51,2026-10-28,cost-vs-envelope,1610,USD over plan-to-date,1,ok,true,2026-10-26,upstream-slip cost-spike,,"$10,010 actual vs $8,400 plan through week 7 (119.2 % of plan-to-date)"
+51,2026-10-28,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-28,upstream-slip cost-spike,,+16 / -0 pts against a 135-pt baseline
+51,2026-10-28,critical-path-slack-days,3,days,0.5,ok,false,2026-10-28,upstream-slip cost-spike,,s-dash-checkout due -> a-checkout-alerts start; 4 open link(s) on GA chains
+51,2026-10-28,blocked-share-pct,21.88,% of open points,1,ok,false,2026-10-28,upstream-slip cost-spike,,direct 0 + transitive 7 of 32 open pts on GA chains
+51,2026-10-28,weekly-spend-burn-ratio,1.1583,"actual / plan, latest week",0.01,ok,false,2026-10-26,upstream-slip cost-spike,,"week 7: $1,390 actual vs $1,200 plan"
+52,2026-10-29,forecast-slip-days,-5.77,days,1,ok,false,2026-10-29,upstream-slip cost-spike,,29 pts remaining at 3.143 pts/day (44 pts Done in the last 14 days) -> day 61.2
+52,2026-10-29,cost-vs-envelope,1610,USD over plan-to-date,1,ok,true,2026-10-26,upstream-slip cost-spike,,"$10,010 actual vs $8,400 plan through week 7 (119.2 % of plan-to-date)"
+52,2026-10-29,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-29,upstream-slip cost-spike,,+16 / -0 pts against a 135-pt baseline
+52,2026-10-29,critical-path-slack-days,3,days,0.5,ok,false,2026-10-29,upstream-slip cost-spike,,s-dash-checkout due -> a-checkout-alerts start; 4 open link(s) on GA chains
+52,2026-10-29,blocked-share-pct,24.14,% of open points,1,ok,false,2026-10-29,upstream-slip cost-spike,,direct 0 + transitive 7 of 29 open pts on GA chains
+52,2026-10-29,weekly-spend-burn-ratio,1.1583,"actual / plan, latest week",0.01,ok,false,2026-10-26,upstream-slip cost-spike,,"week 7: $1,390 actual vs $1,200 plan"
+53,2026-10-30,forecast-slip-days,-8.57,days,1,ok,false,2026-10-30,upstream-slip cost-spike,,19 pts remaining at 3.500 pts/day (49 pts Done in the last 14 days) -> day 58.4
+53,2026-10-30,cost-vs-envelope,1610,USD over plan-to-date,1,ok,true,2026-10-26,upstream-slip cost-spike,,"$10,010 actual vs $8,400 plan through week 7 (119.2 % of plan-to-date)"
+53,2026-10-30,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-30,upstream-slip cost-spike,,+16 / -0 pts against a 135-pt baseline
+53,2026-10-30,critical-path-slack-days,6,days,0.5,ok,false,2026-10-30,upstream-slip cost-spike,,a-runbooks due -> p-ga start; 2 open link(s) on GA chains
+53,2026-10-30,blocked-share-pct,0,% of open points,1,ok,false,2026-10-30,upstream-slip cost-spike,,direct 0 + transitive 0 of 19 open pts on GA chains
+53,2026-10-30,weekly-spend-burn-ratio,1.1583,"actual / plan, latest week",0.01,ok,false,2026-10-26,upstream-slip cost-spike,,"week 7: $1,390 actual vs $1,200 plan"
+54,2026-10-31,forecast-slip-days,-6.95,days,1,ok,false,2026-10-31,upstream-slip cost-spike,,19 pts remaining at 3.143 pts/day (44 pts Done in the last 14 days) -> day 60.0
+54,2026-10-31,cost-vs-envelope,1610,USD over plan-to-date,1,ok,true,2026-10-26,upstream-slip cost-spike,,"$10,010 actual vs $8,400 plan through week 7 (119.2 % of plan-to-date)"
+54,2026-10-31,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-10-31,upstream-slip cost-spike,,+16 / -0 pts against a 135-pt baseline
+54,2026-10-31,critical-path-slack-days,6,days,0.5,ok,false,2026-10-31,upstream-slip cost-spike,,a-runbooks due -> p-ga start; 2 open link(s) on GA chains
+54,2026-10-31,blocked-share-pct,0,% of open points,1,ok,false,2026-10-31,upstream-slip cost-spike,,direct 0 + transitive 0 of 19 open pts on GA chains
+54,2026-10-31,weekly-spend-burn-ratio,1.1583,"actual / plan, latest week",0.01,ok,false,2026-10-26,upstream-slip cost-spike,,"week 7: $1,390 actual vs $1,200 plan"
+55,2026-11-01,forecast-slip-days,-4.61,days,1,ok,false,2026-11-01,upstream-slip cost-spike,,19 pts remaining at 2.571 pts/day (36 pts Done in the last 14 days) -> day 62.4
+55,2026-11-01,cost-vs-envelope,1610,USD over plan-to-date,1,ok,true,2026-10-26,upstream-slip cost-spike,,"$10,010 actual vs $8,400 plan through week 7 (119.2 % of plan-to-date)"
+55,2026-11-01,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-11-01,upstream-slip cost-spike,,+16 / -0 pts against a 135-pt baseline
+55,2026-11-01,critical-path-slack-days,6,days,0.5,ok,false,2026-11-01,upstream-slip cost-spike,,a-runbooks due -> p-ga start; 2 open link(s) on GA chains
+55,2026-11-01,blocked-share-pct,0,% of open points,1,ok,false,2026-11-01,upstream-slip cost-spike,,direct 0 + transitive 0 of 19 open pts on GA chains
+55,2026-11-01,weekly-spend-burn-ratio,1.1583,"actual / plan, latest week",0.01,ok,false,2026-10-26,upstream-slip cost-spike,,"week 7: $1,390 actual vs $1,200 plan"
+56,2026-11-02,forecast-slip-days,-5.26,days,1,ok,false,2026-11-02,upstream-slip cost-spike,,16 pts remaining at 2.786 pts/day (39 pts Done in the last 14 days) -> day 61.7
+56,2026-11-02,cost-vs-envelope,1730,USD over plan-to-date,1,ok,true,2026-11-02,upstream-slip cost-spike,,"$11,330 actual vs $9,600 plan through week 8 (118.0 % of plan-to-date)"
+56,2026-11-02,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-11-02,upstream-slip cost-spike,,+16 / -0 pts against a 135-pt baseline
+56,2026-11-02,critical-path-slack-days,7,days,0.5,ok,false,2026-11-02,upstream-slip cost-spike,,a-checkout-alerts due -> p-ga start; 1 open link(s) on GA chains
+56,2026-11-02,blocked-share-pct,12.5,% of open points,1,ok,false,2026-11-02,upstream-slip cost-spike,,direct 0 + transitive 2 of 16 open pts on GA chains
+56,2026-11-02,weekly-spend-burn-ratio,1.1,"actual / plan, latest week",0.01,ok,false,2026-11-02,upstream-slip cost-spike,,"week 8: $1,320 actual vs $1,200 plan"
+57,2026-11-03,forecast-slip-days,-8.34,days,1,ok,false,2026-11-03,upstream-slip cost-spike,,16 pts remaining at 9.643 pts/day (135 pts Done in the last 14 days) -> day 58.7
+57,2026-11-03,cost-vs-envelope,1730,USD over plan-to-date,1,ok,true,2026-11-02,upstream-slip cost-spike,,"$11,330 actual vs $9,600 plan through week 8 (118.0 % of plan-to-date)"
+57,2026-11-03,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-11-03,upstream-slip cost-spike,,+16 / -0 pts against a 135-pt baseline
+57,2026-11-03,critical-path-slack-days,7,days,0.5,ok,false,2026-11-03,upstream-slip cost-spike,,a-checkout-alerts due -> p-ga start; 1 open link(s) on GA chains
+57,2026-11-03,blocked-share-pct,12.5,% of open points,1,ok,false,2026-11-03,upstream-slip cost-spike,,direct 0 + transitive 2 of 16 open pts on GA chains
+57,2026-11-03,weekly-spend-burn-ratio,1.1,"actual / plan, latest week",0.01,ok,false,2026-11-02,upstream-slip cost-spike,,"week 8: $1,320 actual vs $1,200 plan"
+58,2026-11-04,forecast-slip-days,-7.34,days,1,ok,false,2026-11-04,upstream-slip cost-spike,,16 pts remaining at 9.643 pts/day (135 pts Done in the last 14 days) -> day 59.7
+58,2026-11-04,cost-vs-envelope,1730,USD over plan-to-date,1,ok,true,2026-11-02,upstream-slip cost-spike,,"$11,330 actual vs $9,600 plan through week 8 (118.0 % of plan-to-date)"
+58,2026-11-04,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-11-04,upstream-slip cost-spike,,+16 / -0 pts against a 135-pt baseline
+58,2026-11-04,critical-path-slack-days,7,days,0.5,ok,false,2026-11-04,upstream-slip cost-spike,,a-checkout-alerts due -> p-ga start; 1 open link(s) on GA chains
+58,2026-11-04,blocked-share-pct,12.5,% of open points,1,ok,false,2026-11-04,upstream-slip cost-spike,,direct 0 + transitive 2 of 16 open pts on GA chains
+58,2026-11-04,weekly-spend-burn-ratio,1.1,"actual / plan, latest week",0.01,ok,false,2026-11-02,upstream-slip cost-spike,,"week 8: $1,320 actual vs $1,200 plan"
+59,2026-11-05,forecast-slip-days,-7.22,days,1,ok,false,2026-11-05,upstream-slip cost-spike,,8 pts remaining at 10.214 pts/day (143 pts Done in the last 14 days) -> day 59.8
+59,2026-11-05,cost-vs-envelope,1730,USD over plan-to-date,1,ok,true,2026-11-02,upstream-slip cost-spike,,"$11,330 actual vs $9,600 plan through week 8 (118.0 % of plan-to-date)"
+59,2026-11-05,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-11-05,upstream-slip cost-spike,,+16 / -0 pts against a 135-pt baseline
+59,2026-11-05,critical-path-slack-days,,days,0.5,ok,false,2026-11-05,upstream-slip cost-spike,,no open dependencies on a GA chain
+59,2026-11-05,blocked-share-pct,0,% of open points,1,ok,false,2026-11-05,upstream-slip cost-spike,,direct 0 + transitive 0 of 8 open pts on GA chains
+59,2026-11-05,weekly-spend-burn-ratio,1.1,"actual / plan, latest week",0.01,ok,false,2026-11-02,upstream-slip cost-spike,,"week 8: $1,320 actual vs $1,200 plan"
+60,2026-11-06,forecast-slip-days,-6.22,days,1,ok,false,2026-11-06,upstream-slip cost-spike,,8 pts remaining at 10.214 pts/day (143 pts Done in the last 14 days) -> day 60.8
+60,2026-11-06,cost-vs-envelope,1730,USD over plan-to-date,1,ok,true,2026-11-02,upstream-slip cost-spike,,"$11,330 actual vs $9,600 plan through week 8 (118.0 % of plan-to-date)"
+60,2026-11-06,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-11-06,upstream-slip cost-spike,,+16 / -0 pts against a 135-pt baseline
+60,2026-11-06,critical-path-slack-days,,days,0.5,ok,false,2026-11-06,upstream-slip cost-spike,,no open dependencies on a GA chain
+60,2026-11-06,blocked-share-pct,0,% of open points,1,ok,false,2026-11-06,upstream-slip cost-spike,,direct 0 + transitive 0 of 8 open pts on GA chains
+60,2026-11-06,weekly-spend-burn-ratio,1.1,"actual / plan, latest week",0.01,ok,false,2026-11-02,upstream-slip cost-spike,,"week 8: $1,320 actual vs $1,200 plan"
+61,2026-11-07,forecast-slip-days,-5.52,days,1,ok,false,2026-11-07,upstream-slip cost-spike,,5 pts remaining at 10.429 pts/day (146 pts Done in the last 14 days) -> day 61.5
+61,2026-11-07,cost-vs-envelope,1730,USD over plan-to-date,1,ok,true,2026-11-02,upstream-slip cost-spike,,"$11,330 actual vs $9,600 plan through week 8 (118.0 % of plan-to-date)"
+61,2026-11-07,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-11-07,upstream-slip cost-spike,,+16 / -0 pts against a 135-pt baseline
+61,2026-11-07,critical-path-slack-days,,days,0.5,ok,false,2026-11-07,upstream-slip cost-spike,,no open dependencies on a GA chain
+61,2026-11-07,blocked-share-pct,0,% of open points,1,ok,false,2026-11-07,upstream-slip cost-spike,,direct 0 + transitive 0 of 5 open pts on GA chains
+61,2026-11-07,weekly-spend-burn-ratio,1.1,"actual / plan, latest week",0.01,ok,false,2026-11-02,upstream-slip cost-spike,,"week 8: $1,320 actual vs $1,200 plan"
+62,2026-11-08,forecast-slip-days,-4.2,days,1,ok,false,2026-11-08,upstream-slip cost-spike,,2 pts remaining at 2.500 pts/day (35 pts Done in the last 14 days) -> day 62.8
+62,2026-11-08,cost-vs-envelope,1730,USD over plan-to-date,1,ok,true,2026-11-02,upstream-slip cost-spike,,"$11,330 actual vs $9,600 plan through week 8 (118.0 % of plan-to-date)"
+62,2026-11-08,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-11-08,upstream-slip cost-spike,,+16 / -0 pts against a 135-pt baseline
+62,2026-11-08,critical-path-slack-days,,days,0.5,ok,false,2026-11-08,upstream-slip cost-spike,,no open dependencies on a GA chain
+62,2026-11-08,blocked-share-pct,0,% of open points,1,ok,false,2026-11-08,upstream-slip cost-spike,,direct 0 + transitive 0 of 2 open pts on GA chains
+62,2026-11-08,weekly-spend-burn-ratio,1.1,"actual / plan, latest week",0.01,ok,false,2026-11-02,upstream-slip cost-spike,,"week 8: $1,320 actual vs $1,200 plan"
+63,2026-11-09,forecast-slip-days,-3.07,days,1,ok,false,2026-11-09,upstream-slip cost-spike,,2 pts remaining at 2.143 pts/day (30 pts Done in the last 14 days) -> day 63.9
+63,2026-11-09,cost-vs-envelope,1800,USD over plan-to-date,1,ok,true,2026-11-09,upstream-slip cost-spike,,"$12,600 actual vs $10,800 plan through week 9 (116.7 % of plan-to-date)"
+63,2026-11-09,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-11-09,upstream-slip cost-spike,,+16 / -0 pts against a 135-pt baseline
+63,2026-11-09,critical-path-slack-days,,days,0.5,ok,false,2026-11-09,upstream-slip cost-spike,,no open dependencies on a GA chain
+63,2026-11-09,blocked-share-pct,0,% of open points,1,ok,false,2026-11-09,upstream-slip cost-spike,,direct 0 + transitive 0 of 2 open pts on GA chains
+63,2026-11-09,weekly-spend-burn-ratio,1.0583,"actual / plan, latest week",0.01,ok,false,2026-11-09,upstream-slip cost-spike,,"week 9: $1,270 actual vs $1,200 plan"
+64,2026-11-10,forecast-slip-days,-2.07,days,1,ok,false,2026-11-10,upstream-slip cost-spike,,2 pts remaining at 2.143 pts/day (30 pts Done in the last 14 days) -> day 64.9
+64,2026-11-10,cost-vs-envelope,1800,USD over plan-to-date,1,ok,true,2026-11-09,upstream-slip cost-spike,,"$12,600 actual vs $10,800 plan through week 9 (116.7 % of plan-to-date)"
+64,2026-11-10,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-11-10,upstream-slip cost-spike,,+16 / -0 pts against a 135-pt baseline
+64,2026-11-10,critical-path-slack-days,,days,0.5,ok,false,2026-11-10,upstream-slip cost-spike,,no open dependencies on a GA chain
+64,2026-11-10,blocked-share-pct,0,% of open points,1,ok,false,2026-11-10,upstream-slip cost-spike,,direct 0 + transitive 0 of 2 open pts on GA chains
+64,2026-11-10,weekly-spend-burn-ratio,1.0583,"actual / plan, latest week",0.01,ok,false,2026-11-09,upstream-slip cost-spike,,"week 9: $1,270 actual vs $1,200 plan"
+65,2026-11-11,forecast-slip-days,-1.07,days,1,ok,false,2026-11-11,upstream-slip cost-spike,,2 pts remaining at 2.143 pts/day (30 pts Done in the last 14 days) -> day 65.9
+65,2026-11-11,cost-vs-envelope,1800,USD over plan-to-date,1,ok,true,2026-11-09,upstream-slip cost-spike,,"$12,600 actual vs $10,800 plan through week 9 (116.7 % of plan-to-date)"
+65,2026-11-11,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-11-11,upstream-slip cost-spike,,+16 / -0 pts against a 135-pt baseline
+65,2026-11-11,critical-path-slack-days,,days,0.5,ok,false,2026-11-11,upstream-slip cost-spike,,no open dependencies on a GA chain
+65,2026-11-11,blocked-share-pct,0,% of open points,1,ok,false,2026-11-11,upstream-slip cost-spike,,direct 0 + transitive 0 of 2 open pts on GA chains
+65,2026-11-11,weekly-spend-burn-ratio,1.0583,"actual / plan, latest week",0.01,ok,false,2026-11-09,upstream-slip cost-spike,,"week 9: $1,270 actual vs $1,200 plan"
+66,2026-11-12,forecast-slip-days,0.04,days,1,ok,false,2026-11-12,upstream-slip cost-spike,,2 pts remaining at 1.929 pts/day (27 pts Done in the last 14 days) -> day 67.0
+66,2026-11-12,cost-vs-envelope,1800,USD over plan-to-date,1,ok,true,2026-11-09,upstream-slip cost-spike,,"$12,600 actual vs $10,800 plan through week 9 (116.7 % of plan-to-date)"
+66,2026-11-12,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-11-12,upstream-slip cost-spike,,+16 / -0 pts against a 135-pt baseline
+66,2026-11-12,critical-path-slack-days,,days,0.5,ok,false,2026-11-12,upstream-slip cost-spike,,no open dependencies on a GA chain
+66,2026-11-12,blocked-share-pct,0,% of open points,1,ok,false,2026-11-12,upstream-slip cost-spike,,direct 0 + transitive 0 of 2 open pts on GA chains
+66,2026-11-12,weekly-spend-burn-ratio,1.0583,"actual / plan, latest week",0.01,ok,false,2026-11-09,upstream-slip cost-spike,,"week 9: $1,270 actual vs $1,200 plan"
+67,2026-11-13,forecast-slip-days,0,days,1,ok,false,2026-11-13,upstream-slip cost-spike,,all work Done on day 67; committed GA day 67
+67,2026-11-13,cost-vs-envelope,1800,USD over plan-to-date,1,ok,true,2026-11-09,upstream-slip cost-spike,,"$12,600 actual vs $10,800 plan through week 9 (116.7 % of plan-to-date)"
+67,2026-11-13,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-11-13,upstream-slip cost-spike,,+16 / -0 pts against a 135-pt baseline
+67,2026-11-13,critical-path-slack-days,,days,0.5,ok,false,2026-11-13,upstream-slip cost-spike,,no open dependencies on a GA chain
+67,2026-11-13,blocked-share-pct,,% of open points,1,ok,false,2026-11-13,upstream-slip cost-spike,,no open work
+67,2026-11-13,weekly-spend-burn-ratio,1.0583,"actual / plan, latest week",0.01,ok,false,2026-11-09,upstream-slip cost-spike,,"week 9: $1,270 actual vs $1,200 plan"
+68,2026-11-14,forecast-slip-days,0,days,1,ok,false,2026-11-14,upstream-slip cost-spike,,all work Done on day 67; committed GA day 67
+68,2026-11-14,cost-vs-envelope,1800,USD over plan-to-date,1,ok,true,2026-11-09,upstream-slip cost-spike,,"$12,600 actual vs $10,800 plan through week 9 (116.7 % of plan-to-date)"
+68,2026-11-14,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-11-14,upstream-slip cost-spike,,+16 / -0 pts against a 135-pt baseline
+68,2026-11-14,critical-path-slack-days,,days,0.5,ok,false,2026-11-14,upstream-slip cost-spike,,no open dependencies on a GA chain
+68,2026-11-14,blocked-share-pct,,% of open points,1,ok,false,2026-11-14,upstream-slip cost-spike,,no open work
+68,2026-11-14,weekly-spend-burn-ratio,1.0583,"actual / plan, latest week",0.01,ok,false,2026-11-09,upstream-slip cost-spike,,"week 9: $1,270 actual vs $1,200 plan"
+69,2026-11-15,forecast-slip-days,0,days,1,ok,false,2026-11-15,upstream-slip cost-spike,,all work Done on day 67; committed GA day 67
+69,2026-11-15,cost-vs-envelope,1800,USD over plan-to-date,1,ok,true,2026-11-09,upstream-slip cost-spike,,"$12,600 actual vs $10,800 plan through week 9 (116.7 % of plan-to-date)"
+69,2026-11-15,scope-change-pct,11.85,% of baseline points,0.5,ok,true,2026-11-15,upstream-slip cost-spike,,+16 / -0 pts against a 135-pt baseline
+69,2026-11-15,critical-path-slack-days,,days,0.5,ok,false,2026-11-15,upstream-slip cost-spike,,no open dependencies on a GA chain
+69,2026-11-15,blocked-share-pct,,% of open points,1,ok,false,2026-11-15,upstream-slip cost-spike,,no open work
+69,2026-11-15,weekly-spend-burn-ratio,1.0583,"actual / plan, latest week",0.01,ok,false,2026-11-09,upstream-slip cost-spike,,"week 9: $1,270 actual vs $1,200 plan"

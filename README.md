@@ -56,6 +56,8 @@ drift/
 narrative/      findings -> TPM-voiced digest via Anthropic SDK      [7/9]
 evals/          drift-digest goldens — frozen cases, scored        [RC1-261]
 seed/           idempotent RC1 demo-data seeder                      [2/9]
+simulate/       scripted 10-week program in PMA, one sim-day per
+                tick; the KPI agent's test fixture                   [RC1-299]
 tests/          pytest, fixture-driven (no live API calls)
 ```
 
@@ -111,6 +113,39 @@ forces them: `bucket` and `downstream` are fields copied from the payload.
 
 That is a finding about the *prompt*, not the checks, and it only became
 readable once the checks were independently known to fail on bad output.
+
+### The simulated program (RC1-299)
+
+The KPI agent is verified against a program whose every number is known in
+advance: thirty-four stories in four workstreams under a dedicated PMA epic,
+advancing one simulated day per tick, with four planted events — a scope add
+in week 3, an upstream slip in week 5, a cost spike in week 6, and a silent
+source break in week 7 (the label the collector keys on is dropped for five
+days, and nobody comments). `simulate/scenario.py` is the program as data;
+`state_at(day)` is the exact Jira state for any day, and the ground-truth
+ledger (RC1-300) derives from the same function the simulator converges to.
+
+```bash
+python -m simulate seed              # create / converge to day 0
+python -m simulate tick [--days N]   # advance the clock and converge
+python -m simulate to-day 45         # jump (development)
+python -m simulate verify            # Jira == scenario for the current day?
+python -m simulate status
+python -m simulate teardown          # delete every simulated issue, forget the clock
+```
+
+Seed, tick and verify are one computation — a diff between `state_at(day)`
+and what Jira shows — so a converged day always verifies, and converging day
+by day is the same as jumping. The clock, a manifest of keys, and the weekly
+cloud-spend line live in `data/kpi-sim/` (gitignored); the collector reads the
+sim-date from there. `scripts/launchd/` has the daily-tick plist for the
+three-week run; it is not installed automatically.
+
+Two PMA specifics, both learned the hard way: story points are on no screen,
+so they go through the Agile estimation endpoint for board 68; and "blocked"
+is the Flagged/Impediment field, because the workflow has no Blocked status.
+Teardown needs *Delete Issues* on PMA, which the default software scheme
+grants only to the project's Administrators role.
 
 ## Pipeline
 

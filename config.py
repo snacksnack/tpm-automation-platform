@@ -32,5 +32,11 @@ class Settings(BaseSettings):
     # X-Drift-Token). Unset => endpoint is open (local dev only).
     drift_run_token: str | None = None
 
+    # Program simulator (simulate/, RC1-299). Story points are written through the
+    # Agile estimation endpoint, which needs the board whose estimation field
+    # they are; 68 is the PMA scrum board.
+    kpi_sim_board_id: int = 68
+    kpi_sim_dir: str = "data/kpi-sim"
+
 
 settings = Settings()

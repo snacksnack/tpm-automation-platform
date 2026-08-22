@@ -8,11 +8,20 @@ from __future__ import annotations
 
 import httpx
 
-# Static IDs for the RC1 instance (verified during [2/9] pre-flight).
-STORY_TYPE_ID = "10009"
-EPIC_TYPE_ID = "10005"
+# Static field ids for this instance (verified during [2/9] pre-flight and RC1-299).
 START_DATE_FIELD = "customfield_10015"
+POINTS_FIELD = "customfield_10033"  # the board estimation field; read-only via REST PUT
+FLAGGED_FIELD = "customfield_10021"
 BLOCKS_LINK = "Blocks"
+
+
+def _adf_paragraph(text: str) -> dict:
+    """The v3 API wants rich text as Atlassian Document Format; one plain paragraph."""
+    return {
+        "type": "doc",
+        "version": 1,
+        "content": [{"type": "paragraph", "content": [{"type": "text", "text": text}]}],
+    }
 
 
 class JiraError(RuntimeError):
@@ -24,6 +33,7 @@ class JiraClient:
         if not (email and token):
             raise JiraError("JIRA_EMAIL and JIRA_API_TOKEN must be set (see .env.example).")
         self._api = f"{base_url.rstrip('/')}/rest/api/3"
+        self._agile = f"{base_url.rstrip('/')}/rest/agile/1.0"
         self._c = httpx.Client(auth=(email, token), timeout=timeout)
 
     def __enter__(self) -> JiraClient:
@@ -82,13 +92,24 @@ class JiraClient:
         return out
 
     # --- writes ---
-    def create_epic(self, summary: str, labels: list[str], *, project: str = "RC1") -> str:
-        fields = {
+    def create_epic(
+        self,
+        summary: str,
+        labels: list[str],
+        *,
+        project: str = "RC1",
+        due: str | None = None,
+    ) -> str:
+        # Issue types are addressed by name: the ids differ per project (RC1's
+        # Epic is 10005, PMA's is 10000) and the simulator seeds PMA (RC1-299).
+        fields: dict[str, object] = {
             "project": {"key": project},
-            "issuetype": {"id": EPIC_TYPE_ID},
+            "issuetype": {"name": "Epic"},
             "summary": summary,
             "labels": labels,
         }
+        if due:
+            fields["duedate"] = due
         return self._req("POST", "/issue", json={"fields": fields}).json()["key"]
 
     def create_story(
@@ -101,10 +122,11 @@ class JiraClient:
         assignee_id: str | None = None,
         parent: str | None = None,
         project: str = "RC1",
+        description: str | None = None,
     ) -> str:
         fields: dict[str, object] = {
             "project": {"key": project},
-            "issuetype": {"id": STORY_TYPE_ID},
+            "issuetype": {"name": "Story"},
             "summary": summary,
             "labels": labels,
         }
@@ -116,7 +138,41 @@ class JiraClient:
             fields["assignee"] = {"id": assignee_id}
         if parent:
             fields["parent"] = {"key": parent}
+        if description:
+            fields["description"] = _adf_paragraph(description)
         return self._req("POST", "/issue", json={"fields": fields}).json()["key"]
+
+    def set_fields(self, key: str, fields: dict[str, object]) -> None:
+        self._req("PUT", f"/issue/{key}", json={"fields": fields})
+
+    def set_start_date(self, key: str, start: str) -> None:
+        self.set_fields(key, {START_DATE_FIELD: start})
+
+    def add_labels(self, key: str, labels: list[str]) -> None:
+        ops = [{"add": label} for label in labels]
+        self._req("PUT", f"/issue/{key}", json={"update": {"labels": ops}})
+
+    def remove_labels(self, key: str, labels: list[str]) -> None:
+        ops = [{"remove": label} for label in labels]
+        self._req("PUT", f"/issue/{key}", json={"update": {"labels": ops}})
+
+    def set_flagged(self, key: str, flagged: bool) -> None:
+        """Jira's Flagged/Impediment field — the blocked marker in workflows without
+        a Blocked status (PMA). Verified writable on PMA via the old seeder."""
+        value = [{"value": "Impediment"}] if flagged else None
+        self.set_fields(key, {FLAGGED_FIELD: value})
+
+    def set_estimation(self, key: str, points: float, board_id: int) -> None:
+        """Story points via the Agile estimation endpoint. The points field is on no
+        PMA screen, so a plain field PUT is refused; this route writes the board's
+        estimation field regardless (RC1-299, learned from tpm_automation/patch_pma.py)."""
+        url = f"{self._agile}/issue/{key}/estimation"
+        r = self._c.put(url, params={"boardId": board_id}, json={"value": str(points)})
+        if r.status_code >= 300:
+            raise JiraError(f"PUT estimation {key} -> HTTP {r.status_code}: {r.text[:400]}")
+
+    def add_comment(self, key: str, text: str) -> None:
+        self._req("POST", f"/issue/{key}/comment", json={"body": _adf_paragraph(text)})
 
     def set_priority(self, key: str, name: str) -> None:
         self._req("PUT", f"/issue/{key}", json={"fields": {"priority": {"name": name}}})

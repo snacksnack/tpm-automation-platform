@@ -11,7 +11,6 @@ import httpx
 # Static field ids for this instance (verified during [2/9] pre-flight and RC1-299).
 START_DATE_FIELD = "customfield_10015"
 POINTS_FIELD = "customfield_10033"  # the board estimation field; read-only via REST PUT
-FLAGGED_FIELD = "customfield_10021"
 BLOCKS_LINK = "Blocks"
 
 
@@ -156,16 +155,10 @@ class JiraClient:
         ops = [{"remove": label} for label in labels]
         self._req("PUT", f"/issue/{key}", json={"update": {"labels": ops}})
 
-    def set_flagged(self, key: str, flagged: bool) -> None:
-        """Jira's Flagged/Impediment field — the blocked marker in workflows without
-        a Blocked status (PMA). Verified writable on PMA via the old seeder."""
-        value = [{"value": "Impediment"}] if flagged else None
-        self.set_fields(key, {FLAGGED_FIELD: value})
-
     def set_estimation(self, key: str, points: float, board_id: int) -> None:
-        """Story points via the Agile estimation endpoint. The points field is on no
-        PMA screen, so a plain field PUT is refused; this route writes the board's
-        estimation field regardless (RC1-299, learned from tpm_automation/patch_pma.py)."""
+        """Story points via the Agile estimation endpoint: it writes the board's
+        estimation field whether or not that field is on a screen (RC1-299, learned
+        from tpm_automation/patch_pma.py when it was not)."""
         url = f"{self._agile}/issue/{key}/estimation"
         r = self._c.put(url, params={"boardId": board_id}, json={"value": str(points)})
         if r.status_code >= 300:

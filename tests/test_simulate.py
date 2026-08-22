@@ -14,13 +14,14 @@ from pathlib import Path
 
 import pytest
 
-from seed.jira_client import FLAGGED_FIELD, POINTS_FIELD, START_DATE_FIELD
+from seed.jira_client import POINTS_FIELD, START_DATE_FIELD
 from simulate import apply, scenario
 from simulate.clock import SimState
 from simulate.scenario import (
     GA_DAY,
     LAST_DAY,
     PROGRAM_LABEL,
+    STATUS_BLOCKED,
     STATUS_DONE,
     STATUS_IN_PROGRESS,
     STATUS_REVIEW,
@@ -53,7 +54,6 @@ class FakeJira:
                 "duedate": due,
                 START_DATE_FIELD: start,
                 POINTS_FIELD: None,
-                FLAGGED_FIELD: None,
                 "issuelinks": [],
                 "parent": {"key": parent} if parent else None,
             },
@@ -85,9 +85,6 @@ class FakeJira:
 
     def set_estimation(self, key, points, board_id):
         self.issues[key]["fields"][POINTS_FIELD] = float(points)
-
-    def set_flagged(self, key, flagged):
-        self.issues[key]["fields"][FLAGGED_FIELD] = [{"value": "Impediment"}] if flagged else None
 
     def add_labels(self, key, labels):
         cur = self.issues[key]["fields"]["labels"]
@@ -142,7 +139,7 @@ def snapshot(jira: FakeJira) -> dict[str, tuple]:
         ))
         out[by_key[key]] = (
             f["status"]["name"], f["duedate"], f[START_DATE_FIELD], f[POINTS_FIELD],
-            bool(f[FLAGGED_FIELD]), tuple(sorted(f["labels"])), blocks,
+            tuple(sorted(f["labels"])), blocks,
         )
     return out
 
@@ -169,8 +166,8 @@ def test_every_story_is_internally_consistent():
             assert b in scenario.BY_SLUG, f"{s.slug} blocks unknown {b}"
         if s.slip:
             assert s.slip[1] > s.due and s.slip[0] > s.created, s.slug
-        if s.flagged:
-            assert s.flagged[0] < s.flagged[1], s.slug
+        if s.blocked:
+            assert s.blocked[0] < s.blocked[1] <= s.done, s.slug
 
 
 def test_links_form_a_dag_rooted_at_ga():
@@ -215,10 +212,15 @@ def test_baseline_slack_is_tight_but_positive_and_the_slip_inverts_one_chain():
 def test_status_is_monotonic_and_review_only_for_long_stories():
     order = {STATUS_TODO: 0, STATUS_IN_PROGRESS: 1, STATUS_REVIEW: 2, STATUS_DONE: 3}
     for s in scenario.STORIES:
-        seq = [order[s.status_on(d)] for d in range(s.created, LAST_DAY + 1)]
+        # Blocked is a detour, not a step: outside the blocked window the flow is monotonic
+        seq = [order[s.status_on(d)] for d in range(s.created, LAST_DAY + 1)
+               if not s.blocked_on(d)]
         assert seq == sorted(seq), s.slug
+        blocked_days = [d for d in range(0, LAST_DAY + 1) if s.status_on(d) == STATUS_BLOCKED]
+        expected = list(range(*s.blocked)) if s.blocked else []
+        assert blocked_days == expected, s.slug
         assert s.status_on(s.done) == STATUS_DONE
-        if s.done - s.started_day >= 4:
+        if s.done - s.started_day >= 4 and not s.blocked_on(s.done - 1):
             assert s.status_on(s.done - 1) == STATUS_REVIEW, s.slug
         else:
             assert STATUS_REVIEW not in {s.status_on(d) for d in range(0, LAST_DAY + 1)}, s.slug
@@ -288,18 +290,20 @@ def test_day_by_day_equals_jumping_straight_there():
     assert apply.verify(jump, LAST_DAY) == []
 
 
-def test_points_dates_links_and_flags_land():
+def test_points_dates_links_and_blocked_land():
     jira = FakeJira()
     converge(jira, 35)
     snap = snapshot(jira)
-    status, due, start, points, flagged, labels, blocks = snap["t-context"]
+    status, due, start, points, labels, blocks = snap["t-context"]
     assert points == 8.0 and due == scenario.sim_date(41).isoformat()
     assert blocks == ("s-latency",)
-    assert snap["s-latency"][4] is True  # flagged while waiting on t-context
-    assert snap["p-security"][4] is False  # its flag cleared on day 33
+    assert snap["s-latency"][0] == STATUS_BLOCKED  # waiting on t-context
+    assert snap["p-security"][0] == STATUS_DONE  # unblocked on day 33 and finished
     assert snap["t-sdk"][0] == STATUS_DONE
     assert "x-mobile" in snap and snap["x-mobile"][0] == STATUS_DONE
-    assert "own-tomas" in snap["p-infra"][5]
+    assert "own-tomas" in snap["p-infra"][4]
+    key = next(k for k, i in jira.issues.items() if "ks-s-latency" in i["fields"]["labels"])
+    assert any(c.startswith("Blocked:") for c in jira.comments[key])
 
 
 def test_the_slip_is_a_second_write_with_a_comment_and_the_break_is_silent():

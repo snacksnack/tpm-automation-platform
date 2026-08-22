@@ -22,9 +22,9 @@ collector snapshots it (RC1-301). And the program's own dates are real
 calendar dates (KICKOFF + day) because Jira date fields need them; sim-date
 and wall-clock are deliberately different things.
 
-Blocked work is modelled with Jira's Flagged/Impediment field rather than a
-Blocked status, because the PMA workflow has none. The instrument stage
-records that as the proxy it is.
+Blocked work is a real status: PMA's workflow gained a global Blocked status
+on 2026-08-22 (the Flagged/Impediment field was the stand-in before that), so
+the KPI tree's "direct blocked" half reads exactly what it says.
 """
 
 from __future__ import annotations
@@ -47,6 +47,7 @@ BASE_POINTS_PLAN_PER_WEEK = 13.5  # baseline points / 10 weeks; the plan rate
 STATUS_TODO = "To Do"
 STATUS_IN_PROGRESS = "In Progress"
 STATUS_REVIEW = "CODE REVIEW"
+STATUS_BLOCKED = "Blocked"
 STATUS_DONE = "Done"
 
 OWNERS = ("Priya", "Marcus", "Lena", "Tomás", "Aisha")
@@ -79,7 +80,7 @@ class Story:
     created: int = 0  # day the story appears (scope adds are created later)
     blocks: tuple[str, ...] = ()  # slugs this story blocks (upstream -> downstream)
     slip: tuple[int, int] | None = None  # (day applied, new due day)
-    flagged: tuple[int, int] | None = None  # [from, to) days the Impediment flag is set
+    blocked: tuple[int, int] | None = None  # [from, to) days in the Blocked status
     ga_blocking: bool = False  # the GA sign-off root; chains into it are the critical path
     note: str = ""
 
@@ -95,6 +96,8 @@ class Story:
     def status_on(self, day: int) -> str:
         if day >= self.done:
             return STATUS_DONE
+        if self.blocked_on(day):
+            return STATUS_BLOCKED
         if day >= self.started_day:
             # A day in review before Done, only for stories that ran long enough
             # to have one. Deterministic, and it gives the snapshot diff a
@@ -104,8 +107,8 @@ class Story:
             return STATUS_IN_PROGRESS
         return STATUS_TODO
 
-    def flagged_on(self, day: int) -> bool:
-        return bool(self.flagged) and self.flagged[0] <= day < self.flagged[1]
+    def blocked_on(self, day: int) -> bool:
+        return bool(self.blocked) and self.blocked[0] <= day < self.blocked[1]
 
 
 # fmt: off
@@ -114,8 +117,8 @@ STORIES: tuple[Story, ...] = (
     Story("p-infra", "Telemetry pipeline infra: ingest, storage, query", "platform", "Tomás",
           5, start=0, due=5, done=5, blocks=("t-collector",)),
     Story("p-security", "Security review of telemetry data handling", "platform", "Tomás",
-          3, start=20, due=30, done=33, flagged=(27, 33),
-          note="Waits on the security team from day 27; flagged as an impediment."),
+          3, start=20, due=30, done=33, blocked=(27, 33),
+          note="Waits on the security team from day 27; Blocked until it lands."),
     Story("p-cost", "Cost guardrails: sampling and retention caps", "platform", "Priya",
           3, start=36, due=42, done=44,
           note="The response to the week-6 spend spike; lands after the spike row."),
@@ -153,10 +156,10 @@ STORIES: tuple[Story, ...] = (
     Story("s-ingest", "Metrics ingest pipeline for SLIs", "slo", "Tomás",
           8, start=17, due=26, done=26, blocks=("s-dash-search", "s-dash-api", "x-slo-mobile")),
     Story("s-latency", "Latency SLIs from trace data", "slo", "Lena",
-          5, start=30, due=36, done=47, started=42, flagged=(30, 42),
+          5, start=30, due=36, done=47, started=42, blocked=(30, 42),
           blocks=("s-dash-checkout",),
-          note="Cannot start until t-context lands; flagged as an impediment from its "
-               "planned start until it actually starts."),
+          note="Cannot start until t-context lands; Blocked from its planned start "
+               "until it actually starts."),
     Story("s-dash-search", "Search SLO dashboard", "slo", "Lena",
           5, start=29, due=35, done=35, blocks=("a-search-alerts",)),
     Story("s-dash-api", "API gateway SLO dashboard", "slo", "Tomás",
@@ -285,7 +288,6 @@ class IssueState:
     start: date
     due: date
     points: int
-    flagged: bool
     labels: frozenset[str]
     blocks: tuple[str, ...]  # slugs, only those that also exist on this day
     owner: str
@@ -339,7 +341,6 @@ def state_at(day: int) -> ProgramState:
             start=sim_date(s.start),
             due=sim_date(s.due_on(day)),
             points=s.points,
-            flagged=s.flagged_on(day),
             labels=labels_on(s, day),
             blocks=tuple(b for b in s.blocks if b in present),
             owner=s.owner,

@@ -141,11 +141,12 @@ cloud-spend line live in `data/kpi-sim/` (gitignored); the collector reads the
 sim-date from there. `scripts/launchd/` has the daily-tick plist for the
 three-week run; it is not installed automatically.
 
-Two PMA specifics, both learned the hard way: story points are on no screen,
-so they go through the Agile estimation endpoint for board 68; and "blocked"
-is the Flagged/Impediment field, because the workflow has no Blocked status.
-Teardown needs *Delete Issues* on PMA, which the default software scheme
-grants only to the project's Administrators role.
+Three PMA prerequisites, all configured on 2026-08-22: story points go through
+the Agile estimation endpoint for board 68 (the board-correct route, and it
+works whether or not the field is on a screen — it now is); the workflow has
+a global **Blocked** status, which the KPI tree's blocked-share reads
+directly; and teardown needs *Delete Issues*, which the default software
+scheme grants only to the project's Administrators role.
 
 ## Pipeline
 

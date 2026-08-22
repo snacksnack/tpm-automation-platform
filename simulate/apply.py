@@ -21,7 +21,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from seed.jira_client import BLOCKS_LINK, FLAGGED_FIELD, POINTS_FIELD, START_DATE_FIELD
+from seed.jira_client import BLOCKS_LINK, POINTS_FIELD, START_DATE_FIELD
 from simulate import scenario
 from simulate.scenario import (
     EPIC_SLUG,
@@ -34,7 +34,7 @@ from simulate.scenario import (
 )
 
 ISSUE_FIELDS = [
-    "summary", "status", "labels", "duedate", START_DATE_FIELD, POINTS_FIELD, FLAGGED_FIELD,
+    "summary", "status", "labels", "duedate", START_DATE_FIELD, POINTS_FIELD,
     "issuelinks", "parent",
 ]
 
@@ -46,7 +46,6 @@ class Jira(Protocol):
     def create_story(self, summary: str, labels: list[str], *, due: str | None, start: str | None, assignee_id: str | None, parent: str | None, project: str, description: str | None) -> str: ...  # noqa: E501
     def set_fields(self, key: str, fields: dict[str, object]) -> None: ...
     def set_estimation(self, key: str, points: float, board_id: int) -> None: ...
-    def set_flagged(self, key: str, flagged: bool) -> None: ...
     def add_labels(self, key: str, labels: list[str]) -> None: ...
     def remove_labels(self, key: str, labels: list[str]) -> None: ...
     def transition_to(self, key: str, status_name: str) -> bool: ...
@@ -66,7 +65,6 @@ class Observed:
     due: str | None
     start: str | None
     points: float | None
-    flagged: bool
     labels: set[str]
     blocks: set[str]  # keys this issue blocks (outward Blocks links)
 
@@ -93,7 +91,6 @@ def observe(issue: dict) -> Observed | None:
         due=f.get("duedate"),
         start=f.get(START_DATE_FIELD),
         points=f.get(POINTS_FIELD),
-        flagged=bool(f.get(FLAGGED_FIELD)),
         labels=set(f.get("labels") or []),
         blocks=blocks,
     )
@@ -132,7 +129,7 @@ def load(jira: Jira, epic_key: str) -> dict[str, Observed]:
 @dataclass(frozen=True)
 class Action:
     kind: str  # create_epic | epic_due | epic_label_add | epic_label_remove | create | due |
-    # start | points | label_add | label_remove | link | flag | status
+    # start | points | label_add | label_remove | link | status
     slug: str  # story slug, or "epic"
     value: object = None
     comment: str | None = None
@@ -154,6 +151,8 @@ def _transition_comment(story: Story, state: IssueState, day: int) -> str:
         return f"In review — {story.owner} ({when})."
     if state.status == scenario.STATUS_DONE:
         return f"Done — {story.owner} ({when})."
+    if state.status == scenario.STATUS_BLOCKED:
+        return f"Blocked: {story.note or 'waiting on an upstream'} ({when})."
     return f"Moved to {state.status} ({when})."
 
 
@@ -164,13 +163,6 @@ def _slip_comment(story: Story, day: int) -> str:
         f"Due moved {old.isoformat()} -> {new.isoformat()}: async context propagation needs "
         f"a client-library upgrade first; {story.owner} re-planned (sim day {day})."
     )
-
-
-def _flag_comment(story: Story, day: int, flagged: bool) -> str:
-    if flagged:
-        why = story.note or "blocked on an upstream"
-        return f"Flagged as an impediment: {why} (sim day {day})."
-    return f"Impediment cleared (sim day {day})."
 
 
 def diff(state: ProgramState, epic: Epic | None, observed: dict[str, Observed]) -> list[Action]:
@@ -200,7 +192,6 @@ def diff(state: ProgramState, epic: Epic | None, observed: dict[str, Observed]) 
         cur_due = _iso(st.due) if fresh else obs.due
         cur_start = _iso(st.start) if fresh else obs.start
         cur_points = None if fresh else obs.points
-        cur_flag = False if fresh else obs.flagged
         cur_labels = set(st.labels) if fresh else obs.labels
         cur_status = scenario.STATUS_TODO if fresh else obs.status
         cur_blocks_slugs = set() if fresh else _slugs_of_keys(obs.blocks, observed)
@@ -224,9 +215,6 @@ def diff(state: ProgramState, epic: Epic | None, observed: dict[str, Observed]) 
         for target in st.blocks:
             if target not in cur_blocks_slugs:
                 actions.append(Action("link", slug, target))
-        if cur_flag != st.flagged:
-            comment = _flag_comment(story, state.day, st.flagged)
-            actions.append(Action("flag", slug, st.flagged, comment))
         if cur_status != st.status:
             actions.append(
                 Action("status", slug, st.status, _transition_comment(story, st, state.day))
@@ -317,10 +305,6 @@ def converge(
             jira.remove_labels(keys[a.slug], [str(a.value)])
         elif a.kind == "link":
             jira.create_blocks_link(keys[a.slug], keys[str(a.value)])
-        elif a.kind == "flag":
-            jira.set_flagged(keys[a.slug], bool(a.value))
-            if a.comment:
-                jira.add_comment(keys[a.slug], a.comment)
         elif a.kind == "status":
             if jira.transition_to(keys[a.slug], str(a.value)) and a.comment:
                 jira.add_comment(keys[a.slug], a.comment)

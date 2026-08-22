@@ -6,9 +6,9 @@ committed for day 67, the Friday of week 10. Every planned date, actual
 transition day, slip, flag and spend row is a number in this file, and
 `state_at(day)` turns them into the state Jira must be in on that day.
 
-Planted events, the ones the ground-truth ledger (RC1-300) tests the KPI
-agent against — see docs/kpi/trees/simulated-program.md for which KPI must
-see each, and by when:
+Planted events, the ones the ground-truth ledger (RC1-300, `simulate/ledger.py`)
+tests the KPI agent against — each names the KPIs that must react and the
+first-day detector that must react by the day after:
 
     day 16-17  scope add       four stories, +16 points (+11.9 % of baseline)
     day 29     upstream slip   t-context due 27 -> 41; downstream dates untouched
@@ -241,6 +241,11 @@ class Event:
     until: int | None  # last sim-day it is active (None = through the end)
     detail: str
     must_move: tuple[str, ...]  # KPI ids from the adopted tree that must react
+    #: The first-day detectors (rubric amendment 3): the KPIs that must show
+    #: `signal` by the day after the event. `must_move` KPIs that are not
+    #: detectors may take up to 14 days (the forecast's window).
+    detector: tuple[str, ...] = ()
+    signal: str = "tripped"  # "tripped" (so-what threshold crossed) or "broken"
 
 
 EVENTS: tuple[Event, ...] = (
@@ -248,25 +253,32 @@ EVENTS: tuple[Event, ...] = (
         "scope-add", 16, 17,
         "Four mobile-BFF stories created: +16 points on a 135-point baseline (+11.9 %).",
         ("scope-change-pct", "forecast-slip-days"),
+        detector=("scope-change-pct",),
     ),
     Event(
         "upstream-slip", 29, None,
         "t-context due 27 -> 41 (+14). Downstream s-latency keeps start 30: slack +3 -> -11.",
         ("critical-path-slack-days", "blocked-share-pct", "forecast-slip-days"),
+        detector=("critical-path-slack-days",),
     ),
     Event(
         "cost-spike", 42, None,
         "Week-6 actual $2,450 vs $1,200 plan (2.04x); the row lands on day 42.",
         ("weekly-spend-burn-ratio", "cost-vs-envelope"),
+        detector=("weekly-spend-burn-ratio",),
     ),
     Event(
         "source-break", 43, 47,
         f"The {PROGRAM_LABEL} label is removed from every story; restored on day 48.",
         ("forecast-slip-days", "scope-change-pct", "critical-path-slack-days",
-         "blocked-share-pct"),  # all Jira-sourced KPIs go stale; cost KPIs do not
+         "blocked-share-pct"),  # all Jira-sourced KPIs go broken; cost KPIs do not
+        detector=("forecast-slip-days", "scope-change-pct", "critical-path-slack-days",
+                  "blocked-share-pct"),
+        signal="broken",
     ),
 )
 SOURCE_BREAK = EVENTS[3]
+BY_EVENT: dict[str, Event] = {e.id: e for e in EVENTS}
 
 
 def active_events(day: int) -> list[Event]:
@@ -321,8 +333,13 @@ def owner_label(owner: str) -> str:
     return f"own-{ascii_name.lower()}"
 
 
+GA_BLOCKING_LABEL = "ga-blocking"  # the sign-off root; chains into it are the critical path
+
+
 def labels_on(story: Story, day: int) -> frozenset[str]:
     labels = {slug_label(story.slug), f"ws-{story.workstream}", owner_label(story.owner)}
+    if story.ga_blocking:
+        labels.add(GA_BLOCKING_LABEL)
     if not source_broken_on(day):
         labels.add(PROGRAM_LABEL)
     return frozenset(labels)

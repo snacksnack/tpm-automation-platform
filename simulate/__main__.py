@@ -6,6 +6,9 @@ tick was refused (no seed, or the program is over); 2 a Jira error.
 Needs JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN (config reads .env). The
 board id for story points and the state directory are KPI_SIM_BOARD_ID and
 KPI_SIM_DIR, defaulting to the PMA scrum board and data/kpi-sim.
+
+`ledger` (RC1-300) needs no Jira: it derives the ground-truth ledger from the
+scenario and prints it, or writes the CSV with `--out`.
 """
 
 from __future__ import annotations
@@ -16,7 +19,7 @@ from pathlib import Path
 
 from config import settings
 from seed.jira_client import JiraClient, JiraError
-from simulate import apply, scenario
+from simulate import apply, ledger, scenario
 from simulate.clock import SimState
 
 
@@ -103,6 +106,26 @@ def cmd_teardown(args, jira, state) -> int:
     return 0
 
 
+def cmd_ledger(args) -> int:
+    book = ledger.derive()
+    if args.out:
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(ledger.to_csv(book))
+        print(f"wrote {args.out}: {len(book.rows)} rows, days 0-{book.days[-1]}")
+        return 0
+    days = range(book.days[-1] + 1) if args.day is None else [args.day]
+    print(ledger.render_table(book, days))
+    if args.day is not None:
+        for e in book.readings(args.day):
+            flag = f" [{e.state}: {e.reason}]" if e.state != "ok" else ""
+            trip = " TRIPPED" if e.tripped else ""
+            shown = "-" if e.value is None else e.value
+            print(f"  {e.kpi_id:<26} {shown:>8}{trip}{flag}  {e.detail}")
+    else:
+        print("\n? stale  ! broken  * tripped")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python -m simulate", description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -121,7 +144,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--day", type=int, default=None)
     sub.add_parser("status", help="show the clock")
     dry(sub.add_parser("teardown", help="delete every simulated issue and forget the clock"))
+    p = sub.add_parser("ledger", help="the ground-truth ledger, derived from the scenario")
+    p.add_argument("--out", type=Path, default=None, help="write the CSV here instead")
+    p.add_argument("--day", type=int, default=None, help="one day, with the working shown")
     args = ap.parse_args(argv)
+    if args.cmd == "ledger":
+        return cmd_ledger(args)
 
     handlers = {
         "seed": cmd_seed, "tick": cmd_tick, "to-day": cmd_to_day, "verify": cmd_verify,

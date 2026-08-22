@@ -55,11 +55,13 @@ drift/
   pipeline.py   collect -> ... -> notify, one run + JSON log         [9/9]
 narrative/      findings -> TPM-voiced digest via Anthropic SDK      [7/9]
 evals/          drift-digest goldens — frozen cases, scored        [RC1-261]
+                + kpi-ledger: KPI readings vs the ground truth        [RC1-300]
 kpi/            Program KPI agent — define stage: brief + rubric ->
-                reviewable KPI tree (docs/kpi/)                       [RC1-302]
+                reviewable KPI tree (docs/kpi/); the reading contract [RC1-302]
 seed/           idempotent RC1 demo-data seeder                      [2/9]
 simulate/       scripted 10-week program in PMA, one sim-day per
-                tick; the KPI agent's test fixture                   [RC1-299]
+                tick; the KPI agent's test fixture, and its
+                ground-truth ledger                                   [RC1-299, RC1-300]
 tests/          pytest, fixture-driven (no live API calls)
 ```
 
@@ -82,6 +84,7 @@ python -m evals run drift-digest-allclear   # free, deterministic — runs in CI
 python -m evals run drift-digest            # billed, needs ANTHROPIC_API_KEY
 python -m evals degrade                     # billed — are the checks awake?
 python -m evals template-drift              # declared prompt version vs its hash
+python -m evals run kpi-ledger              # free — the KPI agent's subject (RC1-300, below)
 ```
 
 **Nothing here uses an LLM judge.** The prompt template states its rules as
@@ -142,6 +145,8 @@ docs/kpi/programs/<program>.md      what the agent is given
 docs/kpi/trees/<program>.md         hand-written baseline, written first
 docs/kpi/trees/<program>.agent.md   the agent's draft (+ .json twin)
 docs/kpi/trees/<program>.review.md  where they disagree, and who was right
+docs/kpi/ledger.md                  the ground truth: how each expected reading is derived
+docs/kpi/ledger/<program>.csv       the ledger itself, regenerated from the scenario
 ```
 
 ### The simulated program (RC1-299)
@@ -170,6 +175,31 @@ by day is the same as jumping. The clock, a manifest of keys, and the weekly
 cloud-spend line live in `data/kpi-sim/` (gitignored); the collector reads the
 sim-date from there. `scripts/launchd/` has the daily-tick plist for the
 three-week run; it is not installed automatically.
+
+### The ground-truth ledger and its suite (RC1-300)
+
+What every KPI should read on every sim-day, derived from the same
+`state_at(day)` the simulator converges to — 420 rows, six KPIs × seventy
+days, each a `kpi.reading.Reading` (value, `ok`/`stale`/`broken`, tripped,
+as-of date, reason) plus a tolerance. No value is ever zero for "unknown":
+before the first spend row the cost KPIs read *stale* with a reason, and
+through the week-7 source break the Jira KPIs read *broken* carrying day 42's
+value with day 42's date. [`docs/kpi/ledger.md`](docs/kpi/ledger.md) has the
+derivation, the decisions the tree left open, and what each planted event
+looks like in the numbers.
+
+```bash
+python -m simulate ledger [--day N]                        # print it, or one day with the working
+python -m evals run kpi-ledger                             # 70 cases, free, gates CI; recorded
+python -m evals run kpi-ledger --impl no-break-detection   # a deliberately wrong one: fails days 43-47
+```
+
+`kpi-ledger` is the KPI agent's eval subject: one case per day, one
+characteristic per KPI, and `detects-<event>` on the day after each planted
+event — the first-day detector must read tripped (or broken). The
+implementation is pluggable; until the track stage (RC1-305) lands the
+reference is the ledger's own derivation, and two deliberately wrong ones
+show the suite can fail. Wrong-implementation runs are never recorded.
 
 Three PMA prerequisites, all configured on 2026-08-22: story points go through
 the Agile estimation endpoint for board 68 (the board-correct route, and it

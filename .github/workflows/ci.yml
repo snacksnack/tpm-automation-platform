@@ -34,4 +34,6 @@ jobs:
       # billed half (`python -m evals run drift-digest`) is run by hand — see
       # evals/subjects.py for why the split is by cost rather than by coverage.
       - name: Evals (free subjects only)
-        run: python -m evals run drift-digest-allclear
+        run: |
+          python -m evals run drift-digest-allclear
+          python -m evals run kpi-ledger

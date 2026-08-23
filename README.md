@@ -145,6 +145,7 @@ docs/kpi/programs/<program>.md      what the agent is given
 docs/kpi/trees/<program>.md         hand-written baseline, written first
 docs/kpi/trees/<program>.agent.md   the agent's draft (+ .json twin)
 docs/kpi/trees/<program>.review.md  where they disagree, and who was right
+docs/kpi/simulator.md               runbook: the clock, the daily tick, jumping, teardown
 docs/kpi/ledger.md                  the ground truth: how each expected reading is derived
 docs/kpi/ledger/<program>.csv       the ledger itself, regenerated from the scenario
 ```
@@ -173,8 +174,10 @@ Seed, tick and verify are one computation — a diff between `state_at(day)`
 and what Jira shows — so a converged day always verifies, and converging day
 by day is the same as jumping. The clock, a manifest of keys, and the weekly
 cloud-spend line live in `data/kpi-sim/` (gitignored); the collector reads the
-sim-date from there. `scripts/launchd/` has the daily-tick plist for the
-three-week run; it is not installed automatically.
+sim-date from there. `scripts/launchd/` has the daily-tick plist (07:00
+local, one sim-day per calendar day); it is not installed automatically —
+[`docs/kpi/simulator.md`](docs/kpi/simulator.md) is the runbook for the
+clock, the tick, jumping ahead, and teardown.
 
 ### The ground-truth ledger and its suite (RC1-300)
 

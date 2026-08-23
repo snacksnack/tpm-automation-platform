@@ -103,7 +103,7 @@ def test_draft_hands_the_model_the_brief_and_rubric_and_stamps_versions():
     assert client.calls == 1
     payload = json.loads(client.captured["messages"][0]["content"])
     assert payload["program_brief"] == brief
-    assert payload["rubric"].startswith("# KPI rubric — version 1")
+    assert payload["rubric"].startswith(f"# KPI rubric — version {RUBRIC_VERSION}")
     assert client.captured["system"] == define.load_prompt()
     assert client.captured["output_config"]["format"]["schema"] == define.SCHEMA
 

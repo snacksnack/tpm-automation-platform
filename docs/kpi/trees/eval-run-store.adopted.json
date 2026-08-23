@@ -1,0 +1,274 @@
+{
+  "program": "Agent Eval Harness (eval run store)",
+  "rubric_version": 1,
+  "prompt_version": null,
+  "model": null,
+  "sponsor_question": "For every shipped LLM system, is the output measurably good right now, and what does knowing that cost.",
+  "outcomes": [
+    {
+      "id": "gated-pass-rate",
+      "name": "Gated pass rate, per subject",
+      "type": "outcome",
+      "direction": "higher",
+      "unit": "% of scorable cases; program-level the minimum across billed subjects",
+      "definition": "For the latest run of each subject: cases that passed every gating characteristic ÷ cases that did not error (case-weighted — CaseResult.passed). Errored cases are excluded from the base and reported by error-rate. Program-level: the minimum across subjects with a model (billed); deterministic subjects are reported but do not set the minimum. A subject with no scorable cases is reported in the no-signal state, never 0 % or 100 %.",
+      "source": {
+        "system": "eval-store snapshot (RC1-301): one row per run",
+        "query": "latest row per subject by started_at: passed, cases, errored, model",
+        "cadence": "per run",
+        "owner": "Reid"
+      },
+      "stale_after": "7 days since the subject's last run",
+      "so_what": "A billed subject under 80 % on two consecutive measurements: freeze prompt changes on that repo until a run passes. A drop of more than 10 points between runs with the same prompt version: the model changed, pin it.",
+      "goodhart": {
+        "risk": "high",
+        "gaming_path": "Delete the hard cases, or flip a failing characteristic to advisory.",
+        "counter": "Gating case count and advisory share, reported beside it; a pass-rate rise with a case-count fall is flagged."
+      },
+      "failure_modes": [
+        "Survivorship: only subjects someone chose to run are in the latest-run set.",
+        "Denominator collapse: a subject with 20 scorable cases of 46 is on a small base; a two-case subject flips 50 points on one case.",
+        "A subject whose latest run is weeks old is carried as stale by measurement-freshness-days, not re-read as current."
+      ],
+      "leads": null,
+      "activity_derived": false
+    },
+    {
+      "id": "cost-per-verified-case",
+      "name": "Cost per verified case",
+      "type": "outcome",
+      "direction": "lower",
+      "unit": "USD per scored case (and $ per full sweep)",
+      "definition": "(model_spend + store_fixed_cost_prorated) ÷ cases_scored over a trailing 4-week window, where model_spend is the sum of run cost in the window, store_fixed_cost_prorated is the Postgres plan's monthly price × (window days ÷ 30), and cases_scored counts non-errored cases. Also reported as $ per full sweep: the cost of the latest run of every billed subject. A $0 billed run is a broken instrument, not a cheap run; where cost is absent it is recomputed from tokens × price and flagged.",
+      "source": {
+        "system": "eval-store snapshot (RC1-301): one row per run + Postgres plan billing",
+        "query": "cost_usd, cases, errored, started_at per run in the window; the plan's fixed monthly price",
+        "cadence": "per run; monthly for the plan price",
+        "owner": "Reid"
+      },
+      "stale_after": "7 days (if no run lands in 7 days the numerator is only the fixed cost and the value is stale, not 'cost fell')",
+      "so_what": "If $ per verified case rises more than 50 % without a matching rise in cases or a deliberate model upgrade, the decision is model choice per subject; if a full sweep exceeds the ceiling, sweeps go fortnightly.",
+      "goodhart": {
+        "risk": "medium",
+        "gaming_path": "Run the free subjects more often: cases up, spend flat, billed systems unmeasured.",
+        "counter": "measurement-freshness-days per billed subject, and the per-sweep figure, which free runs do not move."
+      },
+      "failure_modes": [
+        "A consumer that does not set cost_usd records $0 and the run renders as free.",
+        "The fixed cost dominates at low volume: the unit cost is mostly how often anyone runs anything.",
+        "Price-table changes re-price history."
+      ],
+      "leads": null,
+      "activity_derived": false
+    }
+  ],
+  "leading": [
+    {
+      "id": "measurement-freshness-days",
+      "name": "Measurement freshness",
+      "type": "leading",
+      "direction": "lower",
+      "unit": "days since the last run, per billed subject; program-level the maximum",
+      "definition": "today − max(started_at) per billed subject (model not null); program-level the maximum. A subject never run is reported never-measured, not 0.",
+      "source": {
+        "system": "eval-store snapshot (RC1-301): one row per run",
+        "query": "started_at, subject, model",
+        "cadence": "daily read",
+        "owner": "Reid"
+      },
+      "stale_after": "never — this KPI defines stale for the others; it is computed from timestamps and the clock",
+      "so_what": "Any billed subject over 7 days: the weekly brief names it and the ask is 'run it or retire it'. Over 21 days the subject is dropped from the pass-rate minimum and listed as unmeasured.",
+      "goodhart": {
+        "risk": "low",
+        "gaming_path": "Run a subject with one case to reset the clock — caught by the case count reported beside the pass rate.",
+        "counter": "none"
+      },
+      "failure_modes": [
+        "All runs land when a human takes a measurement; CI never writes. A tree without this indicator reports a pass rate indefinitely off three days of data.",
+        "CI exercises the free subjects without writing, so a subject can be exercised yet look unmeasured here."
+      ],
+      "leads": {
+        "outcome_id": "gated-pass-rate",
+        "mechanism": "A regression in a subject that has not been run cannot appear in the pass rate; freshness bounds how old the 'current' quality reading is.",
+        "lead_time": "the whole gap"
+      },
+      "activity_derived": false
+    },
+    {
+      "id": "unmeasured-code-versions",
+      "name": "Unmeasured code-version drift, per subject",
+      "type": "leading",
+      "direction": "lower",
+      "unit": "count",
+      "definition": "For each subject: the count of consumer package versions released in the subject's repository that are newer than the code_version of that subject's most recent run. If tag and version formats cannot be compared, report unavailable, never 0.",
+      "source": {
+        "system": "GitHub repositories of the six subjects + the eval store",
+        "query": "per subject: release tags newer than the latest run's code_version",
+        "cadence": "per release / on read",
+        "owner": "Reid"
+      },
+      "stale_after": "7 days",
+      "so_what": "Two or more shipped versions of a subject unmeasured: the sponsor triggers a run against the latest version before trusting any freeze or ship decision, or accepts the risk explicitly.",
+      "goodhart": {
+        "risk": "low",
+        "gaming_path": "none",
+        "counter": "none"
+      },
+      "failure_modes": [
+        "code_version is the consumer package version, not a commit: tag-to-version mapping can be ambiguous.",
+        "Survivorship: unreleased-but-shipped changes are invisible.",
+        "No branch or PR record: a version measured on a side branch is indistinguishable from the shipped one."
+      ],
+      "leads": {
+        "outcome_id": "gated-pass-rate",
+        "mechanism": "Each shipped version can introduce a regression; versions released after the last measured one carry unverified risk before the pass rate can show it.",
+        "lead_time": "days to weeks"
+      },
+      "activity_derived": false
+    },
+    {
+      "id": "error-rate",
+      "name": "Error rate",
+      "type": "leading",
+      "direction": "lower",
+      "unit": "% of cases that produced nothing to score, per subject; program-level the maximum",
+      "definition": "From the latest run per subject: errored ÷ cases × 100. A run with no cases is no-signal, never 0 %. Program-level the maximum across subjects, with the subject named.",
+      "source": {
+        "system": "eval-store snapshot (RC1-301): one row per run",
+        "query": "latest row per subject: errored, cases",
+        "cadence": "per run",
+        "owner": "Reid"
+      },
+      "stale_after": "follows the subject's freshness",
+      "so_what": "Error rate over 20 % on a subject: the decision is an infrastructure fix (key, fixture, timeout) before any quality conclusion is drawn from that subject; the brief says 'unmeasured', not a pass rate.",
+      "goodhart": {
+        "risk": "low",
+        "gaming_path": "Swallow exceptions so errors become failures or passes — a code-review matter, and visible as a pass-rate change on the same case set.",
+        "counter": "none"
+      },
+      "failure_modes": [
+        "A subject where every case errors has a pass rate of 0/0: reported no-signal, never 0 % or 100 %.",
+        "Reflects only the last human-triggered run."
+      ],
+      "leads": {
+        "outcome_id": "gated-pass-rate",
+        "mechanism": "Errored cases leave the pass-rate base, making it smaller and more flattering; and errors are the harness breaking, which is a different fix from a prompt regression.",
+        "lead_time": "same run; the decision differs, which is why it is separate"
+      },
+      "activity_derived": false
+    },
+    {
+      "id": "cost-per-run-by-model",
+      "name": "Cost per run, by model",
+      "type": "leading",
+      "direction": "lower",
+      "unit": "USD per run, per (subject, model)",
+      "definition": "Mean cost per run over the trailing 4 weeks, grouped by subject and model, shown with the run's case count so a change can be attributed to model, prompt or case set. Deterministic runs (no model) are excluded.",
+      "source": {
+        "system": "eval-store snapshot (RC1-301): one row per run",
+        "query": "cost_usd, cases, subject, model, started_at per run in the window",
+        "cadence": "per run",
+        "owner": "Reid"
+      },
+      "stale_after": "7 days",
+      "so_what": "A (subject, model) pair costing more than 3× the cheapest model that has run the same subject: the decision is to move it.",
+      "goodhart": {
+        "risk": "low",
+        "gaming_path": "none",
+        "counter": "none"
+      },
+      "failure_modes": [
+        "model is null on deterministic subjects: excluded, reported as 'no model'.",
+        "The price table is maintained by hand; a missing price is a broken instrument, not a free run."
+      ],
+      "leads": {
+        "outcome_id": "cost-per-verified-case",
+        "mechanism": "The model a subject runs on sets its per-run cost; a move to a dearer model shows here on the first run and in the unit cost only as the window fills.",
+        "lead_time": "up to the window length, 4 weeks"
+      },
+      "activity_derived": false
+    }
+  ],
+  "rejected": [
+    {
+      "name": "Runs per week",
+      "ground": "activity",
+      "reason": "Counts how often a human chose to measure, not whether the systems are good; its information lives in freshness.",
+      "proxy": null,
+      "proxy_misses": null
+    },
+    {
+      "name": "Regressions caught before merge",
+      "ground": "unmeasurable",
+      "reason": "The outcome the program exists for; the store carries no branch or PR and CI never writes.",
+      "proxy": "A run with a failed gating characteristic followed within 7 days by a passing run of the same subject with a newer code_version: caught and fixed.",
+      "proxy_misses": "Regressions nobody ran a suite on, fixes by revert, and prompt-only fixes on the same code_version."
+    },
+    {
+      "name": "Time-to-green",
+      "ground": "duplicate",
+      "reason": "The same fail→pass pairing as the caught-and-fixed proxy, reported as days.",
+      "proxy": null,
+      "proxy_misses": null
+    },
+    {
+      "name": "Gating coverage (gating cases per subject, advisory share)",
+      "ground": "duplicate",
+      "reason": "The pass rate's Goodhart counter; it travels with the outcome by rule and does not take a slot.",
+      "proxy": null,
+      "proxy_misses": null
+    },
+    {
+      "name": "Advisory degradation rate",
+      "ground": "diagnostic",
+      "reason": "Plausible mechanism, not a shown one; parked as a drill-through hypothesis until tracked data shows an advisory slip preceding a gating failure.",
+      "proxy": null,
+      "proxy_misses": null
+    },
+    {
+      "name": "Total cases in the suite",
+      "ground": "diagnostic",
+      "reason": "The counter inside coverage.",
+      "proxy": null,
+      "proxy_misses": null
+    },
+    {
+      "name": "Mean latency per case",
+      "ground": "diagnostic",
+      "reason": "No sponsor decision on it.",
+      "proxy": null,
+      "proxy_misses": null
+    },
+    {
+      "name": "Overall mean pass rate across subjects",
+      "ground": "duplicate",
+      "reason": "Hides the failing repo; the program-level minimum is the honest aggregate.",
+      "proxy": null,
+      "proxy_misses": null
+    },
+    {
+      "name": "Hallucination rate",
+      "ground": "diagnostic",
+      "reason": "Only subjects reporting claims_checked carry it; inside the pass rate at program level.",
+      "proxy": null,
+      "proxy_misses": null
+    },
+    {
+      "name": "Judge/human agreement",
+      "ground": "unmeasurable",
+      "reason": "The harness validates its judge in code; there is no run row to compute it from.",
+      "proxy": null,
+      "proxy_misses": null
+    },
+    {
+      "name": "Trend-page freshness",
+      "ground": "no-decision",
+      "reason": "If it slips the fix is 'run the script', not a sponsor decision.",
+      "proxy": null,
+      "proxy_misses": null
+    }
+  ],
+  "notes": [
+    "Adopted set per docs/kpi/trees/eval-run-store.review.md (2026-08-22): outcomes from the baseline (case-weighted; the agent's no-signal state and token×price fallback adopted); unmeasured-code-versions from the agent pending source verification in RC1-303; cost-per-run-by-model is the agent's outcome, demoted."
+  ]
+}

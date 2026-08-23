@@ -12,7 +12,7 @@ fields are typed, and a third one is a three-line addition that gets reviewed.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from config import settings
 
@@ -36,6 +36,10 @@ class Program:
     #: Read run rows from the shared eval store (EVAL_DATABASE_URL).
     eval_store: bool = False
     eval_subjects: tuple[str, ...] = ()  # empty = every subject
+    #: Values a KPI may use that are declared, not measured — a plan price off
+    #: a billing page. Listed in the source catalog (RC1-303) as exactly that,
+    #: so a KPI leaning on one is a proxy with a stated caveat, not a measurement.
+    constants: dict[str, float] = field(default_factory=dict)
 
     @property
     def project_key(self) -> str:
@@ -56,6 +60,9 @@ EVAL_RUN_STORE = Program(
     id="eval-run-store",
     name="Eval run store",
     eval_store=True,
+    # heroku-postgresql:essential-0 on reid-eval-store (RC1-263): the fixed half
+    # of what the program costs. Re-verified against the billing page monthly.
+    constants={"store_plan_usd_per_month": 5.0},
 )
 
 PROGRAMS: dict[str, Program] = {p.id: p for p in (SIMULATED, EVAL_RUN_STORE)}

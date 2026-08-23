@@ -1,0 +1,270 @@
+{
+  "program": "Observability Platform GA (simulated)",
+  "rubric_version": 1,
+  "prompt_version": null,
+  "model": null,
+  "sponsor_question": "Will we hit the date, stay inside the cost envelope, and find out early enough to act if either changes.",
+  "outcomes": [
+    {
+      "id": "forecast-slip-days",
+      "name": "Forecast slip",
+      "type": "outcome",
+      "direction": "lower",
+      "unit": "days",
+      "definition": "forecast_ga − committed_ga, where forecast_ga = today + remaining_points ÷ trailing_throughput_per_day. remaining_points is the sum of story points on stories not in Done; trailing_throughput_per_day is points moved to Done over the last 14 sim-days ÷ 14, read by diffing consecutive daily snapshots. Before 14 days of history exist, throughput is the plan rate (total_points ÷ 70). If throughput is zero the KPI is reported broken with reason 'no completed work to forecast from' — never as zero slip. Once no points remain, the value is the day the last story reached Done minus the committed GA day.",
+      "source": {
+        "system": "Jira snapshot (daily, RC1-301)",
+        "query": "issues under the program label: status, story points (customfield_10033); the epic's duedate as the committed GA; the sim clock for today; the snapshot from 14 sim-days earlier",
+        "cadence": "daily",
+        "owner": "TPM"
+      },
+      "stale_after": "2 sim-days",
+      "so_what": "If the forecast slips past +5 days, the decision is cut scope or add a person to the critical workstream; past +10, the GA date is re-committed upward. Under +5 the date holds and nothing changes.",
+      "goodhart": {
+        "risk": "high",
+        "gaming_path": "Move stories to Done that are not done: remaining points fall and the forecast improves.",
+        "counter": "Reopen rate — stories leaving Done between consecutive snapshots — is reported beside it; any reopen in a week flags the forecast, and the decision on a reopen is to freeze the Done definition and add a review gate."
+      },
+      "failure_modes": [
+        "Throughput window straddles a holiday or an onboarding week: the forecast swings on a small denominator.",
+        "Points re-estimated downward mid-flight: remaining falls without work.",
+        "Stale snapshot re-read as fresh.",
+        "Denominator collapse: with few stories left, one closure moves the forecast by days."
+      ],
+      "leads": null,
+      "activity_derived": false
+    },
+    {
+      "id": "cost-vs-envelope",
+      "name": "Cloud cost vs envelope",
+      "type": "outcome",
+      "direction": "lower",
+      "unit": "USD over plan-to-date (and % of plan-to-date)",
+      "definition": "cumulative_actual − cumulative_plan through the last complete landed week, and cumulative_actual ÷ cumulative_plan as the percentage. The single-week view is the leading indicator weekly-spend-burn-ratio, not part of this number.",
+      "source": {
+        "system": "Cloud spend line (simulator spend.csv in the snapshot; a billing export for a real program)",
+        "query": "week, planned_usd, actual_usd for every landed week",
+        "cadence": "weekly, lands the Monday after",
+        "owner": "TPM; Finance owns the source row"
+      },
+      "stale_after": "8 days (one cadence plus a day)",
+      "so_what": "Over 110 % of plan-to-date for two consecutive weeks: the decision is re-scope the pipeline (sampling, retention) or go back to Finance for the envelope.",
+      "goodhart": {
+        "risk": "medium",
+        "gaming_path": "Defer ingest of a service to next quarter so this program's line looks fine.",
+        "counter": "scope-change-pct — a service dropped from scope shows there."
+      },
+      "failure_modes": [
+        "The spend line is a weekly feed that can silently stop; staleness is the common case, not the edge.",
+        "A misaligned week boundary mis-states plan-to-date.",
+        "A spike attributed to this program that was another team's."
+      ],
+      "leads": null,
+      "activity_derived": false
+    }
+  ],
+  "leading": [
+    {
+      "id": "scope-change-pct",
+      "name": "Scope change vs baseline",
+      "type": "leading",
+      "direction": "lower",
+      "unit": "% of baseline points",
+      "definition": "(points_added − points_removed) ÷ baseline_points × 100, where baseline is the sum of story points on stories present in the sim-day-0 snapshot, added is points on stories not in that snapshot, and removed is points on day-0 stories no longer under the program. Reported net, with added and removed separately.",
+      "source": {
+        "system": "Jira snapshot (daily, RC1-301)",
+        "query": "issues under the program label: story points, presence vs the day-0 snapshot (created is informative only)",
+        "cadence": "daily",
+        "owner": "TPM"
+      },
+      "stale_after": "2 sim-days",
+      "so_what": "Net scope over +10 % triggers a scope review with the sponsor that week: which stories are GA-blocking and which are not.",
+      "goodhart": {
+        "risk": "low",
+        "gaming_path": "Hide scope by not filing it — caught by the forecast when the unfiled work has to be done anyway.",
+        "counter": "none"
+      },
+      "failure_modes": [
+        "Re-filed duplicates read as adds.",
+        "Stories moved out of the epic read as removals.",
+        "Unestimated stories are invisible: the count of unestimated open stories is reported beside it."
+      ],
+      "leads": {
+        "outcome_id": "forecast-slip-days",
+        "mechanism": "Points added today are days of work the forecast has not absorbed; the sponsor's decision lead time is what this buys — a 15 % add with seven weeks left is recoverable, the same add with two is not.",
+        "lead_time": "same day for the number; weeks for the decision"
+      },
+      "activity_derived": false
+    },
+    {
+      "id": "critical-path-slack-days",
+      "name": "Critical-path slack",
+      "type": "leading",
+      "direction": "higher",
+      "unit": "days",
+      "definition": "Over every blocks link whose downstream is on a chain to a story labelled ga-blocking and whose upstream and downstream are both open: slack = downstream.start − upstream.due. The KPI is the minimum, with the link named. No open link on a GA chain: no value, reported as such.",
+      "source": {
+        "system": "Jira snapshot (daily, RC1-301)",
+        "query": "issues under the program label: Blocks links, start date (customfield_10015), duedate, status, the ga-blocking label",
+        "cadence": "daily",
+        "owner": "TPM"
+      },
+      "stale_after": "2 sim-days",
+      "so_what": "Slack under 3 days on a GA-blocking chain: the TPM re-sequences or re-assigns that week. Negative slack: the downstream's dates are re-planned immediately.",
+      "goodhart": {
+        "risk": "medium",
+        "gaming_path": "Push downstream start dates out to manufacture slack — which is slipping the schedule quietly.",
+        "counter": "forecast-slip-days — pushed starts flow into remaining-work timing."
+      },
+      "failure_modes": [
+        "Links entered backwards invert the sign.",
+        "A story without a start date drops out of the minimum silently: the number of skipped links is reported.",
+        "A late upstream with no re-planned due date under-reports; the transitive half of blocked share sees it."
+      ],
+      "leads": {
+        "outcome_id": "forecast-slip-days",
+        "mechanism": "A due-date slip on an upstream consumes slack first; the forecast only moves once the downstream fails to start and throughput on that chain falls.",
+        "lead_time": "the slack itself — at +10 days a slip is invisible to the forecast for ~10 days"
+      },
+      "activity_derived": false
+    },
+    {
+      "id": "blocked-share-pct",
+      "name": "Blocked share of open work on GA chains",
+      "type": "leading",
+      "direction": "lower",
+      "unit": "% of open points",
+      "definition": "Points on open stories on chains to a ga-blocking story whose status is Blocked (direct), or whose upstream — transitively via Blocks links — is open and Blocked or past due (transitive), ÷ all open points in the program. Direct and transitive halves are reported separately.",
+      "source": {
+        "system": "Jira snapshot (daily, RC1-301)",
+        "query": "issues under the program label: status (the Blocked status), Blocks links, story points, duedate, the ga-blocking label",
+        "cadence": "daily",
+        "owner": "TPM"
+      },
+      "stale_after": "2 sim-days",
+      "so_what": "Blocked share over 25 % for three consecutive days: the TPM's weekly ask to the sponsor names the blocker owner — that is the escalation, not a dashboard colour.",
+      "goodhart": {
+        "risk": "medium",
+        "gaming_path": "Leave a blocked story In Progress rather than mark it Blocked.",
+        "counter": "The transitive half catches it when the upstream is late; days-in-status on In Progress stories is in the drill-through."
+      },
+      "failure_modes": [
+        "A project without a Blocked status makes the direct half read zero: it must be reported not measurable, never zero.",
+        "Transitive blockage over-counts when an upstream is late by a day."
+      ],
+      "leads": {
+        "outcome_id": "forecast-slip-days",
+        "mechanism": "Blocked points will not convert to throughput this window; a rising blocked share precedes a falling trailing throughput by up to the window length.",
+        "lead_time": "7–14 days"
+      },
+      "activity_derived": false
+    },
+    {
+      "id": "weekly-spend-burn-ratio",
+      "name": "Weekly spend burn ratio",
+      "type": "leading",
+      "direction": "lower",
+      "unit": "ratio, latest landed week",
+      "definition": "For the latest landed spend week, actual spend ÷ planned spend for that week (single-week, not cumulative). 1.0 is on plan. If planned spend for the week is zero, report broken with reason 'no planned baseline for week' — never zero or infinity.",
+      "source": {
+        "system": "Cloud spend line (simulator spend.csv in the snapshot)",
+        "query": "the latest landed row: actual_usd ÷ planned_usd",
+        "cadence": "weekly, lands the Monday after",
+        "owner": "TPM; Finance owns the source row"
+      },
+      "stale_after": "9 days",
+      "so_what": "Over 1.2 for two consecutive weeks, the sponsor changes telemetry retention and sampling now to protect the envelope; a single week over 1.5 is escalated the week it lands.",
+      "goodhart": {
+        "risk": "medium",
+        "gaming_path": "Shift ingest or storage load into a later week to keep any single week near 1.0 while total spend is unchanged.",
+        "counter": "cost-vs-envelope — single-week smoothing leaves cumulative variance visible."
+      },
+      "failure_modes": [
+        "Stale source: the row lands the Monday after, so overspend is seen up to a week late.",
+        "Plan drift: a mid-program revision to planned weekly spend resets the baseline.",
+        "Single-week noise: a one-off backfill spike reads as a burn problem when cumulative spend is fine."
+      ],
+      "leads": {
+        "outcome_id": "cost-vs-envelope",
+        "mechanism": "Cumulative variance is the running sum of weekly gaps; the weekly ratio crosses its threshold before the cumulative figure does.",
+        "lead_time": "2–4 weeks"
+      },
+      "activity_derived": false
+    }
+  ],
+  "rejected": [
+    {
+      "name": "Throughput, trailing two weeks (points/week)",
+      "ground": "duplicate",
+      "reason": "The denominator of the forecast and reported inside it; demoted to the drill-through, labelled activity-derived, when the burn ratio took the fourth slot.",
+      "proxy": null,
+      "proxy_misses": null
+    },
+    {
+      "name": "Throughput vs required run-rate",
+      "ground": "duplicate",
+      "reason": "slip > 0 exactly when throughput < remaining ÷ weeks remaining: the same inputs on the same day in different units.",
+      "proxy": null,
+      "proxy_misses": null
+    },
+    {
+      "name": "Reopen rate",
+      "ground": "duplicate",
+      "reason": "Reported beside the forecast as its Goodhart counter by rule; a counter does not take a slot.",
+      "proxy": null,
+      "proxy_misses": null
+    },
+    {
+      "name": "Stories closed per week / velocity",
+      "ground": "activity",
+      "reason": "The team's output count, not the program's result.",
+      "proxy": null,
+      "proxy_misses": null
+    },
+    {
+      "name": "% stories with comments in the last 7 days",
+      "ground": "no-decision",
+      "reason": "The sponsor changes nothing on it; a TPM diagnostic.",
+      "proxy": null,
+      "proxy_misses": null
+    },
+    {
+      "name": "% stories with dates populated",
+      "ground": "diagnostic",
+      "reason": "The forecast's data-hygiene check; a drill-through item.",
+      "proxy": null,
+      "proxy_misses": null
+    },
+    {
+      "name": "Open drift findings (count)",
+      "ground": "diagnostic",
+      "reason": "Its content feeds the slack indicator; its count changes no decision.",
+      "proxy": null,
+      "proxy_misses": null
+    },
+    {
+      "name": "Days since last status update per story",
+      "ground": "no-decision",
+      "reason": "A stalled-story conversation, not SVP altitude.",
+      "proxy": null,
+      "proxy_misses": null
+    },
+    {
+      "name": "Trace coverage (% services emitting traces)",
+      "ground": "unmeasurable",
+      "reason": "The truest product outcome, and no source in the brief carries it; recorded so the successor program measures it.",
+      "proxy": null,
+      "proxy_misses": null
+    },
+    {
+      "name": "On-call alert volume after GA",
+      "ground": "unmeasurable",
+      "reason": "The real outcome of an observability platform, not observable until after GA.",
+      "proxy": null,
+      "proxy_misses": null
+    }
+  ],
+  "notes": [
+    "Adopted set per docs/kpi/trees/simulated-program.review.md (2026-08-22): outcomes from the baseline with the agent's broken-with-reason wording; blocked share restricted to GA chains per the agent; weekly burn ratio from the agent; throughput demoted. The ga-blocking label and the 14-day window are RC1-300 decisions."
+  ]
+}

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The KPI program's daily run: scripts/kpi_daily.sh at 07:00 local — tick the
+  simulated program one day, then snapshot every registered program
+  (RC1-299, RC1-301). One job rather than one per step, so the order holds
+  even when a missed morning fires at wake.
+
+  Install (deliberate — it changes what your machine does every morning):
+    cp scripts/launchd/com.reidcollins.kpi-daily.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.reidcollins.kpi-daily.plist
+  Remove:
+    launchctl unload ~/Library/LaunchAgents/com.reidcollins.kpi-daily.plist
+
+  Edit WorkingDirectory to the repo checkout. Logs land in data/kpi-sim/.
+  Credentials: Jira from the repo's .env (config reads it); the eval store's
+  EVAL_DATABASE_URL from ~/.zshrc, read by the script — see docs/kpi/simulator.md.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.reidcollins.kpi-daily</string>
+  <key>WorkingDirectory</key>
+  <string>/Users/reidcollins/programming/personal/tpm-automation-platform</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>/Users/reidcollins/programming/personal/tpm-automation-platform/scripts/kpi_daily.sh</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>7</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/Users/reidcollins/programming/personal/tpm-automation-platform/data/kpi-sim/daily.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/reidcollins/programming/personal/tpm-automation-platform/data/kpi-sim/daily.err</string>
+</dict>
+</plist>

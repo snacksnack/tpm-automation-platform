@@ -76,28 +76,22 @@ trees for, keyed on the brief's filename in `docs/kpi/programs/`:
 | `eval-run-store` | — | — | wall clock | `EVAL_DATABASE_URL` |
 
 The eval store's DSN is read from the process environment, never from a
-repo `.env` (RC1-263), so `snapshot eval-run-store` needs a shell that has
-it — the launchd agent below does not, by design.
+repo `.env` (RC1-263); by hand that means a shell with `~/.zshrc` loaded,
+and the daily run reads the line from the profile itself.
 
 ## The daily snapshot
 
-`scripts/launchd/com.reidcollins.kpi-snapshot.plist` runs
-`python -m collectors snapshot simulated-program` at **07:30 local**, half
-an hour after the simulator's tick, so each sim-day is snapshotted once in
-its converged state. Installed the same way as the tick, and just as
-deliberately not automatic:
+Both programs are snapshotted every morning by the KPI daily run —
+`scripts/kpi_daily.sh`, launchd at 07:00, tick first and then
+`snapshot simulated-program` and `snapshot eval-run-store`. The runbook
+for installing and watching it is [`simulator.md`](simulator.md#the-daily-run).
+`EVAL_DATABASE_URL` needs no setup: the script reads the one `export` line
+from `~/.zshrc`, its only home.
 
-```bash
-cp scripts/launchd/com.reidcollins.kpi-snapshot.plist ~/Library/LaunchAgents/
-launchctl load ~/Library/LaunchAgents/com.reidcollins.kpi-snapshot.plist
-tail -3 data/kpi-sim/snapshot.log        # the last runs
-```
-
-A missed morning snapshots at wake, once. If the tick and the snapshot both
-fire at wake, launchd runs them in the order they come due — tick first.
-Jumping with `python -m simulate to-day N` and then `snapshot` by hand
-gives any day on demand; a sim-date snapshotted twice keeps both runs, and
-`show --sim-date` / a recompute use the latest.
+Jumping with `python -m simulate to-day N` and then
+`scripts/kpi_daily.sh --no-tick` records any day on demand; a sim-date
+snapshotted twice keeps both runs, and `show --sim-date` / a recompute use
+the latest.
 
 ## Recomputing a day, offline — the done-when
 

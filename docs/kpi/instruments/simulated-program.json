@@ -1,0 +1,252 @@
+{
+  "program": "simulated-program",
+  "rubric_version": 2,
+  "prompt_version": 1,
+  "model": "claude-opus-4-8",
+  "instrumented_at": "2026-08-23T07:04:20.158850-04:00",
+  "sample_sim_date": "2026-09-08",
+  "kpis": [
+    {
+      "kpi_id": "forecast-slip-days",
+      "verdict": "confirmed",
+      "status": "verified",
+      "fields": [
+        "jira.status_category",
+        "jira.points",
+        "jira.due",
+        "jira.issue_type",
+        "jira.status",
+        "clock.sim_date",
+        "clock.sim_day"
+      ],
+      "query": "remaining_points = sum(jira.points) over issues where jira.status_category != 'Done'; trailing_throughput_per_day = (points reaching Done over last 14 sim-days, computed by diffing consecutive daily jira snapshots' status_category) / 14; forecast_ga = clock.sim_date + remaining_points / throughput; committed_ga = jira.due on the issue where jira.issue_type == 'Epic'; before 14 days of history use plan rate total_points/70; if throughput==0 report broken.",
+      "proxy": null,
+      "misses": null,
+      "reason": "All inputs are stored fields: points, status_category for done/remaining, epic due as committed GA, sim_date/sim_day for the clock, and the 14-day diff is served by daily snapshots. Reopen counter uses status_category diffs across snapshots.",
+      "caveat": "Requires 14 sim-days of prior snapshots for the trailing throughput; on today's snapshot (sim_day 1) only one day of history exists, so throughput falls back to the plan rate total_points/70 and the forecast is plan-driven, not measured.",
+      "measure": "simulated:forecast-slip-days",
+      "sample": {
+        "kpi_id": "forecast-slip-days",
+        "sim_date": "2026-09-08",
+        "value": 4.0,
+        "state": "ok",
+        "tripped": false,
+        "as_of": "2026-09-08",
+        "reason": null,
+        "detail": "135 pts remaining at 1.929 pts/day (plan rate 135 pts / 70 days (under 14 days of history)) -> day 71.0"
+      },
+      "when_missing": {
+        "kpi_id": "forecast-slip-days",
+        "sim_date": "2026-09-08",
+        "value": 3.0,
+        "state": "broken",
+        "tripped": false,
+        "as_of": "2026-09-07",
+        "reason": "source broken since day 1: 30 issues under the program label on day 0, 0 today; carrying day 0",
+        "detail": "135 pts remaining at 1.929 pts/day (plan rate 135 pts / 70 days (under 14 days of history)) -> day 70.0"
+      },
+      "problems": []
+    },
+    {
+      "kpi_id": "cost-vs-envelope",
+      "verdict": "confirmed",
+      "status": "verified",
+      "fields": [
+        "spend.planned_usd",
+        "spend.actual_usd",
+        "spend.week",
+        "spend.week_start",
+        "spend.landed_on_day"
+      ],
+      "query": "cumulative_actual = sum(spend.actual_usd) over landed weeks; cumulative_plan = sum(spend.planned_usd) over the same weeks; report cumulative_actual - cumulative_plan and the ratio cumulative_actual/cumulative_plan through the last complete landed week.",
+      "proxy": null,
+      "misses": null,
+      "reason": "planned_usd and actual_usd per landed week are stored fields; week/week_start/landed_on_day identify the last complete landed week. Every input needed is in the spend source.",
+      "caveat": "The spend source reads 'missing' on today's snapshot ('no weeks landed yet', spend_rows=0), so this reads broken with reason 'no landed spend weeks' until the first weekly row lands the Monday after week 1.",
+      "measure": "simulated:cost-vs-envelope",
+      "sample": {
+        "kpi_id": "cost-vs-envelope",
+        "sim_date": "2026-09-08",
+        "value": null,
+        "state": "stale",
+        "tripped": false,
+        "as_of": null,
+        "reason": "no spend row has landed yet; week 1 lands on day 7",
+        "detail": ""
+      },
+      "when_missing": {
+        "kpi_id": "cost-vs-envelope",
+        "sim_date": "2026-09-08",
+        "value": null,
+        "state": "stale",
+        "tripped": false,
+        "as_of": null,
+        "reason": "no spend row has landed yet; week 1 lands on day 7",
+        "detail": ""
+      },
+      "problems": []
+    },
+    {
+      "kpi_id": "scope-change-pct",
+      "verdict": "confirmed",
+      "status": "verified",
+      "fields": [
+        "jira.points",
+        "jira.key",
+        "jira.labels",
+        "jira.status_category"
+      ],
+      "query": "baseline_points = sum(jira.points) over issues present in the sim-day-0 snapshot; added = sum(jira.points) on issues (by jira.key) not in the day-0 snapshot; removed = sum(jira.points) on day-0 issues (by jira.key) no longer carrying the program label; net = (added - removed)/baseline * 100, reporting added and removed separately.",
+      "proxy": null,
+      "misses": null,
+      "reason": "Presence-versus-day-0 is a snapshot diff on jira.key, and points/labels are stored fields; the definition explicitly uses presence rather than the changelog, which is not available.",
+      "caveat": "Needs the sim-day-0 snapshot retained for comparison; today is sim_day 1 so the day-0 baseline exists but the diff window is one day. Unestimated open stories (points None) are invisible and must be reported beside the number.",
+      "measure": "simulated:scope-change-pct",
+      "sample": {
+        "kpi_id": "scope-change-pct",
+        "sim_date": "2026-09-08",
+        "value": 0.0,
+        "state": "ok",
+        "tripped": false,
+        "as_of": "2026-09-08",
+        "reason": null,
+        "detail": "+0 / -0 pts against a 135-pt baseline"
+      },
+      "when_missing": {
+        "kpi_id": "scope-change-pct",
+        "sim_date": "2026-09-08",
+        "value": 0.0,
+        "state": "broken",
+        "tripped": false,
+        "as_of": "2026-09-07",
+        "reason": "source broken since day 1: 30 issues under the program label on day 0, 0 today; carrying day 0",
+        "detail": "+0 / -0 pts against a 135-pt baseline"
+      },
+      "problems": []
+    },
+    {
+      "kpi_id": "critical-path-slack-days",
+      "verdict": "confirmed",
+      "status": "verified",
+      "fields": [
+        "jira.links",
+        "jira.start",
+        "jira.due",
+        "jira.status",
+        "jira.status_category",
+        "jira.labels"
+      ],
+      "query": "Over each jira.links (upstream, downstream) whose downstream is on a Blocks chain to an issue with 'ga-blocking' in jira.labels and both endpoints open (status_category != 'Done'): slack = downstream.jira.start - upstream.jira.due; KPI = min slack with the link named; no open GA-chain link => no value.",
+      "proxy": null,
+      "misses": null,
+      "reason": "Blocks links, start (customfield_10015), due, status, and the ga-blocking label are all stored fields; chain traversal is over jira.links.",
+      "caveat": "Links with a missing start or due drop out silently; the count of skipped links must be reported. On today's snapshot 15 links exist so the chain is computable.",
+      "measure": "simulated:critical-path-slack-days",
+      "sample": {
+        "kpi_id": "critical-path-slack-days",
+        "sim_date": "2026-09-08",
+        "value": 3.0,
+        "state": "ok",
+        "tripped": false,
+        "as_of": "2026-09-08",
+        "reason": null,
+        "detail": "s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains"
+      },
+      "when_missing": {
+        "kpi_id": "critical-path-slack-days",
+        "sim_date": "2026-09-08",
+        "value": 3.0,
+        "state": "broken",
+        "tripped": false,
+        "as_of": "2026-09-07",
+        "reason": "source broken since day 1: 30 issues under the program label on day 0, 0 today; carrying day 0",
+        "detail": "s-dash-checkout due -> a-checkout-alerts start; 6 open link(s) on GA chains"
+      },
+      "problems": []
+    },
+    {
+      "kpi_id": "blocked-share-pct",
+      "verdict": "confirmed",
+      "status": "verified",
+      "fields": [
+        "jira.status",
+        "jira.status_category",
+        "jira.links",
+        "jira.points",
+        "jira.due",
+        "jira.labels"
+      ],
+      "query": "direct = sum(jira.points) on open issues on chains to a 'ga-blocking' issue where jira.status == 'Blocked'; transitive = sum(jira.points) on open issues whose upstream (via jira.links) is open and Blocked or past due (jira.due < clock.sim_date); denominator = sum(jira.points) over all open issues; report direct and transitive halves separately as % of open points.",
+      "proxy": null,
+      "misses": null,
+      "reason": "The Blocked status, links, points, due, and ga-blocking label are stored fields; both halves are snapshot-computable.",
+      "caveat": "If the project's snapshot carries no issue in status 'Blocked', the direct half must be reported not-measurable, never zero; the status vocabulary present in the snapshot must be checked.",
+      "measure": "simulated:blocked-share-pct",
+      "sample": {
+        "kpi_id": "blocked-share-pct",
+        "sim_date": "2026-09-08",
+        "value": 0.0,
+        "state": "ok",
+        "tripped": false,
+        "as_of": "2026-09-08",
+        "reason": null,
+        "detail": "direct 0 + transitive 0 of 135 open pts on GA chains"
+      },
+      "when_missing": {
+        "kpi_id": "blocked-share-pct",
+        "sim_date": "2026-09-08",
+        "value": 0.0,
+        "state": "broken",
+        "tripped": false,
+        "as_of": "2026-09-07",
+        "reason": "source broken since day 1: 30 issues under the program label on day 0, 0 today; carrying day 0",
+        "detail": "direct 0 + transitive 0 of 135 open pts on GA chains"
+      },
+      "problems": []
+    },
+    {
+      "kpi_id": "weekly-spend-burn-ratio",
+      "verdict": "confirmed",
+      "status": "verified",
+      "fields": [
+        "spend.actual_usd",
+        "spend.planned_usd",
+        "spend.week",
+        "spend.landed_on_day"
+      ],
+      "query": "For the latest landed spend row (max spend.week / landed_on_day): ratio = spend.actual_usd / spend.planned_usd; if spend.planned_usd == 0 report broken with reason 'no planned baseline for week'.",
+      "proxy": null,
+      "misses": null,
+      "reason": "actual_usd and planned_usd per week are stored fields; the latest landed row is identified by week/landed_on_day.",
+      "caveat": "The spend source is 'missing' today ('no weeks landed yet'), so this reads broken/stale with reason 'no landed spend week' until the first weekly row lands.",
+      "measure": "simulated:weekly-spend-burn-ratio",
+      "sample": {
+        "kpi_id": "weekly-spend-burn-ratio",
+        "sim_date": "2026-09-08",
+        "value": null,
+        "state": "stale",
+        "tripped": false,
+        "as_of": null,
+        "reason": "no spend row has landed yet; week 1 lands on day 7",
+        "detail": ""
+      },
+      "when_missing": {
+        "kpi_id": "weekly-spend-burn-ratio",
+        "sim_date": "2026-09-08",
+        "value": null,
+        "state": "stale",
+        "tripped": false,
+        "as_of": null,
+        "reason": "no spend row has landed yet; week 1 lands on day 7",
+        "detail": ""
+      },
+      "problems": []
+    }
+  ],
+  "notes": [
+    "Two rejected candidates in the tree name product outcomes with no source: trace coverage (% services emitting traces) and post-GA on-call alert volume — the catalog has no telemetry or alerting feed, confirming the unmeasurable ground; the successor program would need a traces feed and an alerting/on-call source collected.",
+    "Both cost KPIs depend entirely on the spend source, which is 'missing' on the day-1 sample (spend_rows=0); every cost verdict will render broken until the first Monday-after row lands. This is the expected staleness case the tree's failure_modes already call out.",
+    "The forecast, scope, slack, and blocked-share KPIs all rely on snapshot-to-snapshot diffing (throughput over 14 days, presence vs day-0, reopen counter); confirmation assumes prior daily snapshots are retained and readable, not just today's — worth an explicit check in the measure harness.",
+    "Jira changelog, comments, worklogs, and sprint fields are not available; every Jira KPI here correctly uses snapshot state or snapshot diffs rather than transition history, so none are affected."
+  ]
+}

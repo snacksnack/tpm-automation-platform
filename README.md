@@ -57,8 +57,9 @@ drift/
 narrative/      findings -> TPM-voiced digest via Anthropic SDK      [7/9]
 evals/          drift-digest goldens — frozen cases, scored        [RC1-261]
                 + kpi-ledger: KPI readings vs the ground truth        [RC1-300]
-kpi/            Program KPI agent — define stage: brief + rubric ->
-                reviewable KPI tree (docs/kpi/); the reading contract [RC1-302]
+kpi/            Program KPI agent — define (brief + rubric -> tree),
+                instrument (tree + source catalog -> verified set),
+                measures, the reading contract (docs/kpi/)  [RC1-302, RC1-303]
 seed/           idempotent RC1 demo-data seeder                      [2/9]
 simulate/       scripted 10-week program in PMA, one sim-day per
                 tick; the KPI agent's test fixture, and its
@@ -146,11 +147,43 @@ docs/kpi/programs/<program>.md      what the agent is given
 docs/kpi/trees/<program>.md         hand-written baseline, written first
 docs/kpi/trees/<program>.agent.md   the agent's draft (+ .json twin)
 docs/kpi/trees/<program>.review.md  where they disagree, and who was right
+docs/kpi/trees/<program>.adopted.json the adopted set, as data, for the stages after define
+docs/kpi/instruments/<program>.md   each adopted KPI: confirmed, proxied or rejected, and proven
 docs/kpi/simulator.md               runbook: the clock, the daily tick, jumping, teardown
 docs/kpi/snapshots.md               the collector: one dated snapshot per run per program
 docs/kpi/ledger.md                  the ground truth: how each expected reading is derived
 docs/kpi/ledger/<program>.csv       the ledger itself, regenerated from the scenario
 ```
+
+### Instrument (RC1-303)
+
+A KPI without a verified source does not ship. `python -m kpi.instrument`
+takes the adopted tree and the **source catalog** — what the collector
+actually stores, field by field, plus what it explicitly does not (the
+Jira changelog, per-characteristic eval detail, GitHub) and the latest
+snapshot's health — and the model returns a verdict per KPI: *confirmed*
+with the fields it uses, *proxied* with the stand-in and what it misses, or
+*rejected* with the missing source named. The code then refuses any cited
+field not in the catalog, runs the registered measure (`kpi/measures.py`)
+for every confirmed or proxied KPI against the stored snapshots, and runs
+it again with every source removed — it must read *broken* or *stale* with
+a reason, never a number. A "confirmed" with nothing that computes it is
+*unverified* and does not ship.
+
+```bash
+python -m kpi.instrument --program eval-run-store \
+    --out docs/kpi/instruments/eval-run-store.md     # billed, one call (~$0.15)
+```
+
+On 2026-08-23: the simulated program's six all verified; the eval run
+store's tree came out five verified, one proxied (`cost-per-verified-case`
+— the store's fixed cost is a declared constant, not a billing feed) and
+one rejected (`unmeasured-code-versions` — GitHub release tags are not a
+snapshot source; collect them and it can be re-instrumented). The sample
+readings already carry two findings the trees predicted: `$0` billed runs
+on two subjects (a broken instrument, flagged as such) and `tool-selection`
+on `claude-sonnet-5` at 3.8× its haiku cost. The rubric moved to **v2**
+here, applying the four rules the two reviews had proposed.
 
 ### The simulated program (RC1-299)
 

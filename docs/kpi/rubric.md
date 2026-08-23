@@ -1,4 +1,4 @@
-# KPI rubric — version 1 (RC1-302)
+# KPI rubric — version 2 (RC1-302, amended RC1-303)
 
 The rubric the define stage applies and the reviewer argues with. It is
 versioned the way the prompt templates are: bump the number in the title on any
@@ -108,6 +108,26 @@ recurring ones:
 
 A KPI with no listed failure mode has not been thought about.
 
+### Four rules the reviews added (v2)
+
+Each came from a disagreement between a hand-written tree and an agent's
+draft (`trees/*.review.md`), which is the only way this document changes.
+
+- **Lead time must be demonstrable, not asserted.** A leading indicator
+  computed from the same inputs as its outcome with no time offset is a
+  duplicate, whatever the mechanism text says. Test: could the outcome move
+  while this did not, on the same snapshot? If not, it is the outcome.
+- **Counter-metrics do not take a slot.** A Goodhart counter is reported
+  beside its outcome in every brief by rule; it is not also a leading
+  indicator unless it predicts something the outcome's own movement does not.
+- **Name the first-day detector for each known risk.** When a brief names a
+  category of risk (scope, dates, cost), the tree says which indicator sees
+  it on the day it happens. A tree that only confirms is a lagging tree.
+- **Calibrate thresholds against the current reading when one exists.** A
+  so-what threshold the program already breaches on the day the tree is
+  drafted is not a decision rule; it is a finding, and the brief's first job
+  is to report it.
+
 ## Staleness is a state
 
 Every KPI declares its **cadence** and a **stale-after** threshold (normally one
@@ -179,7 +199,26 @@ The review compares them:
    and bumps the version. That is the mechanism by which the rubric improves:
    arguing with drafts, not editing in the abstract.
 
+## Instrumentation (RC1-303)
+
+Test 4 is verified, not trusted. The instrument stage checks every KPI in
+the adopted tree against the **source catalog** — what the collector
+actually stores, field by field — and against a registered **measure** that
+computes it, and records one of three verdicts: *confirmed* (every input is
+a stored field), *proxied* (an honest stand-in from stored fields, with the
+sentence saying what it misses), or *rejected* (no input, no honest proxy).
+A KPI leaning on a declared constant rather than a measured feed is a proxy.
+A verdict of "confirmed" with nothing that computes it is *unverified* and
+does not ship. Every confirmed measure is also run with its sources removed
+and must read *broken* or *stale* with a reason — the staleness rule,
+checked per KPI rather than promised. The report lives in
+`instruments/<program>.md`.
+
 ## Changelog
 
+- **v2** (2026-08-23) — the four rules above, proposed in both RC1-302
+  reviews and applied once RC1-303 had exercised the adopted trees; the
+  instrumentation section. No v1 verdict changes: the adopted trees already
+  follow the four rules, which is how they were found.
 - **v1** (2026-08-22) — initial rubric for RC1-302. Six tests, staleness as a
   state, proxy rule, rejection grounds, required fields, review procedure.

@@ -38,6 +38,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import date
 
+from collectors.models import ProgramSnapshot
 from kpi.reading import Reading
 from simulate import scenario
 from simulate.scenario import (
@@ -123,6 +124,67 @@ def snapshot(day: int) -> Snapshot:
     st = scenario.state_at(day)
     visible = {slug: i for slug, i in st.issues.items() if PROGRAM_LABEL in i.labels}
     return Snapshot(day=day, issues=visible, spend=list(st.spend))
+
+
+def _label_value(labels: Iterable[str], prefix: str) -> str:
+    return next((lb[len(prefix):] for lb in labels if lb.startswith(prefix)), "")
+
+
+def snapshot_from_collected(collected: ProgramSnapshot) -> Snapshot:
+    """A collected program snapshot (RC1-301) in the ledger's shape, so the
+    same formulas run over what the collector stored as over the scenario.
+
+    Issues are keyed by their `ks-` slug label where they have one (the
+    simulated program's stories do), else by Jira key, so a collected series
+    and the scenario line up story for story. The epic is not a story: it is
+    read for the committed GA date and dropped. A source that errored
+    (`jira=None`) is an empty snapshot — the source-break rule sees the count
+    fall, which is the reading the tree asks for.
+    """
+    if collected.sim_day is None:
+        raise ValueError("a collected snapshot needs a sim_day to join the ledger's series")
+    issues: dict[str, IssueState] = {}
+    ga_day = GA_DAY
+    project = collected.jira
+    if project is not None:
+        key_to_slug = {
+            i.key: (_label_value(i.labels, scenario.SLUG_PREFIX) or i.key) for i in project.issues
+        }
+        blocks: dict[str, list[str]] = {}
+        for link in project.links:
+            if link.upstream in key_to_slug and link.downstream in key_to_slug:
+                blocks.setdefault(key_to_slug[link.upstream], []).append(
+                    key_to_slug[link.downstream]
+                )
+        for i in project.issues:
+            if i.issue_type == "Epic":
+                if i.due is not None:
+                    ga_day = (i.due - scenario.KICKOFF).days
+                continue
+            if i.start is None or i.due is None:
+                continue  # a story with no dates cannot sit on a schedule; reported by RC1-303
+            slug = key_to_slug[i.key]
+            issues[slug] = IssueState(
+                slug=slug,
+                summary=i.summary,
+                status=i.status,
+                start=i.start,
+                due=i.due,
+                points=int(i.points or 0),
+                labels=frozenset(i.labels),
+                blocks=tuple(sorted(blocks.get(slug, ()))),
+                owner=_label_value(i.labels, "own-"),
+                workstream=_label_value(i.labels, "ws-"),
+                created_day=(i.created - scenario.KICKOFF).days if i.created else 0,
+            )
+    spend = [
+        SpendRow(
+            week=r.week, planned_usd=r.planned_usd, actual_usd=r.actual_usd,
+            lands_on_day=r.landed_on_day if r.landed_on_day is not None else 7 * r.week,
+        )
+        for r in collected.spend
+    ]
+    return Snapshot(day=collected.sim_day, issues=issues, spend=spend, ga_day=ga_day)
 
 
 # --- the graph on a day ------------------------------------------------------------------
@@ -407,6 +469,7 @@ def derive(
     window_days: int = WINDOW_DAYS,
     detect_source_break: bool = True,
     last_day: int = LAST_DAY,
+    series: list[Snapshot] | None = None,
 ) -> Ledger:
     """The ledger for days 0..`last_day`.
 
@@ -414,8 +477,19 @@ def derive(
     deliberately wrong implementation through the same code path: the
     agent's rejected 28-day window, and an implementation that trusts an
     empty snapshot. The reference is the defaults.
+
+    `series` replaces the scenario with snapshots from elsewhere — the
+    collector's, via `snapshot_from_collected` — one per day from day 0,
+    contiguous. That is how "a day's KPI values can be recomputed from its
+    snapshot alone" (RC1-301) is checked: the same formulas, a different
+    source, the same ledger.
     """
-    series = [snapshot(d) for d in range(last_day + 1)]
+    if series is None:
+        series = [snapshot(d) for d in range(last_day + 1)]
+    else:
+        if [s.day for s in series] != list(range(len(series))):
+            raise ValueError("series must be one snapshot per day from day 0, in order")
+        last_day = len(series) - 1
     ledger = Ledger()
     last_good = 0
     broke_on: int | None = None

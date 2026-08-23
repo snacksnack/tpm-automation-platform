@@ -22,6 +22,7 @@ from collectors.models import DateChange, DependencyLink, Issue, ProjectSnapshot
 # RC1 instance specifics (see the rc1-jira-preflight notes). Instance-scoped —
 # lift into config when a second Jira site appears.
 START_DATE_FIELD = "customfield_10015"
+POINTS_FIELD = "customfield_10033"  # the board estimation field (RC1-299 writes it)
 BLOCKS_LINK = "Blocks"
 
 ISSUE_FIELDS = [
@@ -32,6 +33,12 @@ ISSUE_FIELDS = [
     "duedate",
     START_DATE_FIELD,
     "issuelinks",
+    # RC1-301: what the KPI tree reads.
+    "issuetype",
+    "labels",
+    "created",
+    "parent",
+    POINTS_FIELD,
 ]
 
 # changelog field ids / names we care about -> normalized label
@@ -67,6 +74,7 @@ def parse_issue(raw: dict) -> Issue:
     category = (status.get("statusCategory") or {}).get("name") or ""
     priority = (f.get("priority") or {}).get("name")
     assignee = f.get("assignee") or {}
+    points = f.get(POINTS_FIELD)
     return Issue(
         key=raw["key"],
         summary=f.get("summary") or "",
@@ -77,6 +85,11 @@ def parse_issue(raw: dict) -> Issue:
         assignee_name=assignee.get("displayName"),
         due=_parse_date(f.get("duedate")),
         start=_parse_date(f.get(START_DATE_FIELD)),
+        issue_type=(f.get("issuetype") or {}).get("name"),
+        labels=list(f.get("labels") or []),
+        points=float(points) if points is not None else None,
+        created=_parse_date(f.get("created")),
+        parent=(f.get("parent") or {}).get("key"),
     )
 
 
@@ -120,6 +133,18 @@ def parse_changelog(histories: list[dict]) -> list[DateChange]:
             )
     changes.sort(key=lambda c: c.changed_at)
     return changes
+
+
+def snapshot_from_raw(project_key: str, raw_issues: list[dict]) -> ProjectSnapshot:
+    """Search results -> ProjectSnapshot, with no I/O. What `collect` does once
+    the pages are in hand, exposed so a snapshot can be built from any source
+    that speaks the search shape (fixtures, the simulator's test double)."""
+    issues: list[Issue] = []
+    links: list[DependencyLink] = []
+    for raw in raw_issues:
+        issues.append(parse_issue(raw))
+        links.extend(parse_links(raw))
+    return ProjectSnapshot(project_key=project_key, issues=issues, links=dedupe_links(links))
 
 
 def dedupe_links(links: list[DependencyLink]) -> list[DependencyLink]:
@@ -223,21 +248,20 @@ class JiraCollector:
     def date_changes(self, key: str) -> list[DateChange]:
         return parse_changelog(self._changelog(key))
 
-    def collect(self, project_key: str, *, jql: str | None = None) -> ProjectSnapshot:
-        """Fetch and normalize a whole project into a ProjectSnapshot."""
+    def collect(
+        self, project_key: str, *, jql: str | None = None, with_changelog: bool = True
+    ) -> ProjectSnapshot:
+        """Fetch and normalize a whole project into a ProjectSnapshot.
+
+        `with_changelog=False` skips the per-issue changelog requests. The
+        drift rules need `date_changes`; the KPI snapshots (RC1-301) must not
+        use the changelog at all — transitions cannot be backdated, so
+        simulated time would not survive — and one request instead of N+1 is
+        what makes a daily snapshot of every program cheap.
+        """
         jql = jql or f"project = {project_key} ORDER BY key ASC"
-        raw_issues = self._search(jql)
-
-        issues: list[Issue] = []
-        links: list[DependencyLink] = []
-        for raw in raw_issues:
-            issue = parse_issue(raw)
-            issue.date_changes = self.date_changes(issue.key)
-            issues.append(issue)
-            links.extend(parse_links(raw))
-
-        return ProjectSnapshot(
-            project_key=project_key,
-            issues=issues,
-            links=dedupe_links(links),
-        )
+        snapshot = snapshot_from_raw(project_key, self._search(jql))
+        if with_changelog:
+            for issue in snapshot.issues:
+                issue.date_changes = self.date_changes(issue.key)
+        return snapshot

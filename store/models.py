@@ -10,7 +10,7 @@ maps to the same finding across runs, which is what dedup / first-seen rely on.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel
 
@@ -27,6 +27,18 @@ class RunInfo(BaseModel):
     run_id: int
     project_key: str
     created_at: datetime
+
+
+class ProgramRun(BaseModel):
+    """A program snapshot's run row (RC1-301): when it was taken and which
+    sim-day it is for. `sim_date` is what a KPI recompute keys on."""
+
+    run_id: int
+    program_id: str
+    project_key: str
+    collected_at: datetime
+    sim_date: date | None = None
+    sim_day: int | None = None
 
 
 class Finding(BaseModel):

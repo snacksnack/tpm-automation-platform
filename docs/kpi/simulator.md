@@ -20,6 +20,7 @@ artifacts):
 | `spend.csv` | the weekly cloud-spend line, only the weeks that have landed by the current day |
 | `ledger.csv` | the ground-truth ledger for the whole program (RC1-300); rewritten on every converge |
 | `tick.log`, `tick.err` | stdout / stderr of the launchd tick |
+| `snapshot.log`, `snapshot.err` | stdout / stderr of the daily snapshot (RC1-301), if installed |
 
 `python -m simulate status` prints the clock in one line.
 
@@ -56,6 +57,10 @@ How launchd behaves, and what it means for the program:
 - **It stops itself at day 69.** `tick` exits 1 with "the program's last
   day — nothing to advance" and makes no Jira calls; the agent keeps
   firing harmlessly until unloaded.
+
+The daily **snapshot** (`com.reidcollins.kpi-snapshot.plist`, 07:30) is the
+tick's companion: it records the converged day in the snapshot store. Same
+install steps; [`snapshots.md`](snapshots.md) has it.
 
 Check on it:
 

@@ -46,7 +46,8 @@ main.py         FastAPI entrypoint — GET /healthz, POST /drift/run,
                 GET /drift/findings (read-only, no side effects)
 config.py       env-backed settings (pydantic-settings)
 
-collectors/     data acquisition (Jira issues, links, changelog)    [3/9]
+collectors/     data acquisition (Jira issues, links, changelog);
+                program snapshots, one per run, per-source health  [3/9, RC1-301]
 store/          append-only SQLite snapshots + findings table        [4/9]
 drift/
   graph.py      networkx dependency DAG                              [5/9]
@@ -146,6 +147,7 @@ docs/kpi/trees/<program>.md         hand-written baseline, written first
 docs/kpi/trees/<program>.agent.md   the agent's draft (+ .json twin)
 docs/kpi/trees/<program>.review.md  where they disagree, and who was right
 docs/kpi/simulator.md               runbook: the clock, the daily tick, jumping, teardown
+docs/kpi/snapshots.md               the collector: one dated snapshot per run per program
 docs/kpi/ledger.md                  the ground truth: how each expected reading is derived
 docs/kpi/ledger/<program>.csv       the ledger itself, regenerated from the scenario
 ```
@@ -203,6 +205,28 @@ event — the first-day detector must read tripped (or broken). The
 implementation is pluggable; until the track stage (RC1-305) lands the
 reference is the ledger's own derivation, and two deliberately wrong ones
 show the suite can fail. Wrong-implementation runs are never recorded.
+
+### Snapshots (RC1-301)
+
+KPIs are computed from dated snapshots, not Jira's changelog — transitions
+cannot be backdated, so simulated time would not survive. `python -m
+collectors snapshot <program>` reads every source a program names (its Jira
+issues by label, the spend line, the eval store's run rows, the sim clock)
+into one `ProgramSnapshot` stamped with both wall-clock and sim-date, with a
+health row per source: `ok`, `missing` (answered with nothing — the week-7
+break arrives this way) or `error` (could not be read — the section is
+absent, never empty). Snapshots land in the drift detector's own store, the
+same `runs` table widened, so the Portfolio Console (RC1-233) and the KPI
+agent read one history. A day's KPIs recompute from its stored snapshot
+alone — `simulate.ledger.derive(series=…)` over collected snapshots equals
+the scenario-derived ledger, and a test proves it end to end offline.
+[`docs/kpi/snapshots.md`](docs/kpi/snapshots.md).
+
+```bash
+python -m collectors snapshot simulated-program    # collect, store, print health; exit 1 if a source is not ok
+python -m collectors runs simulated-program        # every stored run with its health
+python -m collectors show simulated-program --sim-date 2026-10-20
+```
 
 Three PMA prerequisites, all configured on 2026-08-22: story points go through
 the Agile estimation endpoint for board 68 (the board-correct route, and it

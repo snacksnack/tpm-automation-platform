@@ -7,6 +7,7 @@ document (docs/kpi/rubric.md), and every stage states which version it used.
 
 Stages land one story at a time:
   define      kpi/define.py     RC1-302  brief + rubric -> reviewable KPI tree
+  snapshot    collectors/       RC1-301  one dated ProgramSnapshot per run per program
   instrument                    RC1-303
   track                         RC1-305  emits kpi/reading.py Readings (RC1-300)
   narrate                       RC1-306

@@ -2,13 +2,20 @@
 
 These are the boundary between raw Jira JSON and the rest of the platform — no
 raw dicts should leak past collect(). Shared with the future status-email v2.
+
+RC1-301 adds the program-level snapshot: one `ProgramSnapshot` per run per
+program, carrying the Jira project snapshot beside the other sources a KPI
+tree names (the spend line, the eval store's run rows) and a health row per
+source. A source that failed is *absent* and says so in `health`; it is never
+an empty list pretending to be a measurement.
 """
 
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class DateChange(BaseModel):
@@ -37,6 +44,12 @@ class Issue(BaseModel):
     start: date | None = None
     # Scheduling-field changes for this issue, oldest first.
     date_changes: list[DateChange] = []
+    # RC1-301: what the KPI tree reads that drift did not need.
+    issue_type: str | None = None
+    labels: list[str] = []
+    points: float | None = None
+    created: date | None = None
+    parent: str | None = None
 
     @property
     def not_started(self) -> bool:
@@ -63,3 +76,79 @@ class ProjectSnapshot(BaseModel):
     @property
     def by_key(self) -> dict[str, Issue]:
         return {i.key: i for i in self.issues}
+
+
+# --- program snapshots (RC1-301) -------------------------------------------
+
+
+class SpendRow(BaseModel):
+    """One week of the cloud-spend line. `landed_on_day` is the sim-day the row
+    became available (the simulator's "Monday after"); None for a real feed."""
+
+    week: int
+    week_start: date
+    planned_usd: float
+    actual_usd: float
+    landed_on_day: int | None = None
+
+
+class EvalRunRow(BaseModel):
+    """One eval run as the KPI tree sees it: counts and cost, not the record."""
+
+    run_id: str
+    subject: str
+    code_version: str
+    model: str | None = None
+    started_at: datetime
+    cases: int
+    passed: int
+    errored: int
+    cost_usd: float
+
+
+SourceStatus = Literal["ok", "missing", "error"]
+
+
+class SourceHealth(BaseModel):
+    """What happened when one source was read.
+
+    `missing` is a source that answered with nothing — the query ran and
+    returned no rows, the file is empty. `error` is a source that could not be
+    read at all. The distinction matters downstream: a Jira query that returns
+    zero issues under the program label *is* the week-7 source break, and an
+    implementation that cannot tell it from "the project is empty" reports
+    0 % scope change.
+    """
+
+    source: str = Field(description="jira | spend | eval-store | clock")
+    status: SourceStatus
+    count: int = 0
+    detail: str = ""
+
+
+class ProgramSnapshot(BaseModel):
+    """Everything the KPI stages need for one program on one day, dated twice.
+
+    `collected_at` is wall-clock; `sim_date` is the program's own calendar —
+    the simulator's clock for the simulated program, the same date as
+    `collected_at` for a real one. KPIs are computed against `sim_date`.
+    """
+
+    program_id: str
+    collected_at: datetime
+    sim_date: date
+    sim_day: int | None = None
+    jira: ProjectSnapshot | None = Field(
+        default=None,
+        description="None when the Jira source errored; empty when it answered nothing.",
+    )
+    spend: list[SpendRow] = []
+    eval_runs: list[EvalRunRow] = []
+    health: list[SourceHealth] = []
+
+    def source(self, name: str) -> SourceHealth | None:
+        return next((h for h in self.health if h.source == name), None)
+
+    @property
+    def healthy(self) -> bool:
+        return all(h.status == "ok" for h in self.health)

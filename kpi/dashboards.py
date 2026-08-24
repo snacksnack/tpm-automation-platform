@@ -67,6 +67,19 @@ def load_tree(program_id: str, *, trees_dir: Path = TREES) -> dict[str, dict]:
 # --- panels ----------------------------------------------------------------------------------
 
 
+#: `reason` is a sentence, not a label — truncating it mid-word ("no spend row
+#: has lan…") hides exactly the half that says why the KPI could not be read.
+_TABLE_FIELDS = {
+    "defaults": {"custom": {"align": "auto", "cellOptions": {"type": "auto", "wrapText": True}}},
+    "overrides": [
+        {
+            "matcher": {"id": "byName", "options": "why not"},
+            "properties": [{"id": "custom.width", "value": 420}],
+        }
+    ],
+}
+
+
 def _target(sql: str, *, fmt: str = "time_series") -> dict:
     return {
         "refId": "A",
@@ -143,7 +156,7 @@ def latest_table_panel(*, panel_id: int, program_id: str, grid: dict) -> dict:
         ),
         "datasource": DS_REF,
         "gridPos": grid,
-        "fieldConfig": {"defaults": {}, "overrides": []},
+        "fieldConfig": _TABLE_FIELDS,
         "options": {"showHeader": True, "sortBy": []},
         "targets": [_target(sql, fmt="table")],
     }
@@ -216,11 +229,11 @@ def program_dashboard(program_id: str, *, trees_dir: Path = TREES,
 
     panels: list[dict] = [
         unmeasured_stat_panel(panel_id=1, program_id=program_id,
-                              grid={"h": 4, "w": 6, "x": 0, "y": 0}),
+                              grid={"h": 8, "w": 6, "x": 0, "y": 0}),
         latest_table_panel(panel_id=2, program_id=program_id,
-                           grid={"h": 4, "w": 18, "x": 6, "y": 0}),
+                           grid={"h": 8, "w": 18, "x": 6, "y": 0}),
     ]
-    y, panel_id = 4, 3
+    y, panel_id = 8, 3
     for unit, kpi_ids in _group_by_unit(shipping, tree).items():
         names = ", ".join(tree.get(k, {}).get("name", k) for k in kpi_ids)
         outcomes = [k for k in kpi_ids if tree.get(k, {}).get("type") == "outcome"]
@@ -285,7 +298,7 @@ def portfolio_dashboard(program_ids: list[str]) -> dict:
             "id": 1, "type": "stat", "title": "Thresholds crossed",
             "description": "Latest reading per KPI, across every program, with its so-what "
                            "threshold live.",
-            "datasource": DS_REF, "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+            "datasource": DS_REF, "gridPos": {"h": 12, "w": 6, "x": 0, "y": 0},
             "fieldConfig": {
                 "defaults": {
                     "unit": "short",
@@ -301,12 +314,12 @@ def portfolio_dashboard(program_ids: list[str]) -> dict:
             "targets": [_target(tripped_sql, fmt="table")],
         },
         latest_table_panel_all(panel_id=2, sql=latest_sql,
-                               grid={"h": 4, "w": 18, "x": 6, "y": 0}),
+                               grid={"h": 12, "w": 18, "x": 6, "y": 0}),
         {
             "id": 3, "type": "timeseries", "title": "KPIs measured per day",
             "description": "How many KPIs each program could actually read. A step down is a "
                            "source that broke, not a program that improved.",
-            "datasource": DS_REF, "gridPos": {"h": 8, "w": 24, "x": 0, "y": 4},
+            "datasource": DS_REF, "gridPos": {"h": 8, "w": 24, "x": 0, "y": 12},
             "fieldConfig": {
                 "defaults": {"unit": "short", "custom": {
                     "drawStyle": "line", "lineWidth": 2, "pointSize": 6,
@@ -337,7 +350,7 @@ def latest_table_panel_all(*, panel_id: int, sql: str, grid: dict) -> dict:
         "description": "Unmeasurable KPIs sort to the top, with the reason.",
         "datasource": DS_REF,
         "gridPos": grid,
-        "fieldConfig": {"defaults": {}, "overrides": []},
+        "fieldConfig": _TABLE_FIELDS,
         "options": {"showHeader": True, "sortBy": []},
         "targets": [_target(sql, fmt="table")],
     }
@@ -371,11 +384,14 @@ def _wrap(*, title: str, uid: str, description: str, panels: list[dict], tags: l
         "version": 1,
         "editable": True,
         "refresh": "",
-        # Readings are daily and the simulated program runs on a sim clock that
-        # is ahead of the wall clock, so a relative "last 6 hours" window would
-        # open on an empty chart. Two years back and one forward always shows
-        # everything there is.
-        "time": {"from": "now-2y", "to": "now+1y"},
+        # The simulated program's sim-dates run about two weeks ahead of the
+        # wall clock (kickoff 2026-09-07 was seeded on 2026-08-23), so the
+        # window has to reach into the future or its charts open empty. It also
+        # has to stay tight: at a multi-year zoom a fortnight of daily readings
+        # collapses into a couple of specks. Thirty days back covers the three
+        # weeks of history RC1-306 needs; forty-five forward covers the sim
+        # clock through GA.
+        "time": {"from": "now-30d", "to": "now+45d"},
         "panels": panels,
         "annotations": {"list": []},
         "templating": {"list": []},

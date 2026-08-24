@@ -136,7 +136,8 @@ def timeseries_panel(
 def latest_table_panel(*, panel_id: int, program_id: str, grid: dict) -> dict:
     sql = (
         'SELECT r.kpi_id AS "KPI", r.state AS "state", r.value AS "value",\n'
-        '       r.reason AS "why not", r.sim_date AS "day", r.run_id AS "snapshot run"\n'
+        '       r.tripped AS "tripped", r.reason AS "why not", r.sim_date AS "day",\n'
+        '       r.run_id AS "snapshot run"\n'
         f"FROM {TABLE} r\n"
         "JOIN (SELECT kpi_id, max(sim_date) AS d\n"
         f"      FROM {TABLE} WHERE program_id = '{program_id}' GROUP BY kpi_id) latest\n"
@@ -158,6 +159,53 @@ def latest_table_panel(*, panel_id: int, program_id: str, grid: dict) -> dict:
         "gridPos": grid,
         "fieldConfig": _TABLE_FIELDS,
         "options": {"showHeader": True, "sortBy": []},
+        "targets": [_target(sql, fmt="table")],
+    }
+
+
+def tripped_stat_panel(*, panel_id: int, program_id: str, grid: dict) -> dict:
+    """How many of this program's KPIs are over their so-what threshold.
+
+    `tripped` is stored per reading and was, until this panel existed, visible
+    only on the portfolio view — a number carrying a live decision, hidden on
+    the page for the program it belongs to.
+    """
+    sql = (
+        'SELECT count(*) AS "tripped"\n'
+        f"FROM {TABLE} r\n"
+        "JOIN (SELECT kpi_id, max(sim_date) AS d\n"
+        f"      FROM {TABLE} WHERE program_id = '{program_id}' GROUP BY kpi_id) latest\n"
+        "  ON latest.kpi_id = r.kpi_id AND latest.d = r.sim_date\n"
+        f"WHERE r.program_id = '{program_id}' AND r.tripped"
+    )
+    return {
+        "id": panel_id,
+        "type": "stat",
+        "title": "Thresholds crossed",
+        "description": (
+            "KPIs whose so-what threshold is live on the latest reading — the decision "
+            "attached to the number, not the number."
+        ),
+        "datasource": DS_REF,
+        "gridPos": grid,
+        "fieldConfig": {
+            "defaults": {
+                "unit": "short",
+                "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                        {"color": "green", "value": None},
+                        {"color": "red", "value": 1},
+                    ],
+                },
+            },
+            "overrides": [],
+        },
+        "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": False},
+        },
         "targets": [_target(sql, fmt="table")],
     }
 
@@ -228,12 +276,14 @@ def program_dashboard(program_id: str, *, trees_dir: Path = TREES,
     shipping = inst.computes
 
     panels: list[dict] = [
-        unmeasured_stat_panel(panel_id=1, program_id=program_id,
-                              grid={"h": 8, "w": 6, "x": 0, "y": 0}),
-        latest_table_panel(panel_id=2, program_id=program_id,
+        tripped_stat_panel(panel_id=1, program_id=program_id,
+                           grid={"h": 4, "w": 6, "x": 0, "y": 0}),
+        unmeasured_stat_panel(panel_id=2, program_id=program_id,
+                              grid={"h": 4, "w": 6, "x": 0, "y": 4}),
+        latest_table_panel(panel_id=3, program_id=program_id,
                            grid={"h": 8, "w": 18, "x": 6, "y": 0}),
     ]
-    y, panel_id = 8, 3
+    y, panel_id = 8, 4
     for unit, kpi_ids in _group_by_unit(shipping, tree).items():
         names = ", ".join(tree.get(k, {}).get("name", k) for k in kpi_ids)
         outcomes = [k for k in kpi_ids if tree.get(k, {}).get("type") == "outcome"]
@@ -267,7 +317,8 @@ def portfolio_dashboard(program_ids: list[str]) -> dict:
     quoted = ", ".join(f"'{p}'" for p in program_ids)
     latest_sql = (
         'SELECT r.program_id AS "program", r.kpi_id AS "KPI", r.state AS "state",\n'
-        '       r.value AS "value", r.reason AS "why not", r.sim_date AS "day"\n'
+        '       r.value AS "value", r.tripped AS "tripped", r.reason AS "why not",\n'
+        '       r.sim_date AS "day"\n'
         f"FROM {TABLE} r\n"
         "JOIN (SELECT program_id, kpi_id, max(sim_date) AS d\n"
         f"      FROM {TABLE} WHERE program_id IN ({quoted})\n"
@@ -286,6 +337,16 @@ def portfolio_dashboard(program_ids: list[str]) -> dict:
         " AND latest.d = r.sim_date\n"
         "WHERE r.tripped"
     )
+    unmeasured_sql = (
+        'SELECT count(*) AS "unmeasured"\n'
+        f"FROM {TABLE} r\n"
+        "JOIN (SELECT program_id, kpi_id, max(sim_date) AS d\n"
+        f"      FROM {TABLE} WHERE program_id IN ({quoted})\n"
+        "      GROUP BY program_id, kpi_id) latest\n"
+        "  ON latest.program_id = r.program_id AND latest.kpi_id = r.kpi_id\n"
+        " AND latest.d = r.sim_date\n"
+        f"WHERE r.program_id IN ({quoted}) AND r.state <> 'ok'"
+    )
     coverage_sql = (
         'SELECT sim_date::timestamptz AS "time", program_id AS metric, count(*) AS value\n'
         f"FROM {TABLE}\n"
@@ -298,7 +359,7 @@ def portfolio_dashboard(program_ids: list[str]) -> dict:
             "id": 1, "type": "stat", "title": "Thresholds crossed",
             "description": "Latest reading per KPI, across every program, with its so-what "
                            "threshold live.",
-            "datasource": DS_REF, "gridPos": {"h": 12, "w": 6, "x": 0, "y": 0},
+            "datasource": DS_REF, "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0},
             "fieldConfig": {
                 "defaults": {
                     "unit": "short",
@@ -312,6 +373,25 @@ def portfolio_dashboard(program_ids: list[str]) -> dict:
                 "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": False},
             },
             "targets": [_target(tripped_sql, fmt="table")],
+        },
+        {
+            "id": 4, "type": "stat", "title": "KPIs not measurable today",
+            "description": "Stale or broken on the latest day, across every program. "
+                           "Anything above zero is RC1-307's.",
+            "datasource": DS_REF, "gridPos": {"h": 6, "w": 6, "x": 0, "y": 6},
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "thresholds": {"mode": "absolute", "steps": [
+                        {"color": "green", "value": None}, {"color": "orange", "value": 1}]},
+                },
+                "overrides": [],
+            },
+            "options": {
+                "colorMode": "background", "graphMode": "none",
+                "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": False},
+            },
+            "targets": [_target(unmeasured_sql, fmt="table")],
         },
         latest_table_panel_all(panel_id=2, sql=latest_sql,
                                grid={"h": 12, "w": 18, "x": 6, "y": 0}),

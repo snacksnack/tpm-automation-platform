@@ -50,7 +50,7 @@
         "uid": "${DS_POSTGRES}"
       },
       "gridPos": {
-        "h": 12,
+        "h": 6,
         "w": 6,
         "x": 0,
         "y": 0
@@ -96,6 +96,65 @@
           "format": "table",
           "rawQuery": true,
           "rawSql": "SELECT count(*) AS \"tripped\"\nFROM kpi_readings r\nJOIN (SELECT program_id, kpi_id, max(sim_date) AS d\n      FROM kpi_readings GROUP BY program_id, kpi_id) latest\n  ON latest.program_id = r.program_id AND latest.kpi_id = r.kpi_id\n AND latest.d = r.sim_date\nWHERE r.tripped"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "KPIs not measurable today",
+      "description": "Stale or broken on the latest day, across every program. Anything above zero is RC1-307's.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_POSTGRES}"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_POSTGRES}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT count(*) AS \"unmeasured\"\nFROM kpi_readings r\nJOIN (SELECT program_id, kpi_id, max(sim_date) AS d\n      FROM kpi_readings WHERE program_id IN ('eval-run-store', 'simulated-program')\n      GROUP BY program_id, kpi_id) latest\n  ON latest.program_id = r.program_id AND latest.kpi_id = r.kpi_id\n AND latest.d = r.sim_date\nWHERE r.program_id IN ('eval-run-store', 'simulated-program') AND r.state <> 'ok'"
         }
       ]
     },
@@ -153,7 +212,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT r.program_id AS \"program\", r.kpi_id AS \"KPI\", r.state AS \"state\",\n       r.value AS \"value\", r.reason AS \"why not\", r.sim_date AS \"day\"\nFROM kpi_readings r\nJOIN (SELECT program_id, kpi_id, max(sim_date) AS d\n      FROM kpi_readings WHERE program_id IN ('eval-run-store', 'simulated-program')\n      GROUP BY program_id, kpi_id) latest\n  ON latest.program_id = r.program_id AND latest.kpi_id = r.kpi_id\n AND latest.d = r.sim_date\nWHERE r.program_id IN ('eval-run-store', 'simulated-program')\nORDER BY r.state <> 'ok' DESC, r.program_id, r.kpi_id"
+          "rawSql": "SELECT r.program_id AS \"program\", r.kpi_id AS \"KPI\", r.state AS \"state\",\n       r.value AS \"value\", r.tripped AS \"tripped\", r.reason AS \"why not\",\n       r.sim_date AS \"day\"\nFROM kpi_readings r\nJOIN (SELECT program_id, kpi_id, max(sim_date) AS d\n      FROM kpi_readings WHERE program_id IN ('eval-run-store', 'simulated-program')\n      GROUP BY program_id, kpi_id) latest\n  ON latest.program_id = r.program_id AND latest.kpi_id = r.kpi_id\n AND latest.d = r.sim_date\nWHERE r.program_id IN ('eval-run-store', 'simulated-program')\nORDER BY r.state <> 'ok' DESC, r.program_id, r.kpi_id"
         }
       ]
     },

@@ -43,6 +43,65 @@
     {
       "id": 1,
       "type": "stat",
+      "title": "Thresholds crossed",
+      "description": "KPIs whose so-what threshold is live on the latest reading \u2014 the decision attached to the number, not the number.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_POSTGRES}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_POSTGRES}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT count(*) AS \"tripped\"\nFROM kpi_readings r\nJOIN (SELECT kpi_id, max(sim_date) AS d\n      FROM kpi_readings WHERE program_id = 'eval-run-store' GROUP BY kpi_id) latest\n  ON latest.kpi_id = r.kpi_id AND latest.d = r.sim_date\nWHERE r.program_id = 'eval-run-store' AND r.tripped"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
       "title": "KPIs not measurable today",
       "description": "Stale or broken on the latest day. Anything above zero is RC1-307's.",
       "datasource": {
@@ -50,10 +109,10 @@
         "uid": "${DS_POSTGRES}"
       },
       "gridPos": {
-        "h": 8,
+        "h": 4,
         "w": 6,
         "x": 0,
-        "y": 0
+        "y": 4
       },
       "fieldConfig": {
         "defaults": {
@@ -100,7 +159,7 @@
       ]
     },
     {
-      "id": 2,
+      "id": 3,
       "type": "table",
       "title": "Latest reading per KPI",
       "description": "The most recent reading for every shipping KPI. `state` is the honesty column: stale or broken carries the reason it could not be measured, and `snapshot run` is the run the number traces back to (`python -m collectors show <program> --run N`).",
@@ -153,12 +212,12 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT r.kpi_id AS \"KPI\", r.state AS \"state\", r.value AS \"value\",\n       r.reason AS \"why not\", r.sim_date AS \"day\", r.run_id AS \"snapshot run\"\nFROM kpi_readings r\nJOIN (SELECT kpi_id, max(sim_date) AS d\n      FROM kpi_readings WHERE program_id = 'eval-run-store' GROUP BY kpi_id) latest\n  ON latest.kpi_id = r.kpi_id AND latest.d = r.sim_date\nWHERE r.program_id = 'eval-run-store'\nORDER BY r.state <> 'ok' DESC, r.kpi_id"
+          "rawSql": "SELECT r.kpi_id AS \"KPI\", r.state AS \"state\", r.value AS \"value\",\n       r.tripped AS \"tripped\", r.reason AS \"why not\", r.sim_date AS \"day\",\n       r.run_id AS \"snapshot run\"\nFROM kpi_readings r\nJOIN (SELECT kpi_id, max(sim_date) AS d\n      FROM kpi_readings WHERE program_id = 'eval-run-store' GROUP BY kpi_id) latest\n  ON latest.kpi_id = r.kpi_id AND latest.d = r.sim_date\nWHERE r.program_id = 'eval-run-store'\nORDER BY r.state <> 'ok' DESC, r.kpi_id"
         }
       ]
     },
     {
-      "id": 3,
+      "id": 4,
       "type": "timeseries",
       "title": "Rates and shares",
       "description": "Gated pass rate, per subject, Error rate \u2014 outcome KPI: gated-pass-rate.",
@@ -169,7 +228,7 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
+        "x": 12,
         "y": 8
       },
       "fieldConfig": {
@@ -212,7 +271,7 @@
       ]
     },
     {
-      "id": 4,
+      "id": 5,
       "type": "timeseries",
       "title": "Cost",
       "description": "Cost per verified case, Cost per run, by model \u2014 outcome KPI: cost-per-verified-case.",
@@ -223,8 +282,8 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 12,
-        "y": 8
+        "x": 0,
+        "y": 16
       },
       "fieldConfig": {
         "defaults": {
@@ -266,7 +325,7 @@
       ]
     },
     {
-      "id": 5,
+      "id": 6,
       "type": "timeseries",
       "title": "Days",
       "description": "Measurement freshness \u2014 leading indicators.",
@@ -277,7 +336,7 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
+        "x": 12,
         "y": 16
       },
       "fieldConfig": {

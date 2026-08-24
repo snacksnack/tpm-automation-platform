@@ -153,6 +153,7 @@ docs/kpi/simulator.md               runbook: the clock, the daily tick, jumping,
 docs/kpi/snapshots.md               the collector: one dated snapshot per run per program
 docs/kpi/ledger.md                  the ground truth: how each expected reading is derived
 docs/kpi/ledger/<program>.csv       the ledger itself, regenerated from the scenario
+docs/kpi/metrics-store.md           where the readings land, and why not Datadog
 ```
 
 ### Instrument (RC1-303)

@@ -59,7 +59,10 @@ evals/          drift-digest goldens — frozen cases, scored        [RC1-261]
                 + kpi-ledger: KPI readings vs the ground truth        [RC1-300]
 kpi/            Program KPI agent — define (brief + rubric -> tree),
                 instrument (tree + source catalog -> verified set),
-                measures, the reading contract (docs/kpi/)  [RC1-302, RC1-303]
+                track (measures -> readings in Postgres) + the
+                generated Grafana dashboards (docs/kpi/)
+                                        [RC1-302, RC1-303, RC1-305]
+grafana/        generated dashboards: one per program + portfolio  [RC1-305]
 seed/           idempotent RC1 demo-data seeder                      [2/9]
 simulate/       scripted 10-week program in PMA, one sim-day per
                 tick; the KPI agent's test fixture, and its
@@ -154,6 +157,7 @@ docs/kpi/snapshots.md               the collector: one dated snapshot per run pe
 docs/kpi/ledger.md                  the ground truth: how each expected reading is derived
 docs/kpi/ledger/<program>.csv       the ledger itself, regenerated from the scenario
 docs/kpi/metrics-store.md           where the readings land, and why not Datadog
+docs/kpi/track.md                   the track stage: readings, the daily run, the dashboards
 ```
 
 ### Instrument (RC1-303)
@@ -185,6 +189,41 @@ readings already carry two findings the trees predicted: `$0` billed runs
 on two subjects (a broken instrument, flagged as such) and `tool-selection`
 on `claude-sonnet-5` at 3.8× its haiku cost. The rubric moved to **v2**
 here, applying the four rules the two reviews had proposed.
+
+### Track (RC1-305)
+
+Every KPI the instrument stage verified, computed from the stored snapshots
+and landed in Postgres on reid-eval-store — the store decided in RC1-304
+([`docs/kpi/metrics-store.md`](docs/kpi/metrics-store.md); Datadog's free
+tier forgets a metric within a day). Nothing here calls a model: the
+measures are ordinary Python, which is where "deterministic numbers, LLM
+narrative" stops being a principle and becomes a call graph.
+
+```bash
+python -m kpi.track --program simulated-program            # compute and store
+python -m kpi.track --program eval-run-store --dry-run     # compute and print
+python -m kpi.dashboards --out grafana/                    # regenerate the dashboards
+```
+
+`scripts/kpi_daily.sh` runs tick -> snapshot -> track at 07:00 local, in
+that order, so a reading is never dated a day behind the program it
+describes. Exit `1` means at least one KPI read stale or broken; the
+readings are stored anyway, because a day a KPI could not be measured is
+the day worth recording.
+
+Staleness is enforced three times over, because a zero on a dashboard looks
+like a measurement and nobody asks a question about it: `kpi/reading.py`
+refuses a non-ok state without a reason, `kpi_readings` repeats the rule as
+a table constraint, and the charts draw a null as a gap rather than joining
+across it. Every row carries the `run_id` it was computed from, so any
+number on a dashboard traces back to a snapshot with
+`python -m collectors show <program> --run N`.
+
+The dashboards in `grafana/` are generated from the trees and the instrument
+reports rather than drawn by hand — a dashboard someone drew once goes stale
+the moment the instrument stage changes its mind, which is the exact failure
+this epic is about. A test fails if the committed JSON stops matching the
+generator. [`docs/kpi/track.md`](docs/kpi/track.md) has the import steps.
 
 ### The simulated program (RC1-299)
 
@@ -237,9 +276,12 @@ python -m evals run kpi-ledger --impl no-break-detection   # a deliberately wron
 `kpi-ledger` is the KPI agent's eval subject: one case per day, one
 characteristic per KPI, and `detects-<event>` on the day after each planted
 event — the first-day detector must read tripped (or broken). The
-implementation is pluggable; until the track stage (RC1-305) lands the
-reference is the ledger's own derivation, and two deliberately wrong ones
-show the suite can fail. Wrong-implementation runs are never recorded.
+implementation is pluggable, and the reference is still the ledger's own
+derivation: the track stage (RC1-305) landed, but its simulated-program
+measures delegate to these same formulas, so swapping it in would not make
+the run independent. Making it so means moving the formulas out of
+`simulate/` into `kpi/`. Two deliberately wrong implementations show the
+suite can fail; wrong-implementation runs are never recorded.
 
 ### Snapshots (RC1-301)
 

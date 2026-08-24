@@ -18,10 +18,14 @@ broken). This is a subset of the per-KPI check by construction, and it is
 named separately on purpose: "the number was right and nobody noticed" and
 "the number was wrong" are different failures with different fixes.
 
-The implementation under test is pluggable (`IMPLEMENTATIONS`). Until the
-track stage lands (RC1-305) the reference is the ledger's own derivation,
-which makes the reference run a tautology — the story's done-when is that
-a *wrong* implementation fails, and two are shipped: one that trusts an
+The implementation under test is pluggable (`IMPLEMENTATIONS`). The track
+stage has landed (RC1-305), but the reference is still the ledger's own
+derivation and the reference run is still a tautology: the track stage's
+simulated-program measures delegate to these very formulas, so plugging it
+in would compare the ledger against itself through one more layer. It stops
+being circular when the formulas move out of `simulate/` into `kpi/`. The
+story's done-when is that a *wrong* implementation fails, and two are
+shipped: one that trusts an
 empty snapshot (no source-break detection, the zero-for-unknown failure
 the rubric exists to prevent) and one that forecasts over the 28-day window
 the review rejected. Runs of those are never recorded; the store holds

@@ -55,6 +55,9 @@ from kpi.reading import Reading
 
 _TEMPLATE = Path(__file__).parent / "templates" / "instrument.md"
 TREES = Path(__file__).resolve().parent.parent / "docs" / "kpi" / "trees"
+#: Where this stage's reports land, and where the track stage (RC1-305) reads
+#: the verified set back from — `<program>.json` beside the markdown.
+INSTRUMENTS = Path(__file__).resolve().parent.parent / "docs" / "kpi" / "instruments"
 
 Verdict = Literal["confirmed", "proxied", "rejected"]
 Status = Literal["verified", "unverified", "rejected"]

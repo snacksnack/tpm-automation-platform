@@ -169,10 +169,34 @@ def test_one_case_per_day_with_a_detection_check_the_day_after_each_event():
     assert "source-break" in by_id["day-45"].tags and "week-7" in by_id["day-45"].tags
 
 
-def test_reference_implementation_passes_every_case():
-    results = kpi_ledger.run("reference")
+def test_the_track_stage_is_the_reference_and_passes_every_case():
+    """RC1-310's done-when: the measures in `kpi/` against a ledger neither
+    side derived from the other — the tautology the suite started with is gone."""
+    assert kpi_ledger.REFERENCE == "track"
+    results = kpi_ledger.run("track")
     assert all(r.passed for r in results) and not any(r.error for r in results)
     assert all(r.observations["mismatches"] == 0 for r in results)
+
+
+def test_the_rendered_snapshots_are_what_the_collector_would_have_stored():
+    """`simulate.collected` must be a faithful stand-in for the collector: the
+    ledger's own formulas over the rendered series read exactly what they read
+    over the scenario, source-break days and all."""
+    from simulate import collected
+
+    truth = ledger.derive()
+    rendered = ledger.derive(
+        series=[
+            ledger.snapshot_from_collected(collected.program_snapshot(d))
+            for d in range(LAST_DAY + 1)
+        ]
+    )
+    mismatches = [
+        (r.day, r.kpi_id)
+        for r in rendered.rows
+        if r.expected != truth.reading(r.day, r.kpi_id)
+    ]
+    assert mismatches == []
 
 
 def test_an_implementation_that_trusts_an_empty_snapshot_fails_the_break_days():
@@ -214,9 +238,9 @@ def test_a_missing_kpi_fails_its_characteristic_by_name():
 
 
 def test_subject_version_names_the_implementation_only_when_it_is_not_the_reference():
-    assert kpi_ledger.version("reference").prompt_version is None
+    assert kpi_ledger.version("track").prompt_version is None
     assert kpi_ledger.version("window-28").prompt_version == "impl:window-28"
-    assert kpi_ledger.version("reference").model is None
+    assert kpi_ledger.version("track").model is None
 
 
 # --- the CLIs ---------------------------------------------------------------------------------

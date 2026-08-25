@@ -154,12 +154,16 @@ implementation's readings for the day:
   the signal. A subset of the per-KPI check by construction, named separately
   because "the number was right and nobody noticed" is its own failure.
 
-The implementation is pluggable. Until the track stage lands, the reference
-is the ledger's own derivation — a tautology, and said so — and the story's
-done-when is carried by the two deliberately wrong ones:
+The implementation is pluggable, and since RC1-310 the reference is `track`:
+the track stage's own measures (`kpi/measures.py`) over collected-shaped
+snapshots rendered from the scenario (`simulate/collected.py`). The two sides
+are written separately — the ledger derives in `simulate/`, the measures read
+`ProgramSnapshot` in `kpi/` and import nothing from the simulator — so the
+recorded run is a real check, not the tautology it was before the formulas
+moved out of `simulate/`:
 
 ```bash
-python -m evals run kpi-ledger                             # 70/70, recorded to the run store
+python -m evals run kpi-ledger                             # track vs ledger: 70/70, recorded
 python -m evals run kpi-ledger --impl no-break-detection   # 65/70: days 43-47 fail, exit 1
 python -m evals run kpi-ledger --impl window-28            # 29/70: the forecast differs
 ```
@@ -172,5 +176,8 @@ window the review rejected; it passes the plan-rate days and the break, and
 fails wherever the two windows disagree. Neither run is recorded: the store
 holds measurements, not demonstrations.
 
-When RC1-305 exists, its track stage is registered as an implementation and
-becomes the reference; the ledger does not change.
+The ledger itself did not change when the track stage took over as the
+reference: it stays the independently-written expectation in `simulate/`,
+and a disagreement between the two is either a formula bug or an ambiguity
+in the tree's definition — both worth finding before a weekly brief
+(RC1-306, RC1-308) depends on the numbers.

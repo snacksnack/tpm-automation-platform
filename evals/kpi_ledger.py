@@ -18,20 +18,21 @@ broken). This is a subset of the per-KPI check by construction, and it is
 named separately on purpose: "the number was right and nobody noticed" and
 "the number was wrong" are different failures with different fixes.
 
-The implementation under test is pluggable (`IMPLEMENTATIONS`). The track
-stage has landed (RC1-305), but the reference is still the ledger's own
-derivation and the reference run is still a tautology: the track stage's
-simulated-program measures delegate to these very formulas, so plugging it
-in would compare the ledger against itself through one more layer. It stops
-being circular when the formulas move out of `simulate/` into `kpi/`. The
-story's done-when is that a *wrong* implementation fails, and two are
-shipped: one that trusts an
+The implementation under test is pluggable (`IMPLEMENTATIONS`), and the
+reference is `track`: the track stage's own measures (`kpi/measures.py`,
+RC1-310) run over collected-shaped snapshots rendered straight from the
+scenario (`simulate/collected.py`). The two sides are written separately —
+the ledger derives from the scenario in `simulate/`, the measures read
+`ProgramSnapshot` in `kpi/` and import nothing from the simulator — so the
+recorded run is a real check, not the tautology it was before RC1-310.
+Two deliberately wrong implementations are also shipped: one that trusts an
 empty snapshot (no source-break detection, the zero-for-unknown failure
 the rubric exists to prevent) and one that forecasts over the 28-day window
 the review rejected. Runs of those are never recorded; the store holds
 measurements, not demonstrations.
 
-    python -m evals run kpi-ledger                              # reference, recorded
+    python -m evals run kpi-ledger                              # track vs ledger, recorded
+    python -m evals run kpi-ledger --impl track                 # the same, named
     python -m evals run kpi-ledger --impl no-break-detection    # fails days 43-47
     python -m evals run kpi-ledger --impl window-28             # fails where the forecast differs
 """
@@ -50,19 +51,34 @@ from simulate import ledger, scenario
 NAME = "kpi-ledger"
 
 #: An implementation is anything that, given the full program, can answer
-#: "what does each KPI read on day N" — the shape the track stage will have
-#: once it reads snapshots instead of the scenario.
+#: "what does each KPI read on day N".
 Implementation = Callable[[int], list[Reading]]
 
-REFERENCE = "reference"
+REFERENCE = "track"
 
 
 def _impl(book: ledger.Ledger) -> Implementation:
     return book.readings
 
 
+def _track() -> Implementation:
+    """The real thing: the track stage's measures over collected-shaped
+    snapshots, exactly as `python -m kpi.track` runs them over the store."""
+    from collectors import programs
+    from kpi import measures
+    from simulate import collected
+
+    program = programs.get("simulated-program")
+    series = [collected.program_snapshot(d) for d in range(scenario.LAST_DAY + 1)]
+
+    def impl(day: int) -> list[Reading]:
+        return [measures.measure(k, program, series[: day + 1]) for k in ledger.KPI_IDS]
+
+    return impl
+
+
 IMPLEMENTATIONS: dict[str, Callable[[], Implementation]] = {
-    REFERENCE: lambda: _impl(ledger.derive()),
+    REFERENCE: _track,
     "no-break-detection": lambda: _impl(ledger.derive(detect_source_break=False)),
     "window-28": lambda: _impl(ledger.derive(window_days=28)),
 }
@@ -92,8 +108,8 @@ def version(impl: str) -> SubjectVersion:
     return SubjectVersion(
         subject=NAME,
         code_version=_code_version(),
-        # Deterministic: there is no model, and the ledger's formulas are the
-        # "prompt" — their version is the package's.
+        # Deterministic: there is no model, and the measures are the "prompt"
+        # — their version is the package's.
         model=None,
         prompt_version=None if impl == REFERENCE else f"impl:{impl}",
     )

@@ -198,14 +198,22 @@ def test_every_eval_measure_reads_broken_when_the_source_is_gone():
         measures.measure("unmeasured-code-versions", EVAL, [snap])
 
 
-# --- the simulated measures delegate to the ledger ----------------------------------------
+# --- the simulated measures agree with the independently-derived ledger ---------------------
 
 
-def test_simulated_measures_equal_the_ledger_and_refuse_gaps(tmp_path):
+def test_simulated_measures_agree_with_the_ledger_and_refuse_gaps(tmp_path):
+    """The measures no longer delegate to the ledger (RC1-310): the two are
+    written separately, so agreement is checked the way the `kpi-ledger` eval
+    checks it — value within tolerance, same state, same tripped."""
     prog, series = _sim_series(tmp_path, 20)
     truth = ledger.derive()
     for kid in ledger.KPI_IDS:
-        assert measures.measure(kid, prog, series) == truth.reading(20, kid), kid
+        got, want = measures.measure(kid, prog, series), truth.reading(20, kid)
+        assert (got.state, got.tripped) == (want.state, want.tripped), kid
+        if want.value is None:
+            assert got.value is None, kid
+        else:
+            assert got.value == pytest.approx(want.value, abs=ledger.BY_ID[kid].tolerance), kid
     gone = measures.source_missing(series[-1])
     r = measures.measure("scope-change-pct", prog, series[:-1] + [gone])
     assert r.state == "broken" and r.value == truth.reading(19, "scope-change-pct").value
@@ -312,7 +320,14 @@ def test_simulated_tree_instruments_end_to_end_with_a_fake_model(tmp_path):
     assert inst.computes == list(ledger.KPI_IDS)
     truth = ledger.derive()
     for k in inst.kpis:
-        assert k.sample == truth.reading(16, k.kpi_id)
+        want = truth.reading(16, k.kpi_id)
+        assert (k.sample.state, k.sample.tripped) == (want.state, want.tripped), k.kpi_id
+        if want.value is None:
+            assert k.sample.value is None, k.kpi_id
+        else:
+            assert k.sample.value == pytest.approx(
+                want.value, abs=ledger.BY_ID[k.kpi_id].tolerance
+            ), k.kpi_id
         assert k.when_missing.state in ("broken", "stale")
     md = instrument.render_markdown(inst, tree)
     assert "6 of 6 compute from snapshots" in md

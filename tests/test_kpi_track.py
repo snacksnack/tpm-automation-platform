@@ -213,3 +213,33 @@ def test_the_schema_keeps_the_honesty_constraints():
     assert "kpi_readings_not_ok_needs_a_reason" in SCHEMA
     assert "state = 'ok' OR reason IS NOT NULL" in SCHEMA
     assert "CHECK (state IN ('ok', 'stale', 'broken'))" in SCHEMA
+
+
+# --- packaging: kpi ships, simulate does not (RC1-309, RC1-310) ------------------------------
+
+
+def test_kpi_imports_nothing_from_simulate():
+    """`kpi` is in pyproject's packages and copied into the Fly image;
+    `simulate` is deliberately neither. An import of `simulate` anywhere under
+    `kpi/` — even a lazy one — is a deploy-time ImportError waiting for its
+    first caller, which is exactly how RC1-309 happened."""
+    import ast
+    from pathlib import Path
+
+    import kpi
+
+    offenders = []
+    for path in Path(kpi.__file__).parent.rglob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.Import):
+                names = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom):
+                names = [node.module or ""]
+            else:
+                continue
+            offenders += [
+                f"{path.name}:{node.lineno} imports {name}"
+                for name in names
+                if name == "simulate" or name.startswith("simulate.")
+            ]
+    assert offenders == []

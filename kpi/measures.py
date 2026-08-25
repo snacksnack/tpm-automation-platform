@@ -7,12 +7,14 @@ program and its stored snapshots, oldest first, and returns a `Reading` for
 the latest one. Numbers are computed here, by code; nothing in this module
 calls a model.
 
-Two families. The eval-run-store KPIs are implemented here over the
-snapshot's run rows. The simulated program's six delegate to the ledger's
-formulas (`simulate.ledger`), which are the adopted tree's definitions
-already written and already proven against the scenario; they are imported
-lazily because `simulate` is a development package, not a shipped one —
-the track stage moves the formulas into `kpi/` when it takes them over.
+Two families, both implemented here. The eval-run-store KPIs read the
+snapshot's run rows. The simulated program's six read the snapshot's Jira
+project and spend line — written against the adopted tree's definitions
+(`docs/kpi/trees/simulated-program.review.md`), and deliberately *not*
+against `simulate/ledger.py`: the ledger is the independently-written
+expectation the `kpi-ledger` eval diffs these formulas against, and nothing
+under `kpi/` may import `simulate` (RC1-310 — the shipped package must not
+lean on the development-only one).
 
 `source_missing` is the instrument stage's planted-break check: the latest
 snapshot with every source gone. Every confirmed measure is run against it
@@ -23,9 +25,10 @@ the rubric's staleness rule, verified per KPI rather than promised.
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import date, timedelta
 
-from collectors.models import EvalRunRow, ProgramSnapshot, SourceHealth
+from collectors.models import EvalRunRow, ProgramSnapshot, SourceHealth, SpendRow
 from collectors.programs import Program
 from kpi.reading import Reading
 
@@ -229,13 +232,349 @@ def _previous_value(
     return measure(program, series[:-1]).value
 
 
-# --- the simulated program: the ledger's formulas ----------------------------------------
+# --- the simulated program: the adopted tree's formulas over collected snapshots -------------
+
+SIM_WINDOW_DAYS = 14  # trailing throughput window (the tree review kept 14 over 28)
+SIM_STATUS_DONE = "Done"  # the tree keys on status names, not categories
+SIM_STATUS_BLOCKED = "Blocked"
+SIM_SLUG_PREFIX = "ks-"  # the simulator's per-story slug label; falls back to the Jira key
+GA_BLOCKING_LABEL = "ga-blocking"  # the sign-off root; chains into it are the critical path
+SOURCE_BREAK_DROP = 0.5  # story count under this share of the last good day's = broken
+SPEND_STALE_AFTER_DAYS = 8
+
+FORECAST_TRIP_DAYS = 5.0
+SCOPE_TRIP_PCT = 10.0
+SLACK_TRIP_DAYS = 3.0
+BLOCKED_TRIP_PCT = 25.0
+BLOCKED_TRIP_DAYS = 3
+COST_TRIP_RATIO = 1.10
+BURN_TRIP_SINGLE = 1.5
+BURN_TRIP_CONSECUTIVE = 1.2
+
+
+@dataclass(frozen=True)
+class _Story:
+    slug: str
+    blocked: bool
+    done: bool
+    start: date
+    due: date
+    points: int
+    ga_blocking: bool
+    blocks: tuple[str, ...]  # slugs this story blocks
+
+
+@dataclass(frozen=True)
+class _Frame:
+    """One sim-day of the simulated program, read out of its collected snapshot."""
+
+    day: int
+    date: date
+    ga_date: date | None  # the epic's due date: the committed GA
+    stories: dict[str, _Story]
+
+    @property
+    def open(self) -> dict[str, _Story]:
+        return {slug: s for slug, s in self.stories.items() if not s.done}
+
+    @property
+    def total_points(self) -> int:
+        return sum(s.points for s in self.stories.values())
+
+
+def _frame(snap: ProgramSnapshot) -> _Frame:
+    stories: dict[str, _Story] = {}
+    ga_date: date | None = None
+    project = snap.jira
+    if project is not None:
+        slug_of = {
+            i.key: next(
+                (lb[len(SIM_SLUG_PREFIX):] for lb in i.labels if lb.startswith(SIM_SLUG_PREFIX)),
+                i.key,
+            )
+            for i in project.issues
+        }
+        blocks: dict[str, list[str]] = {}
+        for link in project.links:
+            if link.upstream in slug_of and link.downstream in slug_of:
+                blocks.setdefault(slug_of[link.upstream], []).append(slug_of[link.downstream])
+        for i in project.issues:
+            if i.issue_type == "Epic":
+                ga_date = i.due
+                continue
+            if i.start is None or i.due is None:
+                continue  # a story with no dates cannot sit on a schedule; reported by RC1-303
+            slug = slug_of[i.key]
+            stories[slug] = _Story(
+                slug=slug,
+                blocked=i.status == SIM_STATUS_BLOCKED,
+                done=i.status == SIM_STATUS_DONE,
+                start=i.start,
+                due=i.due,
+                points=int(i.points or 0),
+                ga_blocking=GA_BLOCKING_LABEL in i.labels,
+                blocks=tuple(sorted(blocks.get(slug, ()))),
+            )
+    return _Frame(day=snap.sim_day, date=snap.sim_date, ga_date=ga_date, stories=stories)
+
+
+def _upstreams(stories: dict[str, _Story]) -> dict[str, set[str]]:
+    """slug -> slugs that block it, within the frame."""
+    ups: dict[str, set[str]] = {slug: set() for slug in stories}
+    for slug, story in stories.items():
+        for down in story.blocks:
+            if down in ups:
+                ups[down].add(slug)
+    return ups
+
+
+def _ancestors(slug: str, ups: dict[str, set[str]]) -> set[str]:
+    seen: set[str] = set()
+    stack = list(ups.get(slug, ()))
+    while stack:
+        s = stack.pop()
+        if s in seen:
+            continue
+        seen.add(s)
+        stack.extend(ups.get(s, ()))
+    return seen
+
+
+def _ga_chain(stories: dict[str, _Story]) -> set[str]:
+    """Every story on a chain to a GA-blocking story, roots included."""
+    ups = _upstreams(stories)
+    roots = {slug for slug, s in stories.items() if s.ga_blocking}
+    chain = set(roots)
+    for root in roots:
+        chain |= _ancestors(root, ups)
+    return chain
+
+
+def _last_good(frames: list[_Frame]) -> int:
+    """The most recent day the source-break rule trusts: the story count under
+    the program never falls below half of the last trusted day's."""
+    good = 0
+    for day in range(1, len(frames)):
+        reference = len(frames[good].stories)
+        if not (reference > 0 and len(frames[day].stories) < reference * SOURCE_BREAK_DROP):
+            good = day
+    return good
+
+
+def _sim_forecast_slip(frames: list[_Frame]) -> Reading:
+    snap = frames[-1]
+    if snap.ga_date is None:
+        return Reading(
+            kpi_id="forecast-slip-days", sim_date=snap.date, value=None, state="broken",
+            reason="the snapshot names no committed GA date (no epic with a due date)",
+        )
+    remaining = sum(s.points for s in snap.open.values())
+    if remaining == 0:
+        # The first day of the *current* all-Done stretch; an empty snapshot
+        # does not count as one (that is the source break, handled upstream).
+        completed = snap.day
+        while completed > 0 and frames[completed - 1].stories and not frames[completed - 1].open:
+            completed -= 1
+        value = float((frames[completed].date - snap.ga_date).days)
+        return Reading(
+            kpi_id="forecast-slip-days", sim_date=snap.date, value=value, as_of=snap.date,
+            tripped=value > FORECAST_TRIP_DAYS,
+            detail=f"all work Done on day {completed}; committed GA {snap.ga_date}",
+        )
+    if snap.day >= SIM_WINDOW_DAYS:
+        then = frames[snap.day - SIM_WINDOW_DAYS]
+        done = sum(
+            s.points
+            for slug, s in snap.stories.items()
+            if s.done and not (slug in then.stories and then.stories[slug].done)
+        )
+        rate = done / SIM_WINDOW_DAYS
+        basis = f"{done} pts Done in the last {SIM_WINDOW_DAYS} days"
+    else:
+        # No throughput history yet: assume the plan's own rate — every point
+        # today over the program's whole weeks, kickoff to the GA week's end.
+        plan_days = 7 * ((snap.ga_date - frames[0].date).days // 7 + 1)
+        rate = snap.total_points / plan_days
+        basis = (
+            f"plan rate {snap.total_points} pts / {plan_days} days "
+            f"(under {SIM_WINDOW_DAYS} days of history)"
+        )
+    if rate == 0:
+        return Reading(
+            kpi_id="forecast-slip-days", sim_date=snap.date, value=None, state="broken",
+            reason="no completed work to forecast from", as_of=snap.date,
+            detail=f"{remaining} pts remaining; {basis}",
+        )
+    value = round((snap.date - snap.ga_date).days + remaining / rate, 2)
+    return Reading(
+        kpi_id="forecast-slip-days", sim_date=snap.date, value=value, as_of=snap.date,
+        tripped=value > FORECAST_TRIP_DAYS,
+        detail=f"{remaining} pts remaining at {rate:.3f} pts/day ({basis})",
+    )
+
+
+def _sim_scope_change(frames: list[_Frame]) -> Reading:
+    snap, base = frames[-1], frames[0]
+    baseline = base.total_points
+    if baseline == 0:
+        return Reading(
+            kpi_id="scope-change-pct", sim_date=snap.date, value=None, state="broken",
+            reason="the day-0 snapshot holds no stories to baseline against",
+        )
+    added = sum(s.points for slug, s in snap.stories.items() if slug not in base.stories)
+    removed = sum(s.points for slug, s in base.stories.items() if slug not in snap.stories)
+    value = round((added - removed) / baseline * 100, 2)
+    return Reading(
+        kpi_id="scope-change-pct", sim_date=snap.date, value=value, as_of=snap.date,
+        tripped=value > SCOPE_TRIP_PCT,
+        detail=f"+{added} / -{removed} pts against a {baseline}-pt baseline",
+    )
+
+
+def _sim_critical_path_slack(frames: list[_Frame]) -> Reading:
+    snap = frames[-1]
+    chain = _ga_chain(snap.stories)
+    links: list[tuple[int, str, str]] = []
+    for up_slug, up in snap.stories.items():
+        if up.done:
+            continue  # a delivered upstream cannot consume slack
+        for down_slug in up.blocks:
+            down = snap.stories.get(down_slug)
+            if down is None or down_slug not in chain or down.done:
+                continue
+            links.append(((down.start - up.due).days, up_slug, down_slug))
+    if not links:
+        return Reading(
+            kpi_id="critical-path-slack-days", sim_date=snap.date, value=None, as_of=snap.date,
+            detail="no open dependencies on a GA chain",
+        )
+    slack, up_slug, down_slug = min(links)
+    return Reading(
+        kpi_id="critical-path-slack-days", sim_date=snap.date, value=float(slack),
+        as_of=snap.date, tripped=slack < SLACK_TRIP_DAYS,
+        detail=f"{up_slug} due -> {down_slug} start; {len(links)} open link(s) on GA chains",
+    )
+
+
+def _blocked_split(frame: _Frame) -> tuple[int, int, int]:
+    """(direct, transitive, open_points) — direct and transitive restricted to GA chains."""
+    chain = _ga_chain(frame.stories)
+    ups = _upstreams(frame.stories)
+    open_stories = frame.open
+
+    def stuck(slug: str) -> bool:
+        s = open_stories.get(slug)
+        return s is not None and (s.blocked or s.due < frame.date)
+
+    direct = transitive = 0
+    for slug, s in open_stories.items():
+        if slug not in chain:
+            continue
+        if s.blocked:
+            direct += s.points
+        elif any(stuck(a) for a in _ancestors(slug, ups)):
+            transitive += s.points
+    return direct, transitive, sum(s.points for s in open_stories.values())
+
+
+def _sim_blocked_share(frames: list[_Frame]) -> Reading:
+    snap = frames[-1]
+    direct, transitive, open_points = _blocked_split(snap)
+    if open_points == 0:
+        return Reading(
+            kpi_id="blocked-share-pct", sim_date=snap.date, value=None, as_of=snap.date,
+            detail="no open work",
+        )
+    value = round((direct + transitive) / open_points * 100, 2)
+    shares: list[float | None] = [value]
+    for frame in frames[max(0, len(frames) - BLOCKED_TRIP_DAYS):-1]:
+        d, t, op = _blocked_split(frame)
+        shares.append(None if op == 0 else (d + t) / op * 100)
+    tripped = len(shares) == BLOCKED_TRIP_DAYS and all(
+        v is not None and v > BLOCKED_TRIP_PCT for v in shares
+    )
+    return Reading(
+        kpi_id="blocked-share-pct", sim_date=snap.date, value=value, as_of=snap.date,
+        tripped=tripped,
+        detail=f"direct {direct} + transitive {transitive} of {open_points} open pts on GA chains",
+    )
+
+
+def _spend_landed(row: SpendRow) -> date:
+    """Week w covers week_start..+6 and its row lands the Monday after."""
+    return row.week_start + timedelta(days=7)
+
+
+def _no_spend_yet(kpi_id: str, snap: ProgramSnapshot) -> Reading:
+    return Reading(
+        kpi_id=kpi_id, sim_date=snap.sim_date, value=None, state="stale",
+        reason="no spend row has landed yet",
+    )
+
+
+def _spend_freshness(snap: ProgramSnapshot, last: SpendRow) -> tuple[str, str | None]:
+    age = (snap.sim_date - _spend_landed(last)).days
+    if age > SPEND_STALE_AFTER_DAYS:
+        return "stale", f"latest spend row (week {last.week}) is {age} days old"
+    return "ok", None
+
+
+def _sim_cost_vs_envelope(snap: ProgramSnapshot) -> Reading:
+    rows = sorted(snap.spend, key=lambda r: r.week)
+    if not rows:
+        return _no_spend_yet("cost-vs-envelope", snap)
+    ratios: list[float] = []
+    cum_actual = cum_plan = 0.0
+    for r in rows:
+        cum_actual += r.actual_usd
+        cum_plan += r.planned_usd
+        ratios.append(cum_actual / cum_plan)
+    tripped = len(ratios) >= 2 and all(r > COST_TRIP_RATIO for r in ratios[-2:])
+    last = rows[-1]
+    state, reason = _spend_freshness(snap, last)
+    return Reading(
+        kpi_id="cost-vs-envelope", sim_date=snap.sim_date,
+        value=round(cum_actual - cum_plan, 2), state=state, reason=reason, tripped=tripped,
+        as_of=_spend_landed(last),
+        detail=f"${cum_actual:,.0f} actual vs ${cum_plan:,.0f} plan through week {last.week} "
+        f"({ratios[-1] * 100:.1f} % of plan-to-date)",
+    )
+
+
+def _sim_weekly_burn(snap: ProgramSnapshot) -> Reading:
+    rows = sorted(snap.spend, key=lambda r: r.week)
+    if not rows:
+        return _no_spend_yet("weekly-spend-burn-ratio", snap)
+    ratios = [r.actual_usd / r.planned_usd for r in rows]
+    tripped = ratios[-1] > BURN_TRIP_SINGLE or (
+        len(ratios) >= 2 and all(r > BURN_TRIP_CONSECUTIVE for r in ratios[-2:])
+    )
+    last = rows[-1]
+    state, reason = _spend_freshness(snap, last)
+    return Reading(
+        kpi_id="weekly-spend-burn-ratio", sim_date=snap.sim_date, value=round(ratios[-1], 4),
+        state=state, reason=reason, tripped=tripped, as_of=_spend_landed(last),
+        detail=f"week {last.week}: ${last.actual_usd:,.0f} actual vs ${last.planned_usd:,.0f} plan",
+    )
+
+
+_SIM_JIRA: dict[str, Callable[[list[_Frame]], Reading]] = {
+    "forecast-slip-days": _sim_forecast_slip,
+    "scope-change-pct": _sim_scope_change,
+    "critical-path-slack-days": _sim_critical_path_slack,
+    "blocked-share-pct": _sim_blocked_share,
+}
+_SIM_SPEND: dict[str, Callable[[ProgramSnapshot], Reading]] = {
+    "cost-vs-envelope": _sim_cost_vs_envelope,
+    "weekly-spend-burn-ratio": _sim_weekly_burn,
+}
 
 
 def _simulated(kpi_id: str) -> Measure:
-    def measure(program: Program, series: list[ProgramSnapshot]) -> Reading:
-        from simulate import ledger  # development package; see the module docstring
+    jira_formula = _SIM_JIRA.get(kpi_id)
+    spend_formula = _SIM_SPEND.get(kpi_id)
 
+    def measure(program: Program, series: list[ProgramSnapshot]) -> Reading:
         snap = series[-1]
         by_day: dict[int, ProgramSnapshot] = {}
         for s in series:
@@ -251,10 +590,27 @@ def _simulated(kpi_id: str) -> Measure:
             return _broken(
                 kpi_id, snap, f"snapshot series has gaps — no snapshot for day(s) {shown}"
             )
-        book = ledger.derive(
-            series=[ledger.snapshot_from_collected(by_day[d]) for d in range(last + 1)]
-        )
-        return book.reading(last, kpi_id)
+        days = [by_day[d] for d in range(last + 1)]
+        if spend_formula is not None:
+            return spend_formula(days[-1])
+        frames = [_frame(s) for s in days]
+        good = _last_good(frames)
+        if good < last:
+            # The rubric's honesty rule: a broken source carries the last good
+            # reading with its date, never a number computed from an absence.
+            carried = jira_formula(frames[: good + 1])
+            return carried.model_copy(
+                update={
+                    "sim_date": snap.sim_date,
+                    "state": "broken",
+                    "reason": (
+                        f"source broken since day {good + 1}: {len(frames[good].stories)} "
+                        f"stories under the program on day {good}, "
+                        f"{len(frames[last].stories)} today; carrying day {good}"
+                    ),
+                }
+            )
+        return jira_formula(frames)
 
     measure.__name__ = f"simulated:{kpi_id}"
     return measure

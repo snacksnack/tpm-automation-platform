@@ -106,5 +106,8 @@ chain with no network: the simulator converges an in-memory Jira for days
 the store round-trips every day, and the recomputed ledger equals the
 scenario-derived one reading for reading — value, state, tripped, as-of.
 
-That is the seam the track stage (RC1-305) sits on: its implementation of
-the `kpi-ledger` subject reads the store, not the scenario.
+That is the seam the track stage (RC1-305) sits on: its measures read
+collected `ProgramSnapshot`s, never the scenario — and since RC1-310 they
+compute the simulated program's KPIs themselves (`kpi/measures.py`), with
+the ledger kept in `simulate/` as the independently-written expectation
+the `kpi-ledger` eval diffs them against.

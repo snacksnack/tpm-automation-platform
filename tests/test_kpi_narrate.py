@@ -78,11 +78,14 @@ def test_payload_is_outcomes_first_and_number_complete(tree, inst):
     assert {"unit", "direction", "so_what", "leads"} <= set(entry)
 
 
-def test_the_uninstrumented_kpi_is_named_not_silently_dropped(tree, inst):
-    payload = narrate.build_payload(EVAL, tree, inst, _two_weeks(tree, inst))
+def test_a_tree_kpi_that_does_not_ship_is_named_not_silently_dropped(tree, inst):
+    gutted = inst.model_copy(
+        update={"kpis": [k for k in inst.kpis if k.kpi_id != "error-rate"]}
+    )
+    payload = narrate.build_payload(EVAL, tree, gutted, _two_weeks(tree, gutted))
     gaps = {g["kpi_id"] for g in payload["not_shipping"]}
-    assert "unmeasured-code-versions" in gaps
-    assert all(k["kpi_id"] != "unmeasured-code-versions" for k in payload["kpis"])
+    assert "error-rate" in gaps
+    assert all(k["kpi_id"] != "error-rate" for k in payload["kpis"])
 
 
 def test_first_week_has_no_delta_and_flags_fire_on_change(tree, inst):

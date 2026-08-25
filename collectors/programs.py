@@ -36,6 +36,10 @@ class Program:
     #: Read run rows from the shared eval store (EVAL_DATABASE_URL).
     eval_store: bool = False
     eval_subjects: tuple[str, ...] = ()  # empty = every subject
+    #: Real billing feeds to read (RC1-308): "anthropic-costs" (the org cost
+    #: report, needs ANTHROPIC_ADMIN_KEY) and/or "heroku-invoices" (the
+    #: account's invoices, needs HEROKU_API_KEY).
+    billing: tuple[str, ...] = ()
     #: Values a KPI may use that are declared, not measured — a plan price off
     #: a billing page. Listed in the source catalog (RC1-303) as exactly that,
     #: so a KPI leaning on one is a proxy with a stated caveat, not a measurement.
@@ -60,8 +64,12 @@ EVAL_RUN_STORE = Program(
     id="eval-run-store",
     name="Eval run store",
     eval_store=True,
-    # heroku-postgresql:essential-0 on reid-eval-store (RC1-263): the fixed half
-    # of what the program costs. Re-verified against the billing page monthly.
+    # RC1-308: the real cost feeds — the org's model spend as billed and the
+    # store's actual invoice, replacing computed and declared numbers.
+    billing=("anthropic-costs", "heroku-invoices"),
+    # heroku-postgresql:essential-0 on reid-eval-store (RC1-263): the declared
+    # fallback for the fixed half of what the program costs, kept for
+    # cost-per-verified-case; the real invoice is the heroku-invoices feed.
     constants={"store_plan_usd_per_month": 5.0},
 )
 

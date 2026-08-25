@@ -20,6 +20,13 @@ class Settings(BaseSettings):
 
     # Anthropic (narrative/)
     anthropic_api_key: str | None = None
+    # Anthropic Admin API (collectors/billing.py, RC1-308): sk-ant-admin…, a
+    # different key class — the regular API key cannot read the cost report.
+    anthropic_admin_key: str | None = None
+
+    # Heroku Platform API (collectors/billing.py, RC1-308): reads the account's
+    # invoices — the store plan's real bill instead of a declared constant.
+    heroku_api_key: str | None = None
 
     # Slack (drift/notify.py)
     slack_webhook_url: str | None = None

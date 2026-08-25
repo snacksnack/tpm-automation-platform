@@ -274,7 +274,7 @@
       "id": 5,
       "type": "timeseries",
       "title": "Cost",
-      "description": "Cost per verified case, Cost per run, by model \u2014 outcome KPI: cost-per-verified-case.",
+      "description": "Cost per verified case, Cost per run, by model \u2014 leading indicators.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "${DS_POSTGRES}"

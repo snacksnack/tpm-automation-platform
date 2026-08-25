@@ -106,6 +106,23 @@ class EvalRunRow(BaseModel):
     cost_usd: float
 
 
+class BillingRow(BaseModel):
+    """One period of a real billing feed (RC1-308): dollars someone was billed,
+    not dollars a price table computed.
+
+    `metered` rows are daily buckets from a metered API (the Anthropic org
+    cost report); `invoice` rows are whole billing periods (a Heroku monthly
+    invoice). `period_end` is exclusive for metered rows, inclusive for
+    invoices — each feed's own convention, preserved rather than papered over.
+    """
+
+    source: str = Field(description="anthropic-costs | heroku-invoices")
+    period_start: date
+    period_end: date
+    amount_usd: float
+    kind: Literal["metered", "invoice"] = "metered"
+
+
 SourceStatus = Literal["ok", "missing", "error"]
 
 
@@ -144,6 +161,7 @@ class ProgramSnapshot(BaseModel):
     )
     spend: list[SpendRow] = []
     eval_runs: list[EvalRunRow] = []
+    billing: list[BillingRow] = []
     health: list[SourceHealth] = []
 
     def source(self, name: str) -> SourceHealth | None:

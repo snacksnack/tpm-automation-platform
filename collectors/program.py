@@ -28,6 +28,7 @@ from pathlib import Path
 
 from collectors.jira import JiraCollector, JiraError
 from collectors.models import (
+    BillingRow,
     EvalRunRow,
     ProgramSnapshot,
     ProjectSnapshot,
@@ -120,6 +121,8 @@ def collect_program(
     *,
     jira: JiraCollector | None = None,
     eval_dsn: str | None = None,
+    heroku_api_key: str | None = None,
+    anthropic_admin_key: str | None = None,
     now: datetime | None = None,
 ) -> ProgramSnapshot:
     """One snapshot of `program`, every source's health recorded.
@@ -229,6 +232,43 @@ def collect_program(
                     )
                 )
 
+    billing: list[BillingRow] = []
+    if program.billing:
+        from collectors import billing as billing_feeds  # httpx: only billing needs it here
+
+        keys = {"anthropic-costs": anthropic_admin_key, "heroku-invoices": heroku_api_key}
+        env_names = {"anthropic-costs": "ANTHROPIC_ADMIN_KEY", "heroku-invoices": "HEROKU_API_KEY"}
+        readers = {
+            "anthropic-costs": lambda key: billing_feeds.read_anthropic_costs(key, now=now),
+            "heroku-invoices": billing_feeds.read_heroku_invoices,
+        }
+        for feed in program.billing:
+            key = keys[feed]
+            if not key:
+                health.append(
+                    SourceHealth(
+                        source=feed, status="error",
+                        detail=f"{env_names[feed]} is not set",
+                    )
+                )
+                continue
+            try:
+                rows = readers[feed](key)
+            except billing_feeds.BillingError as exc:
+                health.append(SourceHealth(source=feed, status="error", detail=str(exc)[:300]))
+            else:
+                billing.extend(rows)
+                health.append(
+                    SourceHealth(
+                        source=feed,
+                        status="ok" if rows else "missing",
+                        count=len(rows),
+                        detail=f"{len(rows)} period(s) through {rows[-1].period_end}"
+                        if rows
+                        else "feed answered with no periods",
+                    )
+                )
+
     return ProgramSnapshot(
         program_id=program.id,
         collected_at=now,
@@ -237,5 +277,6 @@ def collect_program(
         jira=project,
         spend=spend,
         eval_runs=eval_runs,
+        billing=billing,
         health=health,
     )

@@ -52,7 +52,11 @@ def cmd_snapshot(args: argparse.Namespace) -> int:
     jira = _jira() if prog.jira else None
     try:
         snap = collect.collect_program(
-            prog, jira=jira, eval_dsn=os.environ.get("EVAL_DATABASE_URL")
+            prog,
+            jira=jira,
+            eval_dsn=os.environ.get("EVAL_DATABASE_URL"),
+            heroku_api_key=settings.heroku_api_key,
+            anthropic_admin_key=settings.anthropic_admin_key,
         )
     finally:
         if jira is not None:

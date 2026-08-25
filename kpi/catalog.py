@@ -99,6 +99,24 @@ _CLOCK = Source(
         Field("collected_at", "datetime", "wall clock"),
     ),
 )
+_BILLING = Source(
+    "billing",
+    "anthropic-costs: daily buckets, land within a day; heroku-invoices: one row per "
+    "monthly billing period",
+    (
+        Field("source", "str", "anthropic-costs | heroku-invoices"),
+        Field("period_start", "date", ""),
+        Field(
+            "period_end", "date",
+            "exclusive for metered daily buckets, inclusive for invoices",
+        ),
+        Field("amount_usd", "float", "dollars as billed — never computed from a price table"),
+        Field("kind", "str", "metered | invoice"),
+    ),
+    "Real bills (RC1-308). anthropic-costs is the ORG's cost report and cannot be "
+    "filtered to this program's traffic: any attribution of it to runs is an upper "
+    "bound and must say so.",
+)
 
 _NOT_AVAILABLE = {
     "jira": [
@@ -113,12 +131,22 @@ _NOT_AVAILABLE = {
         "the model price table",
         "branch or pull request a run was taken on",
     ],
+    "billing": [
+        "per-API-key or per-workspace attribution of the org cost report",
+        "per-app Heroku charges (the invoice is the account total)",
+    ],
     "other": [
         "GitHub repositories: commits, tags, releases, pull requests",
-        "Postgres plan billing as a feed (a plan price may be declared as a constant)",
-        "Heroku / Vercel billing exports",
+        "Vercel billing exports",
     ],
 }
+
+#: What "other" additionally lacks when a program has NO billing feeds — the
+#: pre-RC1-308 state, kept accurate for the simulated program.
+_NO_BILLING = [
+    "Postgres plan billing as a feed (a plan price may be declared as a constant)",
+    "Heroku billing exports",
+]
 
 
 def sources_for(program: Program) -> list[Source]:
@@ -129,6 +157,8 @@ def sources_for(program: Program) -> list[Source]:
         out.append(_SPEND)
     if program.eval_store:
         out.append(_EVAL)
+    if program.billing:
+        out.append(_BILLING)
     return out
 
 
@@ -142,7 +172,9 @@ def available_fields(program: Program) -> set[str]:
 
 def catalog(program: Program, sample: ProgramSnapshot | None = None) -> dict:
     """The catalog as the model sees it and the checks read it."""
-    not_available = {k: v for k, v in _NOT_AVAILABLE.items() if k == "other"}
+    not_available = {"other": list(_NOT_AVAILABLE["other"])}
+    if not program.billing:
+        not_available["other"] += _NO_BILLING
     for s in sources_for(program):
         if s.name in _NOT_AVAILABLE:
             not_available[s.name] = _NOT_AVAILABLE[s.name]
@@ -168,6 +200,7 @@ def catalog(program: Program, sample: ProgramSnapshot | None = None) -> dict:
                 "jira_links": None if sample.jira is None else len(sample.jira.links),
                 "spend_rows": len(sample.spend),
                 "eval_runs": len(sample.eval_runs),
+                "billing_rows": len(sample.billing),
             },
         }
     return out

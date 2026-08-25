@@ -105,7 +105,11 @@ def test_adopted_trees_exist_for_every_program_and_pass_the_shape_rules():
     sim = instrument.load_adopted_tree("simulated-program")
     assert {k.id for k in sim.kpis} == set(ledger.KPI_IDS)
     evl = instrument.load_adopted_tree("eval-run-store")
-    assert "unmeasured-code-versions" in {k.id for k in evl.leading}
+    # The RC1-308 amendment: economics on real spend, attribution demoted to
+    # leading, and the instrumentation-rejected KPI recorded as rejected.
+    assert {k.id for k in evl.outcomes} == {"gated-pass-rate", "real-cost-per-run"}
+    assert "cost-per-verified-case" in {k.id for k in evl.leading}
+    assert "Unmeasured code-version drift, per subject" in {r.name for r in evl.rejected}
     with pytest.raises(instrument.InstrumentError):
         instrument.load_adopted_tree("nope")
 
@@ -125,7 +129,7 @@ def test_catalog_lists_only_the_programs_sources_and_says_what_is_missing():
     assert "jira.points" in sim["field_names"] and "eval-store.passed" not in sim["field_names"]
     assert any("changelog" in n for n in sim["not_available"]["jira"])
     evl = catalog.catalog(EVAL, _eval_snapshot([_run("a")]))
-    assert [s["name"] for s in evl["sources"]] == ["clock", "eval-store"]
+    assert [s["name"] for s in evl["sources"]] == ["clock", "eval-store", "billing"]
     assert "constants.store_plan_usd_per_month" in evl["field_names"]
     assert any("advisory" in n for n in evl["not_available"]["eval-store"])
     assert any("GitHub" in n for n in evl["not_available"]["other"])
@@ -237,8 +241,8 @@ def test_verify_refuses_unknown_fields_downgrades_unmeasured_and_keeps_honest_ve
                  misses="plan changes and overage until the constant is edited"),
         _verdict("measurement-freshness-days",
                  fields=["eval-store.started_at", "clock.sim_date"]),
-        _verdict("unmeasured-code-versions", "rejected",
-                 reason="GitHub tags are not a snapshot source"),
+        _verdict("real-cost-per-run", "rejected",
+                 reason="no billing key in this test's world"),
         _verdict("error-rate", fields=["eval-store.advisory_share"]),  # not in the catalog
         _verdict("cost-per-run-by-model", "proxied", fields=["eval-store.cost_usd"],
                  proxy="x"),  # no misses
@@ -249,28 +253,30 @@ def test_verify_refuses_unknown_fields_downgrades_unmeasured_and_keeps_honest_ve
     assert by["gated-pass-rate"].when_missing.state == "broken"
     assert by["cost-per-verified-case"].status == "verified"
     assert by["cost-per-verified-case"].verdict == "proxied"
-    assert by["unmeasured-code-versions"].status == "rejected"
+    assert by["real-cost-per-run"].status == "rejected"
     assert by["error-rate"].status == "unverified"
     assert "not in the catalog: eval-store.advisory_share" in by["error-rate"].problems[0]
     assert by["cost-per-run-by-model"].status == "unverified"
     assert any("what it misses" in p for p in by["cost-per-run-by-model"].problems)
+    # Tree order: outcomes first, then leading — cpvc now sits in leading.
     assert inst.computes == [
-        "gated-pass-rate", "cost-per-verified-case", "measurement-freshness-days",
+        "gated-pass-rate", "measurement-freshness-days", "cost-per-verified-case",
     ]
     assert inst.rubric_version == 2 and inst.model == "claude-test"
     assert inst.sample_sim_date == TODAY.isoformat()
     assert inst.notes == ["advisory share cannot be measured"]
 
 
-def test_verify_a_confirmed_kpi_with_no_measure_is_unverified_not_shipped():
+def test_verify_a_confirmed_kpi_with_no_measure_is_unverified_not_shipped(monkeypatch):
+    monkeypatch.delitem(measures.MEASURES, "real-cost-per-run")
     tree = instrument.load_adopted_tree("eval-run-store")
     verdicts = instrument.Verdicts(program="eval-run-store", verdicts=[
-        _verdict("unmeasured-code-versions", fields=["eval-store.code_version"]),
+        _verdict("real-cost-per-run", fields=["billing.amount_usd"]),
     ])
     inst = instrument.verify(verdicts, tree, EVAL, [_eval_snapshot([_run("a")])], now=NOW)
     by = {k.kpi_id: k for k in inst.kpis}
-    assert by["unmeasured-code-versions"].status == "unverified"
-    assert "no measure is registered" in by["unmeasured-code-versions"].problems[0]
+    assert by["real-cost-per-run"].status == "unverified"
+    assert "no measure is registered" in by["real-cost-per-run"].problems[0]
     # KPIs the model said nothing about are unverified too, never silently confirmed
     assert by["gated-pass-rate"].status == "unverified"
     assert by["gated-pass-rate"].problems == ["no verdict"]

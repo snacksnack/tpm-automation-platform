@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The KPI program's weekly brief: scripts/kpi_weekly.sh Monday 08:00 local —
+  narrate both programs from the week's readings, archive to kpi_briefs, post
+  to Slack (RC1-306). An hour after com.reidcollins.kpi-daily so Monday's
+  readings land first; a missed Monday fires at wake, same as the daily job.
+
+  Install (deliberate — it posts to Slack every week):
+    cp scripts/launchd/com.reidcollins.kpi-weekly.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.reidcollins.kpi-weekly.plist
+  Remove:
+    launchctl unload ~/Library/LaunchAgents/com.reidcollins.kpi-weekly.plist
+
+  Edit WorkingDirectory to the repo checkout. Logs land in data/kpi-sim/.
+  Credentials: ANTHROPIC_API_KEY and SLACK_WEBHOOK_URL from the repo's .env
+  (config reads it); EVAL_DATABASE_URL from ~/.zshrc, read by the script.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.reidcollins.kpi-weekly</string>
+  <key>WorkingDirectory</key>
+  <string>/Users/reidcollins/programming/personal/tpm-automation-platform</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>/Users/reidcollins/programming/personal/tpm-automation-platform/scripts/kpi_weekly.sh</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Weekday</key>
+    <integer>1</integer>
+    <key>Hour</key>
+    <integer>8</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/Users/reidcollins/programming/personal/tpm-automation-platform/data/kpi-sim/weekly.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/reidcollins/programming/personal/tpm-automation-platform/data/kpi-sim/weekly.err</string>
+</dict>
+</plist>

@@ -135,6 +135,46 @@ be looking at, and are they real". The judgment is made under a versioned
 rubric — [`docs/kpi/rubric.md`](docs/kpi/rubric.md) — and every stage records
 which version it applied.
 
+### What is measured, and what each number means
+
+Two programs, tracked daily, narrated weekly, escalated when unmeasurable.
+
+**The real program — the agent-evals run store.** The sponsor question: *for
+every shipped LLM system, is the output measurably good right now, and what
+does knowing that cost?* Two outcomes, four leading indicators:
+
+| KPI | meaning |
+| --- | --- |
+| `gated-pass-rate` *(outcome)* | Passing share of scorable eval cases, program-level as the **minimum** across billed subjects — one bad system is a bad answer no matter the average. Under 80 % twice: freeze prompt changes on that repo. |
+| `real-cost-per-run` *(outcome)* | Billed dollars (the org's Anthropic cost report + the store's Heroku invoice, prorated) per eval run taken. Trips at 3x the price-table attribution — the gap is money the measurement program cannot account for. |
+| `measurement-freshness-days` | Days since each subject's last run, program-level the worst. A regression in a subject nobody runs *cannot appear* in the pass rate. |
+| `error-rate` | Share of cases that produced nothing to score — a pass rate over a collapsed denominator moves before it lies. |
+| `cost-per-run-by-model` | Average cost per run by (subject, model) — model mix is the lever that actually moves the bill. |
+| `cost-per-verified-case` | Attributed unit cost per scored case — the controllable share of spend, and it moves first. |
+
+**The simulated program — a scripted 10-week delivery** ([the
+simulator](docs/kpi/simulator.md)), carrying the classic TPM delivery set:
+`forecast-slip-days`, `scope-change-pct`, `critical-path-slack-days`,
+`blocked-share-pct`, `cost-vs-envelope`, `weekly-spend-burn-ratio`. It exists
+to be measured against: the scenario plants a slip, a 2x cost spike and a
+silent source break on known days, and the ground-truth ledger says exactly
+what every KPI must read on every day — including the days it must read
+`stale` or `broken` rather than a number.
+
+Every KPI carries its full contract in the trees: the exact formula, unit and
+direction, when it goes stale, the **so-what** (the decision the sponsor
+pre-agreed to when it trips), and the **Goodhart analysis** (the cheapest way
+to game the number, and the paired counter-metric that catches it). Refusals
+are recorded with the same care as adoptions — activity metrics like *runs
+per week* count how often a human chose to measure, not whether systems are
+good, and never shipped.
+
+The two-minute "why these and not others" is
+[`docs/kpi/why-these-kpis.md`](docs/kpi/why-these-kpis.md); the full
+definitions are
+[`docs/kpi/trees/eval-run-store.md`](docs/kpi/trees/eval-run-store.md) and
+[`docs/kpi/trees/simulated-program.md`](docs/kpi/trees/simulated-program.md).
+
 The define stage is in: a program brief plus the rubric go to the model, a
 KPI tree comes back as structured output, and the code refuses any draft
 that breaks the rubric's shape (1–2 outcomes, 3–4 leading indicators, every

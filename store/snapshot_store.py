@@ -29,6 +29,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 
 from collectors.models import (
+    BillingRow,
     DependencyLink,
     EvalRunRow,
     Issue,
@@ -100,6 +101,14 @@ CREATE TABLE IF NOT EXISTS source_health (
     count  INTEGER NOT NULL,
     detail TEXT
 );
+CREATE TABLE IF NOT EXISTS billing_snapshots (
+    run_id       INTEGER NOT NULL REFERENCES runs(run_id),
+    source       TEXT NOT NULL,
+    period_start TEXT NOT NULL,
+    period_end   TEXT NOT NULL,
+    amount_usd   REAL NOT NULL,
+    kind         TEXT NOT NULL
+);
 CREATE INDEX IF NOT EXISTS idx_issue_run ON issue_snapshots(run_id);
 CREATE INDEX IF NOT EXISTS idx_link_run ON link_snapshots(run_id);
 CREATE INDEX IF NOT EXISTS idx_findings_identity
@@ -107,6 +116,7 @@ CREATE INDEX IF NOT EXISTS idx_findings_identity
 CREATE INDEX IF NOT EXISTS idx_spend_run ON spend_snapshots(run_id);
 CREATE INDEX IF NOT EXISTS idx_eval_run ON eval_run_snapshots(run_id);
 CREATE INDEX IF NOT EXISTS idx_health_run ON source_health(run_id);
+CREATE INDEX IF NOT EXISTS idx_billing_run ON billing_snapshots(run_id);
 """
 
 #: Columns added after a table first shipped. `CREATE TABLE IF NOT EXISTS`
@@ -302,6 +312,15 @@ class SnapshotStore:
             ],
         )
         self._conn.executemany(
+            "INSERT INTO billing_snapshots (run_id, source, period_start, period_end, "
+            "amount_usd, kind) VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                (run_id, r.source, r.period_start.isoformat(), r.period_end.isoformat(),
+                 r.amount_usd, r.kind)
+                for r in snapshot.billing
+            ],
+        )
+        self._conn.executemany(
             "INSERT INTO source_health (run_id, source, status, count, detail) "
             "VALUES (?, ?, ?, ?, ?)",
             [(run_id, h.source, h.status, h.count, h.detail) for h in snapshot.health],
@@ -367,6 +386,17 @@ class SnapshotStore:
                 "SELECT * FROM eval_run_snapshots WHERE run_id = ? ORDER BY started_at", (run_id,)
             )
         ]
+        billing = [
+            BillingRow(
+                source=r["source"], period_start=_d(r["period_start"]),
+                period_end=_d(r["period_end"]), amount_usd=r["amount_usd"], kind=r["kind"],
+            )
+            for r in self._conn.execute(
+                "SELECT * FROM billing_snapshots WHERE run_id = ? "
+                "ORDER BY source, period_start",
+                (run_id,),
+            )
+        ]
         return ProgramSnapshot(
             program_id=row["program_id"],
             collected_at=datetime.fromisoformat(row["created_at"]),
@@ -375,6 +405,7 @@ class SnapshotStore:
             jira=project,
             spend=spend,
             eval_runs=eval_runs,
+            billing=billing,
             health=health,
         )
 

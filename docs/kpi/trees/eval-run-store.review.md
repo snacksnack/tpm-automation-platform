@@ -113,3 +113,26 @@ one is parked as a hypothesis. The baseline lost one slot to a counter it
 had over-promoted — the same correction the agent's draft implied. One real
 miss on the baseline's side (`unmeasured-code-versions`) and one on the
 agent's (the fixed cost and the unit denominator).
+
+## Amendment — real billing feeds (RC1-308, 2026-08-25)
+
+Amended by hand when the real cost sources landed; the shape rules were
+re-validated, not waived.
+
+- **`real-cost-per-run` added as the economics outcome.** Both prior cost
+  numbers were constructions — model spend from a price table, the store
+  from a declared constant. The new outcome is billed dollars only: the
+  org's Anthropic cost report plus the Heroku invoice, prorated, over the
+  runs actually taken. The org feed cannot be filtered to eval traffic, so
+  the KPI carries that as a stated upper-bound caveat and trips on the gap
+  (real over 3x attributed, two consecutive readings) rather than
+  pretending precision it does not have.
+- **`cost-per-verified-case` demoted to leading.** It keeps shipping
+  unchanged — same measure, same history — but it is the *attribution*,
+  and attribution now leads the bill instead of standing in for it.
+- **`unmeasured-code-versions` moved to rejected (unmeasurable).** The
+  instrument stage's verdict (RC1-303) said so from the start; the tree now
+  agrees instead of carrying a KPI that can never ship and a weekly "not in
+  this brief" apology for it.
+- **`cost-per-run-by-model` retargeted** to lead the new outcome — model
+  mix is the lever that moves the real bill.

@@ -274,7 +274,7 @@
       "id": 5,
       "type": "timeseries",
       "title": "Cost",
-      "description": "Cost per verified case, Cost per run, by model \u2014 outcome KPI: cost-per-verified-case.",
+      "description": "Real cost per run, Cost per run, by model, Cost per verified case \u2014 outcome KPI: real-cost-per-run.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "${DS_POSTGRES}"
@@ -320,7 +320,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT sim_date::timestamptz AS \"time\", kpi_id AS metric, value\nFROM kpi_readings\nWHERE program_id = 'eval-run-store' AND kpi_id IN ('cost-per-verified-case', 'cost-per-run-by-model')\nORDER BY 1"
+          "rawSql": "SELECT sim_date::timestamptz AS \"time\", kpi_id AS metric, value\nFROM kpi_readings\nWHERE program_id = 'eval-run-store' AND kpi_id IN ('real-cost-per-run', 'cost-per-run-by-model', 'cost-per-verified-case')\nORDER BY 1"
         }
       ]
     },

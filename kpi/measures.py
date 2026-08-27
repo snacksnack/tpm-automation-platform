@@ -219,6 +219,100 @@ def cost_per_run_by_model(program: Program, series: list[ProgramSnapshot]) -> Re
     )
 
 
+# Real billing (RC1-308): the org cost report lands daily, an invoice monthly.
+METERED_STALE_DAYS = 3
+INVOICE_STALE_DAYS = 40
+REAL_COST_RATIO_TRIP = 3.0  # real spend vs price-table attribution
+
+
+def _billing_components(snap: ProgramSnapshot) -> tuple[float, float, float, int] | None:
+    """(model_spend, store_cost, attributed, runs) over the trailing window,
+    or None when a feed has no rows or no run was taken. Shared with the
+    two-consecutive trip so both readings use one definition."""
+    metered = [b for b in snap.billing if b.source == "anthropic-costs"]
+    invoices = [b for b in snap.billing if b.source == "heroku-invoices"]
+    if not metered or not invoices:
+        return None
+    floor = snap.sim_date - timedelta(days=WINDOW_DAYS)
+    model_spend = sum(b.amount_usd for b in metered if b.period_start > floor)
+    invoice = max(invoices, key=lambda b: b.period_end)
+    period_days = max((invoice.period_end - invoice.period_start).days, 1)
+    store_cost = invoice.amount_usd / period_days * WINDOW_DAYS
+    runs = _in_window(snap.eval_runs, snap.sim_date)
+    if not runs:
+        return None
+    attributed = sum(r.cost_usd for r in runs)
+    return model_spend, store_cost, attributed, len(runs)
+
+
+def real_cost_per_run(program: Program, series: list[ProgramSnapshot]) -> Reading:
+    """What a run of the measurement program really costs: billed dollars —
+    the org's metered model spend plus the store's actual invoice, prorated —
+    over the runs taken in the trailing window. The price-table attribution
+    rides in the detail as the Goodhart counter: a widening gap is spend the
+    program cannot account for, and that gap is the trip."""
+    snap = series[-1]
+    for feed in ("anthropic-costs", "heroku-invoices"):
+        h = snap.source(feed)
+        if h is None or h.status == "error":
+            return _broken(
+                "real-cost-per-run", snap,
+                f"{feed} unreadable: {h.detail if h else 'no billing source configured'}",
+            )
+    parts = _billing_components(snap)
+    if parts is None:
+        if not any(b.source == "anthropic-costs" for b in snap.billing):
+            return _broken("real-cost-per-run", snap, "anthropic-costs answered with no periods")
+        if not any(b.source == "heroku-invoices" for b in snap.billing):
+            return _broken("real-cost-per-run", snap, "heroku-invoices answered with no periods")
+        spent = sum(
+            b.amount_usd
+            for b in snap.billing
+            if b.source == "anthropic-costs"
+            and b.period_start > snap.sim_date - timedelta(days=WINDOW_DAYS)
+        )
+        return _broken(
+            "real-cost-per-run", snap,
+            f"no run in the trailing {WINDOW_DAYS} days: ${spent:.2f} of real model spend "
+            "with nothing measured",
+        )
+    model_spend, store_cost, attributed, runs = parts
+    real = model_spend + store_cost
+    value = round(real / runs, 4)
+
+    latest_metered = max(
+        b.period_end for b in snap.billing if b.source == "anthropic-costs"
+    )  # exclusive end: yesterday's bucket ends today, so a live feed reads age 0
+    invoice_end = max(b.period_end for b in snap.billing if b.source == "heroku-invoices")
+    state, reason = "ok", None
+    if (age := (snap.sim_date - latest_metered).days) > METERED_STALE_DAYS:
+        state, reason = "stale", f"latest cost-report bucket is {age} days old"
+    elif (age := (snap.sim_date - invoice_end).days) > INVOICE_STALE_DAYS:
+        state, reason = "stale", f"latest store invoice closed {age} days ago"
+
+    ratio = real / attributed if attributed > 0 else None
+    previous = _billing_components(series[-2]) if len(series) >= 2 else None
+    prev_ratio = (
+        (previous[0] + previous[1]) / previous[2]
+        if previous is not None and previous[2] > 0
+        else None
+    )
+    tripped = (
+        ratio is not None and ratio > REAL_COST_RATIO_TRIP
+        and prev_ratio is not None and prev_ratio > REAL_COST_RATIO_TRIP
+    )
+    detail = (
+        f"${model_spend:.2f} org model spend + ${store_cost:.2f} store over {runs} run(s); "
+        f"price-table attribution ${attributed:.2f}"
+        + (f" ({ratio:.1f}x)" if ratio is not None else "; nothing attributed")
+        + " — org-wide feed, so attribution is an upper bound"
+    )
+    return Reading(
+        kpi_id="real-cost-per-run", sim_date=snap.sim_date, value=value, state=state,
+        reason=reason, tripped=tripped, as_of=latest_metered, detail=detail,
+    )
+
+
 def _freshness(age: int, reason: str) -> tuple[str, str | None]:
     return ("stale", reason) if age > FRESH_DAYS else ("ok", None)
 
@@ -619,6 +713,7 @@ def _simulated(kpi_id: str) -> Measure:
 MEASURES: dict[str, Measure] = {
     "gated-pass-rate": gated_pass_rate,
     "cost-per-verified-case": cost_per_verified_case,
+    "real-cost-per-run": real_cost_per_run,
     "measurement-freshness-days": measurement_freshness_days,
     "error-rate": error_rate,
     "cost-per-run-by-model": cost_per_run_by_model,
@@ -649,4 +744,6 @@ def source_missing(snap: ProgramSnapshot) -> ProgramSnapshot:
         else h
         for h in snap.health
     ]
-    return snap.model_copy(update={"jira": None, "spend": [], "eval_runs": [], "health": health})
+    return snap.model_copy(
+        update={"jira": None, "spend": [], "eval_runs": [], "billing": [], "health": health}
+    )

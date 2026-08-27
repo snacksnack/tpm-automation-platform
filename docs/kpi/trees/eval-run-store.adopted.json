@@ -34,29 +34,29 @@
       "activity_derived": false
     },
     {
-      "id": "cost-per-verified-case",
-      "name": "Cost per verified case",
+      "id": "real-cost-per-run",
+      "name": "Real cost per run",
       "type": "outcome",
       "direction": "lower",
-      "unit": "USD per scored case (and $ per full sweep)",
-      "definition": "(model_spend + store_fixed_cost_prorated) ÷ cases_scored over a trailing 4-week window, where model_spend is the sum of run cost in the window, store_fixed_cost_prorated is the Postgres plan's monthly price × (window days ÷ 30), and cases_scored counts non-errored cases. Also reported as $ per full sweep: the cost of the latest run of every billed subject. A $0 billed run is a broken instrument, not a cheap run; where cost is absent it is recomputed from tokens × price and flagged.",
+      "unit": "USD per recorded run, trailing 28 days",
+      "definition": "(Org model spend as billed by the Anthropic cost report + the store's Heroku invoice prorated to the window) ÷ runs recorded in the trailing 28 days. Billed dollars only — nothing in the numerator comes from a price table. The org feed cannot be filtered to eval traffic, so the value is an upper bound on the program's true cost; the price-table attribution of the same window's runs is reported beside it, and the unattributable gap is the number to watch.",
       "source": {
-        "system": "eval-store snapshot (RC1-301): one row per run + Postgres plan billing",
-        "query": "cost_usd, cases, errored, started_at per run in the window; the plan's fixed monthly price",
-        "cadence": "per run; monthly for the plan price",
+        "system": "billing feeds (RC1-308): anthropic-costs (org cost report, Admin API key) and heroku-invoices (account invoices, Platform API)",
+        "query": "sum the anthropic-costs daily buckets in the window; prorate the latest heroku invoice per-day times 28; divide by eval-store runs in the window",
+        "cadence": "anthropic-costs daily; heroku-invoices monthly",
         "owner": "Reid"
       },
-      "stale_after": "7 days (if no run lands in 7 days the numerator is only the fixed cost and the value is stale, not 'cost fell')",
-      "so_what": "If $ per verified case rises more than 50 % without a matching rise in cases or a deliberate model upgrade, the decision is model choice per subject; if a full sweep exceeds the ceiling, sweeps go fortnightly.",
+      "stale_after": "3 days without a cost-report bucket, or 40 days past the latest invoice period",
+      "so_what": "Real spend above 3x the price-table attribution on two consecutive readings: find the unattributed traffic before trusting any per-run economics. A sustained rise with flat run counts means the measurement program is paying for something it is not measuring.",
       "goodhart": {
         "risk": "medium",
-        "gaming_path": "Run the free subjects more often: cases up, spend flat, billed systems unmeasured.",
-        "counter": "measurement-freshness-days per billed subject, and the per-sweep figure, which free runs do not move."
+        "gaming_path": "Take many cheap runs to dilute the denominator, or stop running suites so the KPI reads broken instead of expensive.",
+        "counter": "Cost per verified case and measurement freshness travel beside it; a per-run fall with a per-case rise, or a freshness trip, is named in the brief."
       },
       "failure_modes": [
-        "A consumer that does not set cost_usd records $0 and the run renders as free.",
-        "The fixed cost dominates at low volume: the unit cost is mostly how often anyone runs anything.",
-        "Price-table changes re-price history."
+        "Attribution: the org feed includes non-eval traffic (the drift digest, the briefs themselves), so the value overstates the program's own cost.",
+        "Invoice lag: the current Heroku period is still open, so proration leans on the latest period the API reports.",
+        "A quiet week divides real fixed spend over few runs and reads expensive without anything having changed."
       ],
       "leads": null,
       "activity_derived": false
@@ -91,38 +91,6 @@
         "outcome_id": "gated-pass-rate",
         "mechanism": "A regression in a subject that has not been run cannot appear in the pass rate; freshness bounds how old the 'current' quality reading is.",
         "lead_time": "the whole gap"
-      },
-      "activity_derived": false
-    },
-    {
-      "id": "unmeasured-code-versions",
-      "name": "Unmeasured code-version drift, per subject",
-      "type": "leading",
-      "direction": "lower",
-      "unit": "count",
-      "definition": "For each subject: the count of consumer package versions released in the subject's repository that are newer than the code_version of that subject's most recent run. If tag and version formats cannot be compared, report unavailable, never 0.",
-      "source": {
-        "system": "GitHub repositories of the six subjects + the eval store",
-        "query": "per subject: release tags newer than the latest run's code_version",
-        "cadence": "per release / on read",
-        "owner": "Reid"
-      },
-      "stale_after": "7 days",
-      "so_what": "Two or more shipped versions of a subject unmeasured: the sponsor triggers a run against the latest version before trusting any freeze or ship decision, or accepts the risk explicitly.",
-      "goodhart": {
-        "risk": "low",
-        "gaming_path": "none",
-        "counter": "none"
-      },
-      "failure_modes": [
-        "code_version is the consumer package version, not a commit: tag-to-version mapping can be ambiguous.",
-        "Survivorship: unreleased-but-shipped changes are invisible.",
-        "No branch or PR record: a version measured on a side branch is indistinguishable from the shipped one."
-      ],
-      "leads": {
-        "outcome_id": "gated-pass-rate",
-        "mechanism": "Each shipped version can introduce a regression; versions released after the last measured one carry unverified risk before the pass rate can show it.",
-        "lead_time": "days to weeks"
       },
       "activity_derived": false
     },
@@ -182,9 +150,41 @@
         "The price table is maintained by hand; a missing price is a broken instrument, not a free run."
       ],
       "leads": {
-        "outcome_id": "cost-per-verified-case",
+        "outcome_id": "real-cost-per-run",
         "mechanism": "The model a subject runs on sets its per-run cost; a move to a dearer model shows here on the first run and in the unit cost only as the window fills.",
         "lead_time": "up to the window length, 4 weeks"
+      },
+      "activity_derived": false
+    },
+    {
+      "id": "cost-per-verified-case",
+      "name": "Cost per verified case",
+      "type": "leading",
+      "direction": "lower",
+      "unit": "USD per scored case (and $ per full sweep)",
+      "definition": "(model_spend + store_fixed_cost_prorated) ÷ cases_scored over a trailing 4-week window, where model_spend is the sum of run cost in the window, store_fixed_cost_prorated is the Postgres plan's monthly price × (window days ÷ 30), and cases_scored counts non-errored cases. Also reported as $ per full sweep: the cost of the latest run of every billed subject. A $0 billed run is a broken instrument, not a cheap run; where cost is absent it is recomputed from tokens × price and flagged.",
+      "source": {
+        "system": "eval-store snapshot (RC1-301): one row per run + Postgres plan billing",
+        "query": "cost_usd, cases, errored, started_at per run in the window; the plan's fixed monthly price",
+        "cadence": "per run; monthly for the plan price",
+        "owner": "Reid"
+      },
+      "stale_after": "7 days (if no run lands in 7 days the numerator is only the fixed cost and the value is stale, not 'cost fell')",
+      "so_what": "If $ per verified case rises more than 50 % without a matching rise in cases or a deliberate model upgrade, the decision is model choice per subject; if a full sweep exceeds the ceiling, sweeps go fortnightly.",
+      "goodhart": {
+        "risk": "medium",
+        "gaming_path": "Run the free subjects more often: cases up, spend flat, billed systems unmeasured.",
+        "counter": "measurement-freshness-days per billed subject, and the per-sweep figure, which free runs do not move."
+      },
+      "failure_modes": [
+        "A consumer that does not set cost_usd records $0 and the run renders as free.",
+        "The fixed cost dominates at low volume: the unit cost is mostly how often anyone runs anything.",
+        "Price-table changes re-price history."
+      ],
+      "leads": {
+        "outcome_id": "real-cost-per-run",
+        "mechanism": "The attributed unit cost is the controllable share of the real bill: model mix and case-volume decisions move attribution first, and the next window's billed spend follows it.",
+        "lead_time": "days — the cost report lands daily; attribution moves the day a run is taken"
       },
       "activity_derived": false
     }
@@ -266,9 +266,17 @@
       "reason": "If it slips the fix is 'run the script', not a sponsor decision.",
       "proxy": null,
       "proxy_misses": null
+    },
+    {
+      "name": "Unmeasured code-version drift, per subject",
+      "ground": "unmeasurable",
+      "reason": "Amended out 2026-08-25 (RC1-308): the instrument stage rejected it — released-but-never-measured consumer versions are not visible from any snapshot source; the store only ever sees versions someone chose to run.",
+      "proxy": null,
+      "proxy_misses": null
     }
   ],
   "notes": [
-    "Adopted set per docs/kpi/trees/eval-run-store.review.md (2026-08-22): outcomes from the baseline (case-weighted; the agent's no-signal state and token×price fallback adopted); unmeasured-code-versions from the agent pending source verification in RC1-303; cost-per-run-by-model is the agent's outcome, demoted."
+    "Adopted set per docs/kpi/trees/eval-run-store.review.md (2026-08-22): outcomes from the baseline (case-weighted; the agent's no-signal state and token×price fallback adopted); unmeasured-code-versions from the agent pending source verification in RC1-303; cost-per-run-by-model is the agent's outcome, demoted.",
+    "Amended by hand 2026-08-25 (RC1-308): real-cost-per-run added as the economics outcome on the real billing feeds; cost-per-verified-case demoted to leading (attribution leads the bill); unmeasured-code-versions moved to rejected on the instrument stage's verdict; cost-per-run-by-model retargeted to the new outcome. See docs/kpi/trees/eval-run-store.review.md § Amendment."
   ]
 }

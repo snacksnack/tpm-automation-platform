@@ -40,6 +40,7 @@ from config import settings
 from kpi import instrument, track
 from kpi.briefs_store import Brief, BriefsStore
 from kpi.define import KpiTree
+from kpi.escalations_store import EscalationsStore
 from kpi.instrument import Instrumentation
 from kpi.readings_store import ReadingsStore, StoredReading
 
@@ -165,8 +166,26 @@ def _kpi_entry(kpi, kind: str, series: list[StoredReading], week_ending: date, i
     }
 
 
+def escalation_entry(esc) -> dict:
+    """One escalation (RC1-307) as the payload carries it — the stage's own
+    words, numbers included, so the audit can vouch for them."""
+    return {
+        "sim_date": esc.sim_date.isoformat(),
+        "kind": esc.kind,
+        "subject": esc.subject,
+        "kpi_ids": list(esc.kpi_ids),
+        "reason": esc.reason,
+        "proposed_fix": esc.proposed_fix,
+        "healed": esc.healed,
+    }
+
+
 def build_payload(
-    program: Program, tree: KpiTree, inst: Instrumentation, stored: list[StoredReading]
+    program: Program,
+    tree: KpiTree,
+    inst: Instrumentation,
+    stored: list[StoredReading],
+    escalations: list[dict] | None = None,
 ) -> dict:
     """One week as JSON, outcomes first — the model's entire world.
 
@@ -207,6 +226,7 @@ def build_payload(
         ),
         "kpis": kpis,
         "not_shipping": not_shipping,
+        "escalations": escalations or [],
     }
 
 
@@ -368,6 +388,15 @@ def render_brief(payload: dict, data: dict) -> str:
     if payload["not_shipping"]:
         gaps = "; ".join(f"{g['kpi_id']} ({g['why']})" for g in payload["not_shipping"])
         out += ["", f"_Not in this brief: {gaps}._"]
+    if payload.get("escalations"):
+        out += ["", "*Escalations this week*"]
+        for esc in payload["escalations"]:
+            mark = "🟢 healed" if esc["healed"] else "🔴"
+            radius = ", ".join(f"`{k}`" for k in esc["kpi_ids"])
+            out.append(
+                f"{mark} {esc['sim_date']} *{esc['kind']}: {esc['subject']}* — {esc['reason']} "
+                f"(blast radius: {radius}) — fix: {esc['proposed_fix']}"
+            )
     out += [
         "",
         f"_Numbers: track stage, snapshot run {payload['run_id']}, sim-date "
@@ -424,6 +453,7 @@ def narrate(
     inst: Instrumentation,
     stored: list[StoredReading],
     *,
+    escalations: list[dict] | None = None,
     client=None,
     model: str = MODEL,
 ) -> Brief:
@@ -432,7 +462,7 @@ def narrate(
     is never archived and never posted."""
     global last_usage
     last_usage = None
-    payload = build_payload(program, tree, inst, stored)
+    payload = build_payload(program, tree, inst, stored, escalations)
     data = _cleaned(_generate(client or _default_client(), model, load_prompt(), payload))
     invented = audit_numbers(_narrative_texts(data), payload)
     if invented:
@@ -493,7 +523,17 @@ def main(argv: list[str] | None = None) -> int:
         inst = track.load_instrumentation(program.id)
         with ReadingsStore(dsn) as readings_store:
             stored = readings_store.readings(program.id)
-        brief = narrate(program, tree, inst, stored, model=args.model)
+        escalations: list[dict] = []
+        if stored:
+            week_ending = max(sr.reading.sim_date for sr in stored)
+            with EscalationsStore(dsn) as esc_store:
+                escalations = [
+                    escalation_entry(e)
+                    for e in esc_store.escalations(
+                        program.id, since=week_ending - timedelta(days=WEEK_DAYS - 1)
+                    )
+                ]
+        brief = narrate(program, tree, inst, stored, escalations=escalations, model=args.model)
     except (NarrateError, FileNotFoundError) as exc:
         print(f"{args.program}: {exc}", file=sys.stderr)
         return 2

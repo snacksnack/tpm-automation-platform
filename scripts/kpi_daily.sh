@@ -1,9 +1,11 @@
 #!/bin/zsh
-# The KPI program's daily run (RC1-299, RC1-301, RC1-305): advance the
-# simulated program one day, snapshot every registered program, then track
-# every shipping KPI from the snapshot just taken. Run by launchd at 07:00
-# local via scripts/launchd/com.reidcollins.kpi-daily.plist; safe to run by
-# hand. `--no-tick` snapshots and tracks without advancing the clock.
+# The KPI program's daily run (RC1-299, RC1-301, RC1-305, RC1-307): advance
+# the simulated program one day, snapshot every registered program, track
+# every shipping KPI from the snapshot just taken, then escalate — retry any
+# source that came back broken, record what stands with its blast radius and
+# proposed fix, and post it to Slack. Run by launchd at 07:00 local via
+# scripts/launchd/com.reidcollins.kpi-daily.plist; safe to run by hand.
+# `--no-tick` snapshots, tracks and escalates without advancing the clock.
 #
 # Order matters and is why this is one job rather than three: converge the
 # world, record it, then read it. Tracking against a snapshot from yesterday
@@ -52,5 +54,7 @@ step snapshot:simulated-program "$PY" -m collectors snapshot simulated-program
 step snapshot:eval-run-store "$PY" -m collectors snapshot eval-run-store
 step track:simulated-program "$PY" -m kpi.track --program simulated-program
 step track:eval-run-store "$PY" -m kpi.track --program eval-run-store
+step escalate:simulated-program "$PY" -m kpi.escalate --program simulated-program
+step escalate:eval-run-store "$PY" -m kpi.escalate --program eval-run-store
 echo "== done exit $worst"
 exit $worst

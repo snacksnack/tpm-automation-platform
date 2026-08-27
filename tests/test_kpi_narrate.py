@@ -230,7 +230,7 @@ def test_narrate_builds_an_archived_shape_brief(tree, inst):
     brief = narrate.narrate(EVAL, tree, inst, _two_weeks(tree, inst), client=client)
     assert isinstance(brief, Brief)
     assert brief.week_ending == WEEK_ENDING and brief.run_id == 7
-    assert brief.prompt_version == narrate.prompt_version() == 1
+    assert brief.prompt_version == narrate.prompt_version() == 2
     assert brief.payload == json.loads(client.captured["messages"][0]["content"])
     assert client.captured["output_config"]["format"]["schema"] == narrate.SCHEMA
     assert "Weekly KPI brief" in brief.brief
@@ -297,7 +297,12 @@ def test_cli_refuses_post_without_archive(monkeypatch, capsys):
         def readings(self, program_id):
             return stored
 
+    class FakeEscalations(FakeReadings):
+        def escalations(self, program_id, *, since=None):
+            return []
+
     monkeypatch.setattr(narrate, "ReadingsStore", FakeReadings)
+    monkeypatch.setattr(narrate, "EscalationsStore", FakeEscalations)
     monkeypatch.setattr(
         narrate, "_default_client", lambda: _FakeClient(_narrative())
     )

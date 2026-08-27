@@ -60,8 +60,11 @@ evals/          drift-digest goldens — frozen cases, scored        [RC1-261]
 kpi/            Program KPI agent — define (brief + rubric -> tree),
                 instrument (tree + source catalog -> verified set),
                 track (measures -> readings in Postgres) + the
-                generated Grafana dashboards (docs/kpi/)
-                                        [RC1-302, RC1-303, RC1-305]
+                generated Grafana dashboards (docs/kpi/),
+                narrate (readings -> weekly SVP brief, archived +
+                posted), escalate (unmeasurable -> retry, blast
+                radius, proposed fix, Slack)
+                    [RC1-302, RC1-303, RC1-305, RC1-306, RC1-307]
 grafana/        generated dashboards: one per program + portfolio  [RC1-305]
 seed/           idempotent RC1 demo-data seeder                      [2/9]
 simulate/       scripted 10-week program in PMA, one sim-day per
@@ -158,6 +161,8 @@ docs/kpi/ledger.md                  the ground truth: how each expected reading 
 docs/kpi/ledger/<program>.csv       the ledger itself, regenerated from the scenario
 docs/kpi/metrics-store.md           where the readings land, and why not Datadog
 docs/kpi/track.md                   the track stage: readings, the daily run, the dashboards
+docs/kpi/narrate.md                 the narrate stage: the weekly brief, audited and archived
+docs/kpi/escalate.md                the escalate stage: retry, blast radius, proposed fixes
 ```
 
 ### Instrument (RC1-303)

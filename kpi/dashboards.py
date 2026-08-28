@@ -8,11 +8,20 @@ number nobody stands behind. These are rebuilt from
 and `docs/kpi/instruments/<program>.json` (what actually ships), so
 re-instrumenting and regenerating keeps the picture honest.
 
-    python -m kpi.dashboards --out grafana/
+    python -m kpi.dashboards --out grafana/            # regenerate the JSON
+    python -m kpi.dashboards --out grafana/ --push     # …and land it on the stack
 
-Import into Grafana Cloud (free tier) against the reid-eval-store Postgres;
-the datasource is an `__inputs` placeholder, so import prompts for it rather
-than carrying a uid from someone else's instance.
+`--push` sends all three to the Grafana Cloud stack (`settings.grafana_url`)
+over the HTTP API with overwrite, so a generator change reaches the
+dashboards without a UI visit and the uids — and every link to them —
+survive (RC1-318). Auth is a service-account token, `GRAFANA_TOKEN` in
+`~/.zshrc` next to `EVAL_DATABASE_URL` and never the repo `.env`.
+
+The committed files stay import-anywhere: the datasource is an `__inputs`
+placeholder, so a hand import prompts for it rather than carrying a uid from
+someone else's instance. The push path answers that same prompt itself — it
+asks the stack for its Postgres datasource and substitutes the uid — so the
+one committed format serves both routes.
 
 Two things the panels do on purpose:
 
@@ -28,8 +37,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import sys
 from pathlib import Path
 
+import httpx
+
+from config import settings
 from kpi.instrument import INSTRUMENTS, TREES
 from kpi.track import load_instrumentation
 
@@ -478,6 +492,84 @@ def _wrap(*, title: str, uid: str, description: str, panels: list[dict], tags: l
     }
 
 
+# --- push (RC1-318) --------------------------------------------------------------------------
+
+
+class PushError(RuntimeError):
+    """The stack refused a push, or could not answer the datasource question."""
+
+
+def _client(base_url: str, token: str) -> httpx.Client:
+    return httpx.Client(
+        base_url=base_url,
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=30.0,
+    )
+
+
+def _datasource_uid(client: httpx.Client) -> str:
+    """The stack's answer to the `__inputs` prompt a hand import would show.
+
+    Asked live rather than configured: the uid is instance state, and a copy
+    of it in the repo would be one more thing that drifts.
+    """
+    resp = client.get("/api/datasources")
+    if resp.status_code >= 300:
+        raise PushError(f"GET /api/datasources -> HTTP {resp.status_code}: {resp.text[:200]}")
+    matches = [d for d in resp.json() if d.get("type") == DS_TYPE]
+    if not matches:
+        found = ", ".join(sorted({d.get("type", "?") for d in resp.json()})) or "none"
+        raise PushError(
+            f"the stack has no {DS_TYPE} datasource (found: {found}); "
+            "add the reid-eval-store Postgres datasource first"
+        )
+    if len(matches) > 1:
+        names = ", ".join(d.get("name", d.get("uid", "?")) for d in matches)
+        raise PushError(f"more than one Postgres datasource ({names}); not guessing which")
+    return matches[0]["uid"]
+
+
+def resolve_datasource(dash: dict, *, uid: str) -> dict:
+    """One dashboard, ready for the API: the envelope's `__inputs` question
+    answered with this stack's datasource uid, envelope keys dropped."""
+    resolved = json.loads(json.dumps(dash).replace("${DS_POSTGRES}", uid))
+    for key in ("__inputs", "__requires"):
+        resolved.pop(key, None)
+    return resolved
+
+
+def push_all(program_ids: list[str], *, client: httpx.Client) -> list[str]:
+    """Land every dashboard on the stack, overwriting in place.
+
+    Overwrite is the point, not a hazard: the generator is the source of
+    truth (the drift test enforces it), and keeping the uid keeps every
+    bookmark and cross-dashboard link alive.
+    """
+    uid = _datasource_uid(client)
+    lines = []
+    for dash in (*(program_dashboard(p) for p in program_ids),
+                 portfolio_dashboard(list(program_ids))):
+        resp = client.post(
+            "/api/dashboards/db",
+            json={
+                "dashboard": resolve_datasource(dash, uid=uid),
+                "overwrite": True,
+                "message": "python -m kpi.dashboards --push",
+            },
+        )
+        if resp.status_code >= 300:
+            raise PushError(
+                f"push of {dash['uid']} -> HTTP {resp.status_code}: {resp.text[:200]}"
+            )
+        body = resp.json()
+        lines.append(
+            f"pushed {dash['title']} -> "
+            f"{str(client.base_url).rstrip('/')}{body.get('url', '')} "
+            f"(version {body.get('version', '?')})"
+        )
+    return lines
+
+
 # --- CLI -------------------------------------------------------------------------------------
 
 
@@ -502,10 +594,33 @@ def main(argv: list[str] | None = None) -> int:
         description="Generate the Grafana dashboards from the trees and instrument reports.",
     )
     ap.add_argument("--out", type=Path, default=Path("grafana"), help="directory to write into")
+    ap.add_argument(
+        "--push", action="store_true",
+        help="after writing, overwrite the dashboards on the Grafana stack "
+             "(settings.grafana_url; GRAFANA_TOKEN in ~/.zshrc)",
+    )
     args = ap.parse_args(argv)
+
+    token = os.environ.get("GRAFANA_TOKEN")
+    if args.push and not token:
+        print(
+            "GRAFANA_TOKEN is not set (it lives in ~/.zshrc, next to EVAL_DATABASE_URL); "
+            "nothing written, nothing pushed",
+            file=sys.stderr,
+        )
+        return 2
 
     for path in write_all(args.out, sorted(programs.PROGRAMS)):
         print(f"wrote {path}")
+
+    if args.push:
+        try:
+            with _client(settings.grafana_url, token) as client:
+                for line in push_all(sorted(programs.PROGRAMS), client=client):
+                    print(line)
+        except PushError as exc:
+            print(f"push failed: {exc}", file=sys.stderr)
+            return 2
     return 0
 
 

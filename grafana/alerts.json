@@ -1,0 +1,122 @@
+{
+  "folder": {
+    "uid": "kpi",
+    "title": "KPI"
+  },
+  "contactPoint": {
+    "name": "kpi-deadman-slack",
+    "type": "slack",
+    "settings": {
+      "url": "${SLACK_WEBHOOK_URL}"
+    },
+    "disableResolveMessage": false
+  },
+  "route": {
+    "receiver": "kpi-deadman-slack",
+    "object_matchers": [
+      [
+        "channel",
+        "=",
+        "kpi-slack"
+      ]
+    ]
+  },
+  "rule": {
+    "uid": "kpi-deadman",
+    "title": "KPI daily job went quiet",
+    "ruleGroup": "kpi-deadman",
+    "folderUID": "kpi",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 3600,
+          "to": 0
+        },
+        "datasourceUid": "${DS_POSTGRES}",
+        "model": {
+          "refId": "A",
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT count(*) AS landings FROM kpi_readings\nWHERE computed_at > now() - interval '36 hours'",
+          "intervalMs": 1000,
+          "maxDataPoints": 43200
+        }
+      },
+      {
+        "refId": "B",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "datasourceUid": "__expr__",
+        "model": {
+          "refId": "B",
+          "type": "reduce",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "expression": "A",
+          "reducer": "last",
+          "settings": {
+            "mode": "dropNN"
+          }
+        }
+      },
+      {
+        "refId": "C",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "datasourceUid": "__expr__",
+        "model": {
+          "refId": "C",
+          "type": "threshold",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "expression": "B",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  1
+                ],
+                "type": "lt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": [
+                  "C"
+                ]
+              },
+              "reducer": {
+                "params": [],
+                "type": "last"
+              },
+              "type": "query"
+            }
+          ]
+        }
+      }
+    ],
+    "noDataState": "Alerting",
+    "execErrState": "Alerting",
+    "for": "1h",
+    "annotations": {
+      "summary": "No KPI reading has landed in 36 hours. The daily job itself has gone quiet \u2014 launchd not firing, machine asleep two mornings running, broken venv, or the store unreachable. Escalate cannot report this: it only runs when the job runs (RC1-319)."
+    },
+    "labels": {
+      "channel": "kpi-slack"
+    },
+    "isPaused": false
+  },
+  "evalIntervalSeconds": 1800
+}

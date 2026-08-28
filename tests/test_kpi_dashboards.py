@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import httpx
 import pytest
 
 from collectors import programs
@@ -92,6 +93,86 @@ def test_dollars_and_percents_do_not_share_an_axis():
     }
     groups = dashboards._group_by_unit(["a", "b", "c"], tree)
     assert groups == {"currencyUSD": ["a", "c"], "percent": ["b"]}
+
+
+# --- push (RC1-318) --------------------------------------------------------------------------
+
+
+_DS = [{"type": dashboards.DS_TYPE, "uid": "real-uid", "name": "reid-eval-store"}]
+
+
+def _stack(datasources, posts):
+    """A mock Grafana stack: answers the datasource question, records pushes."""
+    def handler(request):
+        if request.url.path == "/api/datasources":
+            return httpx.Response(200, json=datasources)
+        assert request.url.path == "/api/dashboards/db"
+        body = json.loads(request.content)
+        posts.append(body)
+        uid = body["dashboard"]["uid"]
+        return httpx.Response(
+            200, json={"uid": uid, "url": f"/d/{uid}/x", "status": "success", "version": 2}
+        )
+    return httpx.Client(transport=httpx.MockTransport(handler), base_url="https://stack.test")
+
+
+def test_push_lands_every_dashboard_with_its_uid():
+    """One push per dashboard, overwrite on, uid intact — the overwrite-in-place
+    that keeps links alive is the whole point of the ticket."""
+    posts: list[dict] = []
+    with _stack(_DS, posts) as client:
+        lines = dashboards.push_all(PROGRAM_IDS, client=client)
+    assert {p["dashboard"]["uid"] for p in posts} == {
+        *(f"kpi-{p}"[:40] for p in PROGRAM_IDS), "kpi-portfolio",
+    }
+    assert all(p["overwrite"] is True for p in posts)
+    assert len(lines) == len(PROGRAM_IDS) + 1
+
+
+def test_push_answers_the_datasource_prompt_itself():
+    """What the import screen asks a human, the push path asks the stack: the
+    placeholder is resolved to the real uid and the envelope keys are gone."""
+    posts: list[dict] = []
+    with _stack(_DS, posts) as client:
+        dashboards.push_all(PROGRAM_IDS, client=client)
+    for post in posts:
+        dumped = json.dumps(post["dashboard"])
+        assert "${DS_POSTGRES}" not in dumped
+        assert '"real-uid"' in dumped
+        assert "__inputs" not in post["dashboard"]
+        assert "__requires" not in post["dashboard"]
+
+
+def test_push_refuses_a_stack_without_the_datasource():
+    with _stack([{"type": "loki", "uid": "x"}], []) as client:
+        with pytest.raises(dashboards.PushError, match="no grafana-postgresql"):
+            dashboards.push_all(PROGRAM_IDS, client=client)
+
+
+def test_push_refuses_to_guess_between_two_datasources():
+    two = [*_DS, {"type": dashboards.DS_TYPE, "uid": "other", "name": "second"}]
+    with _stack(two, []) as client:
+        with pytest.raises(dashboards.PushError, match="not guessing"):
+            dashboards.push_all(PROGRAM_IDS, client=client)
+
+
+def test_push_surfaces_a_refused_write():
+    def handler(request):
+        if request.url.path == "/api/datasources":
+            return httpx.Response(200, json=_DS)
+        return httpx.Response(403, json={"message": "insufficient permissions"})
+    client = httpx.Client(transport=httpx.MockTransport(handler), base_url="https://stack.test")
+    with client, pytest.raises(dashboards.PushError, match="HTTP 403"):
+        dashboards.push_all(PROGRAM_IDS, client=client)
+
+
+def test_push_without_a_token_stops_before_touching_anything(tmp_path, monkeypatch, capsys):
+    """A half-done run (files rewritten, push silently skipped) would look like
+    success; the command refuses up front instead."""
+    monkeypatch.delenv("GRAFANA_TOKEN", raising=False)
+    assert dashboards.main(["--out", str(tmp_path / "g"), "--push"]) == 2
+    assert not (tmp_path / "g").exists()
+    assert "GRAFANA_TOKEN" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize("name", [*PROGRAM_IDS, "portfolio"])

@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     # Slack (drift/notify.py)
     slack_webhook_url: str | None = None
 
+    # Grafana Cloud stack (kpi/dashboards.py --push, RC1-318). The URL is not a
+    # secret; the service-account token is, and it is NOT a setting — it lives
+    # in ~/.zshrc as GRAFANA_TOKEN, the same single-home rule as
+    # EVAL_DATABASE_URL (RC1-263), never the repo .env.
+    grafana_url: str = "https://sincerebutterfly3502.grafana.net"
+
     # Runtime
     dry_run: bool = True
     project_key: str = "RC1"

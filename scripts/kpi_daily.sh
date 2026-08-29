@@ -39,6 +39,13 @@ if [[ -z "${EVAL_DATABASE_URL:-}" && -r "$HOME/.zshrc" ]]; then
 fi
 export EVAL_DATABASE_URL="${EVAL_DATABASE_URL:-}"
 
+# DD_API_KEY keeps the same single home (RC1-305 Datadog leg). Absent, the
+# track stage skips the Datadog write and Postgres still gets the day.
+if [[ -z "${DD_API_KEY:-}" && -r "$HOME/.zshrc" ]]; then
+  eval "$(grep -E '^export DD_API_KEY=' "$HOME/.zshrc" || true)"
+fi
+export DD_API_KEY="${DD_API_KEY:-}"
+
 worst=0
 step() {  # step <name> <command...>
   local name=$1; shift

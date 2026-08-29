@@ -241,7 +241,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"datadog: shipping failed, readings are in Postgres: {exc}", file=sys.stderr)
         else:
             if shipped is not None:
-                print(f"  shipped {shipped} series to Datadog")
+                n_series, n_events = shipped
+                note = f" and {n_events} why-event(s)" if n_events else ""
+                print(f"  shipped {n_series} series{note} to Datadog")
 
     _print_result(result, stored=stored)
     return 1 if result.unmeasured else 0

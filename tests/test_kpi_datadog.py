@@ -251,9 +251,17 @@ def test_dashboard_always_shows_health_and_tripped(tree):
 
 
 def test_dashboard_carries_the_event_stream(tree):
+    """Facet syntax, not the legacy "tags:a,b" form the events platform cannot
+    parse (RC1-330) — and filtered on kind:, which only the reading events
+    carry, so the monitors' own audit events stay out of the stream."""
     payload = datadog.dashboard_payload("simulated-program", ["cost-vs-envelope"], tree)
     [stream] = [w for w in payload["widgets"] if w["definition"]["type"] == "event_stream"]
-    assert stream["definition"]["query"] == "tags:generated:kpi-datadog,program:simulated-program"
+    assert stream["definition"]["query"] == "kind:kpi-reading program:simulated-program"
+
+
+def test_every_event_carries_the_kind_tag_the_widget_filters_on(tree):
+    events = datadog.events_for([_stale(), _broken()], program_id="simulated-program")
+    assert all("kind:kpi-reading" in e["tags"] for e in events)
 
 
 def test_monitor_message_links_the_dashboard_only_when_resolved():

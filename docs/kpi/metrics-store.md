@@ -1,5 +1,20 @@
 # Metrics store — the decision (RC1-304)
 
+> **Addendum, 2026-08-29 — the premise flipped, the record did not move.**
+> The account is on the paid Pro plan now (bought for the Datadog Sr TPM
+> interview track, RC1-322/324/325): fifteen months of metric retention,
+> which is the property the original decision found missing. Re-verified
+> live the same day — custom-metric ingest round-trips in seconds on US1,
+> and a dashboard shares publicly without a viewer seat. The track stage
+> therefore **dual-writes**: Postgres on `reid-eval-store` remains the
+> system of record that the briefs (RC1-306), escalations (RC1-307),
+> Grafana (RC1-318) and the dead-man's switch (RC1-319) read, and
+> `kpi/datadog.py` ships each tracked day to Datadog as the public picture
+> — value points for `ok` readings only (gaps, never zeros), state on
+> `kpi.program.health`, thresholds on `kpi.program.tripped`. A Datadog
+> failure costs a chart a point, never the record a day. The analysis below
+> stands as written; it was correct about the free plan.
+
 **Decision: the KPI readings land in Postgres on `reid-eval-store`, not in
 Datadog.** Datadog's free plan retains metrics for **one day**; the epic needs a
 weekly KPI read back over ten-plus weeks, which is seventy-odd days. The store

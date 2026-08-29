@@ -230,6 +230,19 @@ def main(argv: list[str] | None = None) -> int:
         with ReadingsStore(dsn) as store:
             stored = store.save(result.program_id, result.readings, run_id=result.run_id)
 
+        # The Datadog leg (dual-write, RC1-305 revisited): Postgres is the
+        # record, Datadog the picture. A failure here is a missing point on a
+        # chart, not a lost day — report it, keep the exit code Postgres's.
+        from kpi import datadog
+
+        try:
+            shipped = datadog.ship_readings(result.readings, program_id=result.program_id)
+        except Exception as exc:
+            print(f"datadog: shipping failed, readings are in Postgres: {exc}", file=sys.stderr)
+        else:
+            if shipped is not None:
+                print(f"  shipped {shipped} series to Datadog")
+
     _print_result(result, stored=stored)
     return 1 if result.unmeasured else 0
 

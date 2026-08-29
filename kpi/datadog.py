@@ -132,7 +132,12 @@ def events_for(readings: list[Reading], *, program_id: str) -> list[dict]:
                 "text": body or "(no detail recorded on the reading)",
                 "alert_type": "warning" if (r.state == "stale" and not r.tripped) else "error",
                 "aggregation_key": f"kpi-reading:{program_id}:{r.kpi_id}",
-                "tags": [f"program:{program_id}", f"kpi:{r.kpi_id}", "generated:kpi-datadog"],
+                "tags": [
+                    f"program:{program_id}",
+                    f"kpi:{r.kpi_id}",
+                    "kind:kpi-reading",  # the event-stream widgets filter on this
+                    "generated:kpi-datadog",
+                ],
             }
         )
     return out
@@ -363,7 +368,10 @@ def dashboard_payload(program_id: str, shipping: list[str], tree: dict[str, dict
             "definition": {
                 "type": "event_stream",
                 "title": "why — the tripped and unmeasured readings, in their own words",
-                "query": f"tags:generated:kpi-datadog,program:{program_id}",
+                # Plain facet syntax (space = AND) — the events platform cannot parse
+                # the legacy "tags:a,b" form (RC1-330). kind: is ours alone, so the
+                # monitors' own audit/trigger events stay out of the stream.
+                "query": f"kind:kpi-reading program:{program_id}",
                 "event_size": "l",
             }
         }

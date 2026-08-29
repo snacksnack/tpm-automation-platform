@@ -107,6 +107,37 @@ def series_for(readings: list[Reading], *, program_id: str, at: int) -> list[dic
     return out
 
 
+def events_for(readings: list[Reading], *, program_id: str) -> list[dict]:
+    """One event per reading with something to explain (RC1-329) — tripped, or
+    a state that is not ok. This is how the *why* crosses the wire: metrics
+    carry only numbers and tags, so the reading's reason and detail — the text
+    a person needs when the monitor fires — ride the Events API instead and
+    surface in the dashboards' event stream. Pure.
+
+    `aggregation_key` is per (program, kpi): a KPI that stays tripped for a
+    week rolls up in the stream rather than posting seven look-alike rows.
+    """
+    out: list[dict] = []
+    for r in readings:
+        if not r.tripped and r.state == "ok":
+            continue
+        if r.tripped:
+            title = f"{r.kpi_id} tripped on {program_id}"
+        else:
+            title = f"{r.kpi_id} is {r.state} on {program_id}"
+        body = "\n\n".join(part for part in (r.reason, r.detail) if part)
+        out.append(
+            {
+                "title": title,
+                "text": body or "(no detail recorded on the reading)",
+                "alert_type": "warning" if (r.state == "stale" and not r.tripped) else "error",
+                "aggregation_key": f"kpi-reading:{program_id}:{r.kpi_id}",
+                "tags": [f"program:{program_id}", f"kpi:{r.kpi_id}", "generated:kpi-datadog"],
+            }
+        )
+    return out
+
+
 def ship(series: list[dict], *, api_key: str, site: str | None = None) -> None:
     resp = httpx.post(
         api_url("/api/v2/series", site=site),
@@ -117,18 +148,33 @@ def ship(series: list[dict], *, api_key: str, site: str | None = None) -> None:
     resp.raise_for_status()
 
 
+def ship_events(events: list[dict], *, api_key: str, site: str | None = None) -> None:
+    for event in events:  # the v1 events endpoint takes one event per call
+        resp = httpx.post(
+            api_url("/api/v1/events", site=site),
+            json=event,
+            headers={"DD-API-KEY": api_key},
+            timeout=30,
+        )
+        resp.raise_for_status()
+
+
 def ship_readings(
     readings: list[Reading], *, program_id: str, at: int | None = None
-) -> int | None:
-    """Ship one tracked day. Returns the series count, or None when
-    `DD_API_KEY` is unset (the leg is optional; Postgres is not)."""
+) -> tuple[int, int] | None:
+    """Ship one tracked day: the numbers as series, the why as events.
+    Returns (series, events) counts, or None when `DD_API_KEY` is unset
+    (the leg is optional; Postgres is not)."""
     api_key = os.environ.get("DD_API_KEY")
     if not api_key:
         return None
     series = series_for(readings, program_id=program_id, at=at or int(time.time()))
+    events = events_for(readings, program_id=program_id)
     if series:
         ship(series, api_key=api_key)
-    return len(series)
+    if events:
+        ship_events(events, api_key=api_key)
+    return len(series), len(events)
 
 
 # --- monitors --------------------------------------------------------------------------------
@@ -145,17 +191,24 @@ HEARTBEAT_THRESHOLD = 99
 NO_DATA_MINUTES = 26 * 60
 
 
-def _message(lead: str, *, handle: str | None) -> str:
+def _message(lead: str, *, handle: str | None, dashboard_url: str | None = None) -> str:
     body = (
         f"{lead}\n\n"
         "Numbers are computed by `kpi.track` from snapshots and shipped by "
         "`kpi/datadog.py` (RC1-305); the reading's reason lives in Postgres — "
         "`python -m collectors show <program> --run <id>` traces it."
     )
+    if dashboard_url:
+        body += (
+            f"\n\nWhy: the event stream on [the program dashboard]({dashboard_url}) "
+            "carries this reading's reason and detail (RC1-329)."
+        )
     return f"{body}\n\n{handle}" if handle else body
 
 
-def monitor_payloads(program_id: str, *, handle: str | None = None) -> list[dict]:
+def monitor_payloads(
+    program_id: str, *, handle: str | None = None, dashboard_url: str | None = None
+) -> list[dict]:
     """Three monitors per program, generated so they cannot drift from the
     metrics the shipper actually sends. Pure.
 
@@ -176,6 +229,7 @@ def monitor_payloads(program_id: str, *, handle: str | None = None) -> list[dict
             "message": _message(
                 f"{{{{kpi.name}}}} tripped its threshold on {program_id}.",
                 handle=handle,
+                dashboard_url=dashboard_url,
             ),
             "tags": tags,
             "options": {"thresholds": {"critical": 0}, "notify_no_data": False},
@@ -188,6 +242,7 @@ def monitor_payloads(program_id: str, *, handle: str | None = None) -> list[dict
                 f"{{{{kpi.name}}}} on {program_id} is unmeasured — "
                 "stale on warning, broken on alert. Never mistaken for a zero.",
                 handle=handle,
+                dashboard_url=dashboard_url,
             ),
             "tags": tags,
             "options": {
@@ -203,6 +258,7 @@ def monitor_payloads(program_id: str, *, handle: str | None = None) -> list[dict
                 f"No KPI readings have reached Datadog from {program_id} for "
                 "26+ hours: the daily job or the shipper is down.",
                 handle=handle,
+                dashboard_url=dashboard_url,
             ),
             "tags": tags,
             "options": {
@@ -224,8 +280,14 @@ def push_monitors(program_ids: list[str]) -> list[str]:
             m["name"]: m["id"]
             for m in client.get("/api/v1/monitor", params={"page_size": 200}).json()
         }
+        dashboards = {
+            d["title"]: d["url"]
+            for d in client.get("/api/v1/dashboard").json().get("dashboards", [])
+        }
         for program_id in program_ids:
-            for payload in monitor_payloads(program_id, handle=handle):
+            dash_path = dashboards.get(f"Program KPIs — {program_id}")
+            dash_url = f"https://app.datadoghq.com{dash_path}" if dash_path else None
+            for payload in monitor_payloads(program_id, handle=handle, dashboard_url=dash_url):
                 monitor_id = existing.get(payload["name"])
                 if monitor_id:
                     resp = client.put(f"/api/v1/monitor/{monitor_id}", json=payload)
@@ -293,6 +355,18 @@ def dashboard_payload(program_id: str, shipping: list[str], tree: dict[str, dict
             "tripped thresholds",
             [(f"max:{TRIPPED_METRIC}{scope} by {{kpi}}", "tripped")],
         )
+    )
+    # The why (RC1-329): every tripped/unmeasured reading posts its reason and
+    # detail as an event, so the red on the charts explains itself in place.
+    widgets.append(
+        {
+            "definition": {
+                "type": "event_stream",
+                "title": "why — the tripped and unmeasured readings, in their own words",
+                "query": f"tags:generated:kpi-datadog,program:{program_id}",
+                "event_size": "l",
+            }
+        }
     )
     return {
         "title": f"Program KPIs — {program_id}",

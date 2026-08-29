@@ -36,7 +36,10 @@ is additive. `DD_SITE` overrides the region (default `datadoghq.com`, US1,
 where the account lives). Dashboards are pushed with `DD_APP_KEY` via
 `python -m kpi.datadog dashboards --push`, which builds them from the same
 adopted trees and instrument reports the Grafana generator reads, upserting
-by title so the URLs survive regeneration.
+by title so the URLs survive regeneration. `monitors --push` lands the
+alerting on those metrics the same way — tripped, unmeasured, and a
+no-data heartbeat per program — with the page destination taken from
+`DD_ALERT_HANDLE` at push time.
 """
 
 from __future__ import annotations
@@ -126,6 +129,117 @@ def ship_readings(
     if series:
         ship(series, api_key=api_key)
     return len(series)
+
+
+# --- monitors --------------------------------------------------------------------------------
+
+#: Baked into the monitor message at push time, not read at alert time —
+#: e.g. `export DD_ALERT_HANDLE="@you@example.com"` in ~/.zshrc pages that
+#: address; unset, the monitors alert in the UI and event stream only.
+ALERT_HANDLE_ENV = "DD_ALERT_HANDLE"
+
+#: The heartbeat threshold can never fire — health tops out at 2 — so the
+#: monitor's only job is its no-data state: the daily job runs at 07:00, and
+#: 26 hours of silence means the job or the shipper died, not a quiet day.
+HEARTBEAT_THRESHOLD = 99
+NO_DATA_MINUTES = 26 * 60
+
+
+def _message(lead: str, *, handle: str | None) -> str:
+    body = (
+        f"{lead}\n\n"
+        "Numbers are computed by `kpi.track` from snapshots and shipped by "
+        "`kpi/datadog.py` (RC1-305); the reading's reason lives in Postgres — "
+        "`python -m collectors show <program> --run <id>` traces it."
+    )
+    return f"{body}\n\n{handle}" if handle else body
+
+
+def monitor_payloads(program_id: str, *, handle: str | None = None) -> list[dict]:
+    """Three monitors per program, generated so they cannot drift from the
+    metrics the shipper actually sends. Pure.
+
+    - **tripped**: a KPI's so-what threshold crossed — the planted sim events
+      land here. Multi-alert by `kpi` so each names itself.
+    - **unmeasured**: warning on stale (1), alert on broken (2) — the honesty
+      rule's alarm. The value chart goes quiet and this says why.
+    - **heartbeat**: a threshold that never fires plus `notify_no_data` — the
+      Datadog-side twin of the dead-man's switch (RC1-319).
+    """
+    scope = f"{{program:{program_id}}}"
+    tags = [f"program:{program_id}", "generated:kpi-datadog"]
+    return [
+        {
+            "name": f"Program KPI tripped — {program_id}",
+            "type": "metric alert",
+            "query": f"max(last_1d):max:{TRIPPED_METRIC}{scope} by {{kpi}} > 0",
+            "message": _message(
+                f"{{{{kpi.name}}}} tripped its threshold on {program_id}.",
+                handle=handle,
+            ),
+            "tags": tags,
+            "options": {"thresholds": {"critical": 0}, "notify_no_data": False},
+        },
+        {
+            "name": f"Program KPI unmeasured — {program_id}",
+            "type": "metric alert",
+            "query": f"max(last_1d):max:{HEALTH_METRIC}{scope} by {{kpi}} >= 2",
+            "message": _message(
+                f"{{{{kpi.name}}}} on {program_id} is unmeasured — "
+                "stale on warning, broken on alert. Never mistaken for a zero.",
+                handle=handle,
+            ),
+            "tags": tags,
+            "options": {
+                "thresholds": {"critical": 2, "warning": 1},
+                "notify_no_data": False,
+            },
+        },
+        {
+            "name": f"Program KPI heartbeat — {program_id}",
+            "type": "metric alert",
+            "query": f"max(last_1d):max:{HEALTH_METRIC}{scope} > {HEARTBEAT_THRESHOLD}",
+            "message": _message(
+                f"No KPI readings have reached Datadog from {program_id} for "
+                "26+ hours: the daily job or the shipper is down.",
+                handle=handle,
+            ),
+            "tags": tags,
+            "options": {
+                "thresholds": {"critical": HEARTBEAT_THRESHOLD},
+                "notify_no_data": True,
+                "no_data_timeframe": NO_DATA_MINUTES,
+            },
+        },
+    ]
+
+
+def push_monitors(program_ids: list[str]) -> list[str]:
+    """Create or update the monitors, matched by name — same contract as the
+    dashboards, so a regenerate never spawns duplicates."""
+    handle = os.environ.get(ALERT_HANDLE_ENV)
+    lines: list[str] = []
+    with _client() as client:
+        existing = {
+            m["name"]: m["id"]
+            for m in client.get("/api/v1/monitor", params={"page_size": 200}).json()
+        }
+        for program_id in program_ids:
+            for payload in monitor_payloads(program_id, handle=handle):
+                monitor_id = existing.get(payload["name"])
+                if monitor_id:
+                    resp = client.put(f"/api/v1/monitor/{monitor_id}", json=payload)
+                else:
+                    resp = client.post("/api/v1/monitor", json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+                lines.append(f"{data['id']}  {data['name']}")
+    if not handle:
+        lines.append(
+            f"note: {ALERT_HANDLE_ENV} is unset — monitors alert in the UI only, "
+            "no one is paged"
+        )
+    return lines
 
 
 # --- dashboards ------------------------------------------------------------------------------
@@ -244,9 +358,22 @@ def main(argv: list[str] | None = None) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     dash = sub.add_parser("dashboards", help="build the per-program dashboards")
     dash.add_argument("--push", action="store_true", help="create/update them via the API")
+    mon = sub.add_parser("monitors", help="build the per-program monitors")
+    mon.add_argument("--push", action="store_true", help="create/update them via the API")
     args = ap.parse_args(argv)
 
     ids = sorted(programs.PROGRAMS)
+    if args.cmd == "monitors":
+        if args.push:
+            for line in push_monitors(ids):
+                print(line)
+        else:
+            handle = os.environ.get(ALERT_HANDLE_ENV)
+            for program_id in ids:
+                for payload in monitor_payloads(program_id, handle=handle):
+                    print(f"{payload['name']}\n  {payload['query']}")
+            print("(use --push to land)")
+        return 0
     if args.push:
         for url in push_dashboards(ids):
             print(url)

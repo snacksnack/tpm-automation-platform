@@ -131,6 +131,52 @@ def test_with_a_key_the_series_count_comes_back(monkeypatch):
     assert sent["api_key"] == "test-key"
 
 
+# --- monitors --------------------------------------------------------------------------------
+
+
+def _monitors(handle: str | None = None) -> dict[str, dict]:
+    return {m["name"]: m for m in datadog.monitor_payloads("simulated-program", handle=handle)}
+
+
+def test_three_monitors_per_program():
+    assert set(_monitors()) == {
+        "Program KPI tripped — simulated-program",
+        "Program KPI unmeasured — simulated-program",
+        "Program KPI heartbeat — simulated-program",
+    }
+
+
+def test_tripped_monitor_is_multi_alert_on_the_tripped_metric():
+    m = _monitors()["Program KPI tripped — simulated-program"]
+    assert m["query"] == (
+        "max(last_1d):max:kpi.program.tripped{program:simulated-program} by {kpi} > 0"
+    )
+    assert m["options"]["notify_no_data"] is False
+
+
+def test_unmeasured_monitor_warns_on_stale_and_alerts_on_broken():
+    m = _monitors()["Program KPI unmeasured — simulated-program"]
+    assert m["options"]["thresholds"] == {
+        "critical": datadog.HEALTH["broken"],
+        "warning": datadog.HEALTH["stale"],
+    }
+    assert datadog.HEALTH_METRIC in m["query"]
+
+
+def test_heartbeat_threshold_can_never_fire_only_its_no_data_can():
+    m = _monitors()["Program KPI heartbeat — simulated-program"]
+    assert m["options"]["thresholds"]["critical"] > max(datadog.HEALTH.values())
+    assert m["options"]["notify_no_data"] is True
+    assert m["options"]["no_data_timeframe"] == datadog.NO_DATA_MINUTES
+
+
+def test_handle_reaches_every_message_only_when_set():
+    with_handle = _monitors(handle="@me@example.com")
+    without = _monitors()
+    assert all(m["message"].endswith("@me@example.com") for m in with_handle.values())
+    assert not any("@me@example.com" in m["message"] for m in without.values())
+
+
 # --- dashboards ------------------------------------------------------------------------------
 
 

@@ -113,7 +113,7 @@ def test_without_an_api_key_the_leg_is_skipped(monkeypatch):
     assert datadog.ship_readings([_ok()], program_id="simulated-program") is None
 
 
-def test_with_a_key_the_series_count_comes_back(monkeypatch):
+def test_with_a_key_the_series_and_event_counts_come_back(monkeypatch):
     monkeypatch.setenv("DD_API_KEY", "test-key")
     sent: dict = {}
 
@@ -121,14 +121,57 @@ def test_with_a_key_the_series_count_comes_back(monkeypatch):
         sent["series"] = series
         sent["api_key"] = api_key
 
+    def fake_ship_events(events, *, api_key, site=None):
+        sent["events"] = events
+
     monkeypatch.setattr(datadog, "ship", fake_ship)
-    count = datadog.ship_readings(
+    monkeypatch.setattr(datadog, "ship_events", fake_ship_events)
+    counts = datadog.ship_readings(
         [_ok(), _stale()], program_id="simulated-program", at=AT
     )
-    # ok → value + health + tripped; stale → health + tripped.
-    assert count == 5
+    # ok → value + health + tripped; stale → health + tripped; the stale
+    # reading is also the one event with something to explain.
+    assert counts == (5, 1)
     assert len(sent["series"]) == 5
+    assert len(sent["events"]) == 1
     assert sent["api_key"] == "test-key"
+
+
+# --- events_for ------------------------------------------------------------------------------
+
+
+def test_an_ok_untripped_reading_posts_no_event():
+    assert datadog.events_for([_ok()], program_id="simulated-program") == []
+
+
+def test_the_why_rides_the_event():
+    [event] = datadog.events_for([_stale()], program_id="simulated-program")
+    assert event["title"] == "weekly-spend-burn-ratio is stale on simulated-program"
+    assert "no spend row has landed yet" in event["text"]
+    assert event["alert_type"] == "warning"
+    assert event["aggregation_key"] == "kpi-reading:simulated-program:weekly-spend-burn-ratio"
+
+
+def test_tripped_and_broken_are_errors_stale_is_a_warning():
+    events = datadog.events_for(
+        [_ok(kpi_id="forecast-slip-days", tripped=True), _stale(), _broken()],
+        program_id="simulated-program",
+    )
+    by_title = {e["title"]: e["alert_type"] for e in events}
+    assert by_title == {
+        "forecast-slip-days tripped on simulated-program": "error",
+        "weekly-spend-burn-ratio is stale on simulated-program": "warning",
+        "blocked-share-pct is broken on simulated-program": "error",
+    }
+
+
+def test_a_tripped_reading_carries_its_detail():
+    reading = Reading(
+        kpi_id="cost-per-run-by-model", sim_date=DAY, value=0.381, tripped=True,
+        detail="dearest is pr-review on claude-sonnet-4-6 at $0.381/run",
+    )
+    [event] = datadog.events_for([reading], program_id="eval-run-store")
+    assert "dearest is pr-review" in event["text"]
 
 
 # --- monitors --------------------------------------------------------------------------------
@@ -205,3 +248,18 @@ def test_dashboard_always_shows_health_and_tripped(tree):
     titles = [w["definition"]["title"] for w in payload["widgets"]]
     assert "health (0 ok · 1 stale · 2 broken)" in titles
     assert "tripped thresholds" in titles
+
+
+def test_dashboard_carries_the_event_stream(tree):
+    payload = datadog.dashboard_payload("simulated-program", ["cost-vs-envelope"], tree)
+    [stream] = [w for w in payload["widgets"] if w["definition"]["type"] == "event_stream"]
+    assert stream["definition"]["query"] == "tags:generated:kpi-datadog,program:simulated-program"
+
+
+def test_monitor_message_links_the_dashboard_only_when_resolved():
+    with_url = datadog.monitor_payloads(
+        "simulated-program", dashboard_url="https://app.datadoghq.com/dashboard/abc"
+    )
+    without = datadog.monitor_payloads("simulated-program")
+    assert all("https://app.datadoghq.com/dashboard/abc" in m["message"] for m in with_url)
+    assert not any("dashboard/abc" in m["message"] for m in without)

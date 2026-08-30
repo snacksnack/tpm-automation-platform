@@ -16,7 +16,7 @@ COPY store ./store
 COPY narrative ./narrative
 COPY drift ./drift
 COPY kpi ./kpi
-COPY main.py config.py ./
+COPY main.py config.py observability.py ./
 RUN pip install --upgrade pip && pip install .
 
 # SQLite lives on a mounted volume (see fly.toml).

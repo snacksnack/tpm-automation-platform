@@ -271,3 +271,63 @@ def test_monitor_message_links_the_dashboard_only_when_resolved():
     without = datadog.monitor_payloads("simulated-program")
     assert all("https://app.datadoghq.com/dashboard/abc" in m["message"] for m in with_url)
     assert not any("dashboard/abc" in m["message"] for m in without)
+
+
+# --- SLOs (RC1-324) --------------------------------------------------------------------------
+
+
+def _slos() -> dict[str, dict]:
+    ids = {"Program KPI tripped": 1, "Program KPI unmeasured": 2, "Program KPI heartbeat": 3}
+    return {s["name"]: s for s in datadog.slo_payloads("simulated-program", monitor_ids=ids)}
+
+
+def test_three_slos_per_program_on_the_right_monitors():
+    slos = _slos()
+    assert set(slos) == {
+        "Program measurement health — simulated-program",
+        "Program pipeline liveness — simulated-program",
+        "Program health — simulated-program",
+    }
+    assert slos["Program measurement health — simulated-program"]["monitor_ids"] == [2]
+    assert slos["Program pipeline liveness — simulated-program"]["monitor_ids"] == [3]
+    assert slos["Program health — simulated-program"]["monitor_ids"] == [1]
+
+
+def test_measurement_budget_is_tighter_than_the_program_budget():
+    """The layering argument as an assertion: a program is allowed more red
+    than its instruments are allowed rot — if the two targets ever met, a dead
+    collector could hide inside the program's budget."""
+    slos = _slos()
+    measure = slos["Program measurement health — simulated-program"]["thresholds"][0]
+    program = slos["Program health — simulated-program"]["thresholds"][0]
+    assert measure["target"] > program["target"]
+    assert measure["timeframe"] == program["timeframe"] == datadog.SLO_WINDOW
+
+
+def test_every_slo_carries_the_generated_tag():
+    for s in _slos().values():
+        assert "generated:kpi-datadog" in s["tags"]
+    assert "generated:kpi-datadog" in datadog.fleet_slo_payload()["tags"]
+
+
+def test_fleet_slo_reads_one_hundred_percent_before_the_first_error():
+    """`.errors` does not exist until an error happens — without default_zero
+    the fleet objective would show no-data exactly while the fleet is
+    perfect."""
+    q = datadog.fleet_slo_payload()["query"]
+    assert "default_zero" in q["numerator"]
+    assert "trace.anthropic.request.hits" in q["denominator"]
+
+
+def test_dashboard_gains_the_budget_row_only_once_slos_exist(tree):
+    without = datadog.dashboard_payload("simulated-program", ["cost-vs-envelope"], tree)
+    assert not [w for w in without["widgets"] if w["definition"]["type"] == "slo"]
+    with_ids = datadog.dashboard_payload(
+        "simulated-program",
+        ["cost-vs-envelope"],
+        tree,
+        {"Program health — simulated-program": "abc123"},
+    )
+    slo_widgets = [w for w in with_ids["widgets"] if w["definition"]["type"] == "slo"]
+    assert [w["definition"]["slo_id"] for w in slo_widgets] == ["abc123"]
+    assert all(w["definition"]["show_error_budget"] for w in slo_widgets)

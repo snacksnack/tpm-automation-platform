@@ -199,7 +199,8 @@ docs/kpi/simulator.md               runbook: the clock, the daily tick, jumping,
 docs/kpi/snapshots.md               the collector: one dated snapshot per run per program
 docs/kpi/ledger.md                  the ground truth: how each expected reading is derived
 docs/kpi/ledger/<program>.csv       the ledger itself, regenerated from the scenario
-docs/kpi/metrics-store.md           where the readings land, and why not Datadog
+docs/kpi/metrics-store.md           where the readings land (Postgres the record; Datadog since Pro)
+docs/kpi/slos.md                    error budgets on the program: the layers, targets, push order
 docs/kpi/track.md                   the track stage: readings, the daily run, the dashboards
 docs/kpi/narrate.md                 the narrate stage: the weekly brief, audited and archived
 docs/kpi/escalate.md                the escalate stage: retry, blast radius, proposed fixes
@@ -284,6 +285,7 @@ dashboard can be minted (and revoked) through the API on demand.
 | [Program KPIs — eval-run-store](https://app.datadoghq.com/dashboard/qz5-nmb-i9d) | dashboard | The six real-program KPIs — pass-rate gate, $/run economics, freshness — same health/tripped/why layout. |
 | [Monitors](https://app.datadoghq.com/monitors/manage?query=tag%3A%22generated%3Akpi-datadog%22) | 6 monitors | Per program: **tripped** (multi-alert by KPI — a crossed so-what threshold pages), **unmeasured** (warning on stale, alert on broken — the honesty rule's alarm), **heartbeat** (26h of no data means the daily job or shipper died). |
 | [Synthetics](https://app.datadoghq.com/synthetics/tests) | 2 uptime tests | www.hihelloreid.com and incidents.hihelloreid.com, every 15 min from us-east-1 — the demo sites answer before anyone else notices they don't. |
+| [SLOs](https://app.datadoghq.com/slo/manage?query=tag%3A%28%22generated%3Akpi-datadog%22%29) | 7 objectives | Error budgets on the program (RC1-324): per program, measurement health and pipeline liveness at 99 %/30d, program health at 95 %/30d — the instruments get less rot than the program gets red — plus a fleet-wide 97 % on model calls completing without error. The sim's planted events are scripted to burn these budgets. `docs/kpi/slos.md` has the layering argument. |
 
 The stale/broken/tripped readings also post their `reason` and `detail` as
 events (`kind:kpi-reading`), so the dashboards explain their own red — the

@@ -301,12 +301,25 @@ def real_cost_per_run(program: Program, series: list[ProgramSnapshot]) -> Readin
         ratio is not None and ratio > REAL_COST_RATIO_TRIP
         and prev_ratio is not None and prev_ratio > REAL_COST_RATIO_TRIP
     )
-    detail = (
-        f"${model_spend:.2f} org model spend + ${store_cost:.2f} store over {runs} run(s); "
-        f"price-table attribution ${attributed:.2f}"
-        + (f" ({ratio:.1f}x)" if ratio is not None else "; nothing attributed")
-        + " — org-wide feed, so attribution is an upper bound"
-    )
+    # Scoped rows ship beside an org-total twin (RC1-327); their presence is
+    # what says the spend is the eval workspace's exactly, not an upper bound.
+    org_rows = [b for b in snap.billing if b.source == "anthropic-costs-org"]
+    floor = snap.sim_date - timedelta(days=WINDOW_DAYS)
+    if org_rows:
+        org_spend = sum(b.amount_usd for b in org_rows if b.period_start > floor)
+        detail = (
+            f"${model_spend:.2f} eval-workspace model spend + ${store_cost:.2f} store "
+            f"over {runs} run(s); price-table attribution ${attributed:.2f}"
+            + (f" ({ratio:.1f}x)" if ratio is not None else "; nothing attributed")
+            + f" — org-wide ${org_spend:.2f} for the fleet picture"
+        )
+    else:
+        detail = (
+            f"${model_spend:.2f} org model spend + ${store_cost:.2f} store over {runs} run(s); "
+            f"price-table attribution ${attributed:.2f}"
+            + (f" ({ratio:.1f}x)" if ratio is not None else "; nothing attributed")
+            + " — org-wide feed, so attribution is an upper bound"
+        )
     return Reading(
         kpi_id="real-cost-per-run", sim_date=snap.sim_date, value=value, state=state,
         reason=reason, tripped=tripped, as_of=latest_metered, detail=detail,

@@ -4,9 +4,14 @@ Two readers, one per feed the eval-run-store program declares:
 
 - **anthropic-costs** — the org's Cost Report
   (`GET /v1/organizations/cost_report`, Admin API key): daily buckets of
-  actual billed model spend, amounts in cents as decimal strings. This is
-  org-wide — it cannot be filtered to eval traffic — so a KPI reading it
-  states that attribution caveat rather than hiding it.
+  actual billed model spend, amounts in cents as decimal strings. With a
+  `workspace_id` (RC1-327: eval traffic runs on the dedicated `agent-evals`
+  workspace since 2026-08-29), the report is grouped by workspace and the
+  rows are scoped to that workspace's spend exactly — the org-wide total
+  still ships beside them as `anthropic-costs-org`, because fleet economics
+  (RC1-322) is a different question with the same feed. Without one, the
+  old org-wide behaviour stands and a KPI reading it states that
+  attribution caveat rather than hiding it.
 - **heroku-invoices** — the account's invoices
   (`GET /account/invoices`, Platform API v3): one row per monthly billing
   period, amounts in cents. The store plan's real bill, replacing the
@@ -51,11 +56,18 @@ def _get(url: str, *, headers: dict, params: dict | None = None) -> httpx.Respon
 
 
 def read_anthropic_costs(
-    admin_key: str, *, days: int = COST_REPORT_DAYS, now: datetime | None = None
+    admin_key: str,
+    *,
+    workspace_id: str | None = None,
+    days: int = COST_REPORT_DAYS,
+    now: datetime | None = None,
 ) -> list[BillingRow]:
-    """Daily billed model spend for the org, oldest first.
+    """Daily billed model spend, oldest first.
 
-    Zero-spend days are kept as $0 rows: a day the org spent nothing is a
+    With `workspace_id`, `anthropic-costs` rows carry that workspace's spend
+    exactly and `anthropic-costs-org` rows carry the org total beside them;
+    without one, `anthropic-costs` is the org total, as before. Zero-spend
+    days are kept as $0 rows either way: a day nothing was spent is a
     measurement, distinct from a day the feed could not be read.
     """
     now = now or datetime.now(UTC)
@@ -65,22 +77,37 @@ def read_anthropic_costs(
         "bucket_width": "1d",
         "limit": 31,  # the endpoint's maximum page size
     }
+    if workspace_id:
+        # The default workspace's results carry workspace_id None, so the
+        # eval scope is an exact match, never a remainder.
+        params["group_by[]"] = "workspace_id"
+
+    def row(source: str, bucket: dict, cents: Decimal) -> BillingRow:
+        return BillingRow(
+            source=source,
+            period_start=date.fromisoformat(bucket["starting_at"][:10]),
+            period_end=date.fromisoformat(bucket["ending_at"][:10]),
+            amount_usd=float(cents / 100),
+            kind="metered",
+        )
+
     rows: list[BillingRow] = []
     while True:
         data = _get(ANTHROPIC_COST_URL, headers=headers, params=params).json()
         for bucket in data["data"]:
-            cents = sum(Decimal(r["amount"]) for r in bucket["results"])
-            rows.append(
-                BillingRow(
-                    source="anthropic-costs",
-                    period_start=date.fromisoformat(bucket["starting_at"][:10]),
-                    period_end=date.fromisoformat(bucket["ending_at"][:10]),
-                    amount_usd=float(cents / 100),
-                    kind="metered",
+            total = sum(Decimal(r["amount"]) for r in bucket["results"])
+            if workspace_id:
+                scoped = sum(
+                    Decimal(r["amount"])
+                    for r in bucket["results"]
+                    if r.get("workspace_id") == workspace_id
                 )
-            )
+                rows.append(row("anthropic-costs", bucket, scoped))
+                rows.append(row("anthropic-costs-org", bucket, total))
+            else:
+                rows.append(row("anthropic-costs", bucket, total))
         if not data.get("has_more"):
-            return sorted(rows, key=lambda r: r.period_start)
+            return sorted(rows, key=lambda r: (r.period_start, r.source))
         params["page"] = data["next_page"]
 
 

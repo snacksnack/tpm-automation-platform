@@ -116,7 +116,12 @@ class BillingRow(BaseModel):
     invoices — each feed's own convention, preserved rather than papered over.
     """
 
-    source: str = Field(description="anthropic-costs | heroku-invoices")
+    source: str = Field(
+        description=(
+            "anthropic-costs | anthropic-costs-org | heroku-invoices — the -org "
+            "twin ships when the cost report is workspace-scoped (RC1-327)"
+        )
+    )
     period_start: date
     period_end: date
     amount_usd: float

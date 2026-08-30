@@ -17,7 +17,7 @@ dependencies = [
     "anthropic>=0.39",
     # RC1-322: LLM Observability. A main dependency, not dev — the drift
     # service bills in production and its spans must ship from the image.
-    "ddtrace>=4.14",
+    "ddtrace>=4.14,<5",
 ]
 
 [project.optional-dependencies]

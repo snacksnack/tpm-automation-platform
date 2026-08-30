@@ -43,6 +43,7 @@ from kpi.define import KpiTree
 from kpi.escalations_store import EscalationsStore
 from kpi.instrument import Instrumentation
 from kpi.readings_store import ReadingsStore, StoredReading
+from observability import enable_llm_obs
 
 MODEL = "claude-opus-5"
 _TEMPLATE = Path(__file__).parent / "templates" / "narrate.md"
@@ -509,6 +510,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     program = programs.get(args.program)
+    enable_llm_obs("kpi-agent", service="kpi.narrate")
     dsn = os.environ.get("EVAL_DATABASE_URL")
     if not dsn:
         print(

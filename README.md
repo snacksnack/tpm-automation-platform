@@ -298,6 +298,12 @@ python -m kpi.datadog monitors --push      # create/update the six monitors
 is needed only for the pushes; `DD_ALERT_HANDLE` (baked at push time) is who
 gets paged.
 
+The billed stages also trace themselves into [LLM
+Observability](https://app.datadoghq.com/llm/applications) (RC1-322): every
+model call a span with tokens, latency and estimated cost, under `kpi-agent`
+/ `drift-digest` / `tpm-platform`, with eval verdicts attached as Datadog
+evaluations — see `docs/kpi/llm-obs.md`.
+
 ### The simulated program (RC1-299)
 
 The KPI agent is verified against a program whose every number is known in

@@ -26,6 +26,13 @@ if [[ -z "${EVAL_DATABASE_URL:-}" && -r "$HOME/.zshrc" ]]; then
 fi
 export EVAL_DATABASE_URL="${EVAL_DATABASE_URL:-}"
 
+# DD_API_KEY, same one-home rule (RC1-322): with it, narrate's model calls
+# become LLM Observability traces; without it they are simply untraced.
+if [[ -z "${DD_API_KEY:-}" && -r "$HOME/.zshrc" ]]; then
+  eval "$(grep -E '^export DD_API_KEY=' "$HOME/.zshrc" || true)"
+fi
+export DD_API_KEY="${DD_API_KEY:-}"
+
 worst=0
 step() {  # step <name> <command...>
   local name=$1; shift

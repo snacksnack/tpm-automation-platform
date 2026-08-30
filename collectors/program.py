@@ -123,6 +123,7 @@ def collect_program(
     eval_dsn: str | None = None,
     heroku_api_key: str | None = None,
     anthropic_admin_key: str | None = None,
+    anthropic_eval_workspace_id: str | None = None,
     now: datetime | None = None,
 ) -> ProgramSnapshot:
     """One snapshot of `program`, every source's health recorded.
@@ -239,7 +240,9 @@ def collect_program(
         keys = {"anthropic-costs": anthropic_admin_key, "heroku-invoices": heroku_api_key}
         env_names = {"anthropic-costs": "ANTHROPIC_ADMIN_KEY", "heroku-invoices": "HEROKU_API_KEY"}
         readers = {
-            "anthropic-costs": lambda key: billing_feeds.read_anthropic_costs(key, now=now),
+            "anthropic-costs": lambda key: billing_feeds.read_anthropic_costs(
+                key, workspace_id=anthropic_eval_workspace_id, now=now
+            ),
             "heroku-invoices": billing_feeds.read_heroku_invoices,
         }
         for feed in program.billing:

@@ -104,7 +104,7 @@ _BILLING = Source(
     "anthropic-costs: daily buckets, land within a day; heroku-invoices: one row per "
     "monthly billing period",
     (
-        Field("source", "str", "anthropic-costs | heroku-invoices"),
+        Field("source", "str", "anthropic-costs | anthropic-costs-org | heroku-invoices"),
         Field("period_start", "date", ""),
         Field(
             "period_end", "date",
@@ -113,9 +113,10 @@ _BILLING = Source(
         Field("amount_usd", "float", "dollars as billed — never computed from a price table"),
         Field("kind", "str", "metered | invoice"),
     ),
-    "Real bills (RC1-308). anthropic-costs is the ORG's cost report and cannot be "
-    "filtered to this program's traffic: any attribution of it to runs is an upper "
-    "bound and must say so.",
+    "Real bills (RC1-308). anthropic-costs is scoped to the eval workspace when "
+    "ANTHROPIC_EVAL_WORKSPACE_ID is set (RC1-327) — exact attribution, with the "
+    "org total beside it as anthropic-costs-org. Unscoped, it is the ORG's cost "
+    "report: any attribution of it to runs is an upper bound and must say so.",
 )
 
 _NOT_AVAILABLE = {
@@ -132,7 +133,7 @@ _NOT_AVAILABLE = {
         "branch or pull request a run was taken on",
     ],
     "billing": [
-        "per-API-key or per-workspace attribution of the org cost report",
+        "per-API-key attribution of the cost report (workspace-level exists, RC1-327)",
         "per-app Heroku charges (the invoice is the account total)",
     ],
     "other": [

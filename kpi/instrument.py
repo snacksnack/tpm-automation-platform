@@ -52,6 +52,7 @@ from kpi import RUBRIC_VERSION, catalog, measures
 from kpi.define import MODEL, RUBRIC, DefineError, prompt_version, rubric_version_declared
 from kpi.models import KpiTree
 from kpi.reading import Reading
+from observability import enable_llm_obs
 
 _TEMPLATE = Path(__file__).parent / "templates" / "instrument.md"
 TREES = Path(__file__).resolve().parent.parent / "docs" / "kpi" / "trees"
@@ -458,6 +459,7 @@ def main(argv: list[str] | None = None) -> int:
     if not settings.anthropic_api_key:
         print("ANTHROPIC_API_KEY is not set (config reads .env).", file=sys.stderr)
         return 2
+    enable_llm_obs("kpi-agent", service="kpi.instrument")
     program = programs.get(args.program)
     tree = load_adopted_tree(program.id)
     series = load_series(args.db, program.id)

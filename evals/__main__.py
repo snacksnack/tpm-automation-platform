@@ -13,6 +13,7 @@ import re
 import sys
 from datetime import UTC, datetime
 
+from agent_evals import llmobs
 from agent_evals.runner import exit_code, print_result, record_run
 
 from evals import kpi_ledger, subjects
@@ -52,7 +53,15 @@ def cmd_run(args: argparse.Namespace) -> int:
         cases = subjects.BILLED_CASES
         version = subjects.billed_version(model)
         print(f"{len(cases)} case(s) against {model} — this spends money.")
-        results = [subjects.run_billed(case, client, model) for case in cases]
+        # RC1-322: one trace per billed case, verdict and cost attached. The
+        # free and kpi-ledger subjects stay untraced — no model, no span.
+        llmobs.enable("tpm-platform", service="evals")
+        results = []
+        for case in cases:
+            with llmobs.case(case.id) as traced:
+                result = subjects.run_billed(case, client, model)
+                traced.record(result)
+            results.append(result)
     elif args.subject == kpi_ledger.NAME:
         impl = args.impl or kpi_ledger.REFERENCE
         if impl not in kpi_ledger.IMPLEMENTATIONS:
@@ -136,6 +145,7 @@ def cmd_degrade(args: argparse.Namespace) -> int:
 
     client = anthropic.Anthropic(api_key=key, timeout=60.0, max_retries=3)
     model = args.model
+    llmobs.enable("tpm-platform", service="evals")  # RC1-322: billed spend is traced spend
     wanted = degrade.DEGRADATIONS
     if args.only:
         wanted = tuple(d for d in wanted if d.name in args.only)

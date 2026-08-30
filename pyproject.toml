@@ -15,6 +15,9 @@ dependencies = [
     "pydantic>=2.9",
     "pydantic-settings>=2.5",
     "anthropic>=0.39",
+    # RC1-322: LLM Observability. A main dependency, not dev — the drift
+    # service bills in production and its spans must ship from the image.
+    "ddtrace>=4.14",
 ]
 
 [project.optional-dependencies]
@@ -24,7 +27,8 @@ dev = [
     # RC1-261: the eval harness. Pinned by tag — if the ruler can move under a
     # run, a changed score no longer says whether the digest drifted or the
     # measurement did.
-    "agent-evals[sql] @ git+https://github.com/snacksnack/agent-evals@v0.3.2",
+    # llmobs extra: per-case spans + harness verdicts on traces (RC1-322).
+    "agent-evals[sql,llmobs] @ git+https://github.com/snacksnack/agent-evals@v0.4.0",
 ]
 
 [build-system]
@@ -37,7 +41,7 @@ build-backend = "setuptools.build_meta"
 # agent-evals dependency is in the [dev] extra), and CI's
 # `python -m evals` runs from the repo root, not the installed package (RC1-265).
 packages = ["collectors", "store", "narrative", "drift", "kpi"]
-py-modules = ["main", "config"]
+py-modules = ["main", "config", "observability"]
 
 [tool.setuptools.package-data]
 narrative = ["templates/*.md"]

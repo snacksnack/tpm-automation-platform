@@ -26,8 +26,13 @@ from pydantic import BaseModel, Field
 
 from config import settings
 from drift.pipeline import run_drift
+from observability import enable_llm_obs
 from store.models import Finding
 from store.snapshot_store import SnapshotStore
+
+# RC1-322: the digest's Anthropic calls become LLM Obs traces. No-op without
+# DD_API_KEY, so local dev and tests are unchanged.
+enable_llm_obs("drift-digest", service="drift-service")
 
 # Emit the per-run structured JSON summary to stdout (captured by Fly logs),
 # independent of uvicorn's own logging config.

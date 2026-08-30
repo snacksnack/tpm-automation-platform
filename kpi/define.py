@@ -31,6 +31,7 @@ from pathlib import Path
 
 from kpi import RUBRIC_VERSION
 from kpi.models import KpiTree, ShapeError, render_markdown, validate_shape
+from observability import enable_llm_obs
 
 MODEL = "claude-opus-4-8"
 _TEMPLATE = Path(__file__).parent / "templates" / "define.md"
@@ -251,6 +252,7 @@ def main(argv: list[str] | None = None) -> int:
     if not settings.anthropic_api_key:
         print("ANTHROPIC_API_KEY is not set (config reads .env).", file=sys.stderr)
         return 2
+    enable_llm_obs("kpi-agent", service="kpi.define")
     brief = args.program.read_text()
     try:
         tree = draft_tree(brief, model=args.model)

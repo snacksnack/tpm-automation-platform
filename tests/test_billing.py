@@ -124,7 +124,7 @@ def test_missing_keys_are_error_health_rows_never_empty_bills():
 def test_billing_rows_collect_and_round_trip_through_the_store(tmp_path, monkeypatch):
     monkeypatch.setattr(
         billing, "read_anthropic_costs",
-        lambda key, now=None: [
+        lambda key, workspace_id=None, now=None: [
             BillingRow(source="anthropic-costs", period_start=TODAY - timedelta(days=1),
                        period_end=TODAY, amount_usd=1.25)
         ],
@@ -246,3 +246,80 @@ def test_catalog_lists_billing_for_the_real_program_only():
     sim = catalog.catalog(programs.get("simulated-program"))
     assert not any(s["name"] == "billing" for s in sim["sources"])
     assert any("Heroku billing" in line for line in sim["not_available"]["other"])
+
+
+# --- workspace-scoped attribution (RC1-327) --------------------------------------------------
+
+
+def test_workspace_scoped_costs_ship_scoped_and_org_rows(monkeypatch):
+    """The default workspace's results carry workspace_id None, so the eval
+    scope must be an exact match — never "everything minus the rest"."""
+    payload = {
+        "data": [{
+            "starting_at": "2026-08-24T00:00:00Z",
+            "ending_at": "2026-08-25T00:00:00Z",
+            "results": [
+                {"amount": "100", "currency": "USD", "workspace_id": None},
+                {"amount": "40", "currency": "USD", "workspace_id": "wrkspc_eval"},
+            ],
+        }],
+        "has_more": False,
+        "next_page": None,
+    }
+    calls = []
+
+    def fake_get(url, headers=None, params=None, timeout=None):
+        calls.append(dict(params))
+        return _resp(payload)
+
+    monkeypatch.setattr(billing.httpx, "get", fake_get)
+    rows = billing.read_anthropic_costs("k", workspace_id="wrkspc_eval", now=NOW)
+    assert calls[0]["group_by[]"] == "workspace_id"
+    assert [(r.source, r.amount_usd) for r in rows] == [
+        ("anthropic-costs", 0.40),
+        ("anthropic-costs-org", 1.40),
+    ]
+
+
+def test_without_a_workspace_nothing_is_grouped_and_no_org_twin_ships(monkeypatch):
+    payload = {
+        "data": [{
+            "starting_at": "2026-08-24T00:00:00Z",
+            "ending_at": "2026-08-25T00:00:00Z",
+            "results": [{"amount": "100", "currency": "USD"}],
+        }],
+        "has_more": False,
+        "next_page": None,
+    }
+    calls = []
+
+    def fake_get(url, headers=None, params=None, timeout=None):
+        calls.append(dict(params))
+        return _resp(payload)
+
+    monkeypatch.setattr(billing.httpx, "get", fake_get)
+    rows = billing.read_anthropic_costs("k", now=NOW)
+    assert "group_by[]" not in calls[0]
+    assert [r.source for r in rows] == ["anthropic-costs"]
+
+
+def _with_org_twin(snap):
+    for b in [b for b in snap.billing if b.source == "anthropic-costs"]:
+        snap.billing.append(BillingRow(
+            source="anthropic-costs-org", period_start=b.period_start,
+            period_end=b.period_end, amount_usd=b.amount_usd * 10,
+        ))
+    return snap
+
+
+def test_scoped_detail_drops_the_upper_bound_and_names_the_org_total():
+    r = measures.real_cost_per_run(EVAL, [_with_org_twin(_snap())])
+    assert r.value == pytest.approx(3.5)  # the scoped rows are the spend, unchanged
+    assert "eval-workspace" in r.detail
+    assert "upper bound" not in r.detail
+    assert "org-wide $20.00" in r.detail
+
+
+def test_unscoped_detail_keeps_the_upper_bound_caveat():
+    r = measures.real_cost_per_run(EVAL, [_snap()])
+    assert "upper bound" in r.detail and "eval-workspace" not in r.detail

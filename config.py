@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     # Anthropic Admin API (collectors/billing.py, RC1-308): sk-ant-admin…, a
     # different key class — the regular API key cannot read the cost report.
     anthropic_admin_key: str | None = None
+    # The workspace eval traffic bills to (RC1-327): scopes the cost report so
+    # real-cost-per-run reads eval spend exactly instead of the org total.
+    # Unset => the old org-wide read, with its stated attribution caveat.
+    anthropic_eval_workspace_id: str | None = None
 
     # Heroku Platform API (collectors/billing.py, RC1-308): reads the account's
     # invoices — the store plan's real bill instead of a declared constant.

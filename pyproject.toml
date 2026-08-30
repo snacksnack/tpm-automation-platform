@@ -28,7 +28,7 @@ dev = [
     # run, a changed score no longer says whether the digest drifted or the
     # measurement did.
     # llmobs extra: per-case spans + harness verdicts on traces (RC1-322).
-    "agent-evals[sql,llmobs] @ git+https://github.com/snacksnack/agent-evals@v0.4.0",
+    "agent-evals[sql,llmobs] @ git+https://github.com/snacksnack/agent-evals@v0.4.1",
 ]
 
 [build-system]

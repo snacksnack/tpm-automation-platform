@@ -220,6 +220,25 @@ def test_handle_reaches_every_message_only_when_set():
     assert not any("@me@example.com" in m["message"] for m in without.values())
 
 
+def test_a_bare_alert_handle_gains_its_at_prefix(monkeypatch):
+    # A bare address is valid *text* in a monitor message — the monitor pages
+    # nobody. RC1-351 shipped exactly that, estate-wide.
+    monkeypatch.setenv(datadog.ALERT_HANDLE_ENV, "me@example.com")
+    assert datadog._alert_handle() == "@me@example.com"
+
+
+def test_an_already_prefixed_handle_is_untouched(monkeypatch):
+    monkeypatch.setenv(datadog.ALERT_HANDLE_ENV, "@me@example.com")
+    assert datadog._alert_handle() == "@me@example.com"
+
+
+def test_an_unset_or_blank_handle_reads_as_none(monkeypatch):
+    monkeypatch.delenv(datadog.ALERT_HANDLE_ENV, raising=False)
+    assert datadog._alert_handle() is None
+    monkeypatch.setenv(datadog.ALERT_HANDLE_ENV, "   ")
+    assert datadog._alert_handle() is None
+
+
 # --- dashboards ------------------------------------------------------------------------------
 
 

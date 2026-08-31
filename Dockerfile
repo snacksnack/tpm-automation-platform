@@ -1,9 +1,17 @@
 # Slim Python 3.12 image for the Dependency Drift Detector.
 FROM python:3.12-slim
 
+# RC1-337: the deploy workflow passes the commit it builds, so Datadog traces
+# and errors deep-link to source at that exact commit. Empty on local builds,
+# where DD_API_KEY is absent and nothing traces anyway.
+ARG GIT_SHA=""
+
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    DB_PATH=/data/drift.db
+    DB_PATH=/data/drift.db \
+    DD_GIT_COMMIT_SHA=$GIT_SHA \
+    DD_GIT_REPOSITORY_URL=https://github.com/snacksnack/tpm-automation-platform \
+    DD_VERSION=$GIT_SHA
 
 WORKDIR /app
 

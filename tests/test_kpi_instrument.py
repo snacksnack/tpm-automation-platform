@@ -190,6 +190,28 @@ def test_freshness_error_rate_and_cost_by_model():
     assert c.value == 0.2 and c.tripped and "cheap on sonnet (4.0x)" in c.detail
 
 
+def test_cost_by_model_does_not_trip_on_a_pair_nobody_runs_any_more():
+    """RC1-332: the expensive pair is still inside the 28-day value window but
+    has not run in over a week — the move it asks for has already been made,
+    and the alarm must not outlive its own fix by four weeks. It stays in the
+    detail, so the spend is still on the record."""
+    aged = _eval_snapshot([
+        _run("probe", cost=0.05, model="haiku", days_ago=1),
+        _run("probe", cost=0.40, model="sonnet", days_ago=9),
+    ])
+    c = measures.cost_per_run_by_model(EVAL, [aged])
+    assert c.value == 0.4 and not c.tripped
+    assert "probe on sonnet (8.0x, last run 9d ago)" in c.detail
+    assert "no live decision" in c.detail
+
+    still_running = _eval_snapshot([
+        _run("probe", cost=0.05, model="haiku", days_ago=1),
+        _run("probe", cost=0.40, model="sonnet", days_ago=3),
+    ])
+    f = measures.cost_per_run_by_model(EVAL, [still_running])
+    assert f.tripped and "over 3x: probe on sonnet (8.0x)" in f.detail
+
+
 def test_every_eval_measure_reads_broken_when_the_source_is_gone():
     snap = _eval_snapshot([_run("a")])
     gone = measures.source_missing(snap)

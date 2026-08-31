@@ -139,7 +139,7 @@
         "owner": "Reid"
       },
       "stale_after": "7 days",
-      "so_what": "A (subject, model) pair costing more than 3× the cheapest model that has run the same subject: the decision is to move it.",
+      "so_what": "A (subject, model) pair with a run in the last 7 days costing more than 3× the cheapest model that has run the same subject: the decision is to move it. A pair that has not run in 7 days is reported but does not trip (RC1-332) — the move it asks for is no longer a live decision, and an alarm that outlives its own fix is one nobody acts on. The cheapest comparator is drawn from the whole 4-week window either way: it is evidence the subject can run cheaper, whether or not it ran this week.",
       "goodhart": {
         "risk": "low",
         "gaming_path": "none",

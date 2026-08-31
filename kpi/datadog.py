@@ -526,6 +526,21 @@ def dashboard_payload(
             }
         }
     )
+    # The what-changed (RC1-334): PRs and pushes from the GitHub App, so a
+    # reading that moved and the merge that moved it sit on the same page.
+    # Unscoped by program — GitHub events are repo-shaped, and the platform
+    # repo's merges change what every reading means; narrow to repo tags
+    # once real events show which facets they carry.
+    widgets.append(
+        {
+            "definition": {
+                "type": "event_stream",
+                "title": "delivery — GitHub PRs and pushes",
+                "query": "source:github",
+                "event_size": "s",
+            }
+        }
+    )
     return {
         "title": f"Program KPIs — {program_id}",
         "description": (

@@ -5,7 +5,10 @@ name: Daily drift run
 
 on:
   schedule:
-    - cron: "0 13 * * *" # 13:00 UTC daily
+    # Off the top of the hour on purpose: :00 crons — 13:00 UTC especially —
+    # sit in GitHub's most congested queue, and this one drifted from ~30 min
+    # late to ~10 h late over a week (RC1-335). Best-effort either way.
+    - cron: "17 12 * * *" # 12:17 UTC daily
   workflow_dispatch: {}
 
 jobs:

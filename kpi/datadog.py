@@ -194,6 +194,17 @@ def ship_readings(
 #: address; unset, the monitors alert in the UI and event stream only.
 ALERT_HANDLE_ENV = "DD_ALERT_HANDLE"
 
+
+def _alert_handle() -> str | None:
+    """The alert handle from the environment, normalized to `@`-notification
+    syntax. A bare address is valid *text* in a monitor message — the monitor
+    changes state and pages nobody, which is how RC1-351 silenced the whole
+    estate — so a missing `@` is prepended rather than trusted."""
+    handle = (os.environ.get(ALERT_HANDLE_ENV) or "").strip()
+    if not handle:
+        return None
+    return handle if handle.startswith("@") else f"@{handle}"
+
 #: The heartbeat threshold can never fire — health tops out at 2 — so the
 #: monitor's only job is its no-data state: the daily job runs at 07:00, and
 #: 26 hours of silence means the job or the shipper died, not a quiet day.
@@ -283,7 +294,7 @@ def monitor_payloads(
 def push_monitors(program_ids: list[str]) -> list[str]:
     """Create or update the monitors, matched by name — same contract as the
     dashboards, so a regenerate never spawns duplicates."""
-    handle = os.environ.get(ALERT_HANDLE_ENV)
+    handle = _alert_handle()
     lines: list[str] = []
     with _client() as client:
         existing = {
@@ -639,7 +650,7 @@ def main(argv: list[str] | None = None) -> int:
             for line in push_monitors(ids):
                 print(line)
         else:
-            handle = os.environ.get(ALERT_HANDLE_ENV)
+            handle = _alert_handle()
             for program_id in ids:
                 for payload in monitor_payloads(program_id, handle=handle):
                     print(f"{payload['name']}\n  {payload['query']}")

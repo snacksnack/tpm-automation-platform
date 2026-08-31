@@ -216,6 +216,20 @@ checked per KPI rather than promised. The report lives in
 
 ## Changelog
 
+- **proposed for v3** (2026-08-30, RC1-332) — *a trip must be clearable by
+  the decision it asks for.* Test 3 requires a so-what naming a decision; it
+  does not yet require that taking the decision can turn the number off.
+  `cost-per-run-by-model` found the gap: it compared every (subject, model)
+  pair over a 28-day window, so moving a subject to a cheaper model added a
+  cheap pair without changing the expensive pair's history — the flag, and
+  the program-health error budget with it, would have stood for four weeks
+  after the fix. The measure now trips only on pairs with a run inside the
+  freshness window and reports the aged ones without tripping. Stated
+  generally: **the window a KPI reports over and the window it trips over
+  are separate choices** — report the whole window, trip on what is still a
+  live decision. Held as proposed, not applied, by the same rule the v2
+  amendments followed: a rubric change is adopted once the trees have been
+  exercised under it, not the day it is written.
 - **v2** (2026-08-23) — the four rules above, proposed in both RC1-302
   reviews and applied once RC1-303 had exercised the adopted trees; the
   instrumentation section. No v1 verdict changes: the adopted trees already

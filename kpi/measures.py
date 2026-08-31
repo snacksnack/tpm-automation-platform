@@ -186,6 +186,24 @@ def error_rate(program: Program, series: list[ProgramSnapshot]) -> Reading:
 
 
 def cost_per_run_by_model(program: Program, series: list[ProgramSnapshot]) -> Reading:
+    """Mean cost per run for each (subject, model) pair over the trailing window.
+
+    The value spans `WINDOW_DAYS` — the money was spent, and the reported
+    number says so. The *trip* is narrower (RC1-332): only a pair with a run
+    inside `FRESH_DAYS` can trip, because the so-what asks a live question —
+    "move it" — and a pair nobody has run in a week is no longer a model
+    choice anyone is making. Without the narrowing, acting on the alert
+    cannot clear it: moving a subject to a cheaper model adds a new cheap
+    pair, it does not change the expensive pair's history, so the flag would
+    stand until those runs age out four weeks later and the program-health
+    SLO would sit at zero the whole time. An alarm that survives its own fix
+    trains you to ignore it.
+
+    The comparison itself still runs against every pair in the window: the
+    cheapest alternative is evidence that the subject *can* run cheaper, and
+    that stays true whether or not it ran this week. Aged pairs keep their
+    place in `detail` — dropped from the trip, never from the record.
+    """
     snap = series[-1]
     if gone := _eval_source_gone(snap):
         return _broken("cost-per-run-by-model", snap, gone)
@@ -198,12 +216,20 @@ def cost_per_run_by_model(program: Program, series: list[ProgramSnapshot]) -> Re
     for r in window:
         groups.setdefault((r.subject, r.model or ""), []).append(r)
     means = {k: sum(r.cost_usd for r in v) / len(v) for k, v in groups.items()}
+    latest = {k: max(r.started_at.date() for r in v) for k, v in groups.items()}
     (subject, model), value = max(means.items(), key=lambda kv: kv[1])
-    tripped_pairs = []
+    tripped_pairs: list[str] = []
+    aged_pairs: list[str] = []
     for (s, m), cost in means.items():
         cheapest = min(c for (s2, _), c in means.items() if s2 == s)
-        if cheapest > 0 and cost > cheapest * MODEL_COST_RATIO_TRIP:
-            tripped_pairs.append(f"{s} on {m} ({cost / cheapest:.1f}x)")
+        if not (cheapest > 0 and cost > cheapest * MODEL_COST_RATIO_TRIP):
+            continue
+        ratio = cost / cheapest
+        pair_age = (snap.sim_date - latest[(s, m)]).days
+        if pair_age > FRESH_DAYS:
+            aged_pairs.append(f"{s} on {m} ({ratio:.1f}x, last run {pair_age}d ago)")
+        else:
+            tripped_pairs.append(f"{s} on {m} ({ratio:.1f}x)")
     newest = max(r.started_at.date() for r in window)
     age = (snap.sim_date - newest).days
     state, reason = _freshness(age, f"latest billed run is {age} days old")
@@ -213,6 +239,11 @@ def cost_per_run_by_model(program: Program, series: list[ProgramSnapshot]) -> Re
     )
     if tripped_pairs:
         detail += f"; over 3x: {', '.join(tripped_pairs)}"
+    if aged_pairs:
+        detail += (
+            f"; over 3x but not run in {FRESH_DAYS} days, so no live decision: "
+            f"{', '.join(aged_pairs)}"
+        )
     return Reading(
         kpi_id="cost-per-run-by-model", sim_date=snap.sim_date, value=round(value, 4),
         state=state, reason=reason, tripped=bool(tripped_pairs), as_of=newest, detail=detail,

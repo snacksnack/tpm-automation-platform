@@ -250,13 +250,30 @@ def test_dashboard_always_shows_health_and_tripped(tree):
     assert "tripped thresholds" in titles
 
 
-def test_dashboard_carries_the_event_stream(tree):
+def test_dashboard_carries_the_why_stream(tree):
     """Facet syntax, not the legacy "tags:a,b" form the events platform cannot
     parse (RC1-330) — and filtered on kind:, which only the reading events
     carry, so the monitors' own audit events stay out of the stream."""
     payload = datadog.dashboard_payload("simulated-program", ["cost-vs-envelope"], tree)
-    [stream] = [w for w in payload["widgets"] if w["definition"]["type"] == "event_stream"]
-    assert stream["definition"]["query"] == "kind:kpi-reading program:simulated-program"
+    queries = [
+        w["definition"]["query"]
+        for w in payload["widgets"]
+        if w["definition"]["type"] == "event_stream"
+    ]
+    assert "kind:kpi-reading program:simulated-program" in queries
+
+
+def test_dashboard_carries_the_github_delivery_stream(tree):
+    """RC1-334: the GitHub App's PR/push events beside the why-stream, so a
+    moved reading and the merge that moved it share a page. Deliberately
+    unscoped by program — repo events are org-wide facts."""
+    payload = datadog.dashboard_payload("eval-run-store", ["cost-vs-envelope"], tree)
+    queries = [
+        w["definition"]["query"]
+        for w in payload["widgets"]
+        if w["definition"]["type"] == "event_stream"
+    ]
+    assert "source:github" in queries
 
 
 def test_every_event_carries_the_kind_tag_the_widget_filters_on(tree):

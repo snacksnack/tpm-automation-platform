@@ -306,6 +306,10 @@ model call a span with tokens, latency and estimated cost, under `kpi-agent`
 / `drift-digest` / `tpm-platform`, with eval verdicts attached as Datadog
 evaluations — see `docs/kpi/llm-obs.md`.
 
+The delivery lane itself (epic RC1-333 — CI Visibility, DORA, the code
+security decision) is documented under `docs/delivery/`; the code-security
+spike's written decision is [`docs/delivery/code-security.md`](docs/delivery/code-security.md).
+
 ### The simulated program (RC1-299)
 
 The KPI agent is verified against a program whose every number is known in

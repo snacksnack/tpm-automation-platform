@@ -159,7 +159,35 @@ build log. RC1-337 baked the *code* SHA into the images; nothing pins the
 enabling story, because both Dependabot and any SCA product do their best
 work against a lockfile.
 
-## Enablement gaps found (all free, none on today)
+## Enabled 2026-09-02 (RC1-359)
+
+The gaps in the next section were closed on all five repos by `gh api`, in
+this order: the pr-review-agent first learned to acknowledge and never
+review PRs authored by `dependabot[bot]` (pr_agent PR #36, Fly release
+v20; `REVIEW_SKIP_AUTHORS`), so a burst of version-bump PRs can never
+become a burst of billed reviews; then Dependabot alerts, CodeQL default
+setup, secret scanning and push protection were turned on. Dependabot
+security updates stay off: alerts say what to fix, and RC1-360 showed the
+fixes are ordinary by-hand work. No scanner opened a PR or commented on
+one. Datadog Code Security was not touched.
+
+First analysis, same day (open alerts, Security tab only):
+
+| repo | CodeQL | Dependabot |
+| --- | --- | --- |
+| tpm-automation-platform | 3 (`actions/missing-workflow-permissions` in all three workflows) | 0 |
+| pr_agent | 2 (same rule) | 0 |
+| launch-planner-agent | 6 (`py/path-injection` ×3 in `apps/api/app/main.py`, `js/xss-through-dom`, workflow perms ×2) | 6 (npm in `apps/web`: vitest critical, vite high + 2 medium, postcss, esbuild) |
+| agent-evals | 1 (workflow perms) | 0 |
+| reid_basic | 9 (clear-text logging ×2, path-injection, redos, insecure-randomness, `actions/untrusted-checkout/high` in `heroku-release.yml`, workflow perms ×2) | 4 (`chromadb` in `requirements.txt`: 2 critical, 2 high) |
+
+Still open, both account-owner clicks: secret-scanning **validity checks**
+(the repo PATCH returns 200 and leaves the setting off on user-owned
+repos; GitHub settings pages do not load through the browser tooling), and
+the Datadog GitHub App's read on the three alert types. The dashboard row
+follows the second.
+
+## Enablement gaps found by the spike (all free, none on at the time)
 
 | repo | Dependabot alerts | code scanning (CodeQL) | secret scanning + push protection |
 | --- | --- | --- | --- |

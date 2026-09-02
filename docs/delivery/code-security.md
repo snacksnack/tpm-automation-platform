@@ -181,11 +181,21 @@ First analysis, same day (open alerts, Security tab only):
 | agent-evals | 1 (workflow perms) | 0 |
 | reid_basic | 9 (clear-text logging ×2, path-injection, redos, insecure-randomness, `actions/untrusted-checkout/high` in `heroku-release.yml`, workflow perms ×2) | 4 (`chromadb` in `requirements.txt`: 2 critical, 2 high) |
 
-Still open, both account-owner clicks: secret-scanning **validity checks**
-(the repo PATCH returns 200 and leaves the setting off on user-owned
-repos; GitHub settings pages do not load through the browser tooling), and
-the Datadog GitHub App's read on the three alert types. The dashboard row
-follows the second.
+Validity checks are **out of reach, not merely off**: partner-pattern
+validity checks need GitHub Secret Protection on a Team or Enterprise
+organization and are not offered on personal-account public repos (the
+settings page has no toggle; the repo PATCH accepts the field and ignores
+it). GitHub's own tokens are validity-checked automatically. The free scope
+here is secret scanning plus push protection, both on. The spike's table
+below listed validity checks as free; it is free only where it exists.
+
+CodeQL default setup also switched on **Copilot Autofix**, which posts
+suggested fixes into PR threads and so breaks the one-reviewer-voice rule.
+Turned off on pr_agent 2026-09-02; there is no REST endpoint for it, so the
+other four repos are settings-page clicks.
+
+Still open: the Datadog GitHub App's read on the three alert types. The
+dashboard row follows it.
 
 ## Enablement gaps found by the spike (all free, none on at the time)
 

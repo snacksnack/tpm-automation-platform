@@ -46,3 +46,49 @@ so structured-output callers — the agent-evals judge, every launch-planner
 agent — would silently produce no spans. `agent_evals.llmobs.enable()`
 patches `parse` with an equivalent llm span. This platform's own stages all
 use `create` and need no patch.
+
+## Watching the fleet's spend (RC1-349, RC1-377)
+
+Two hand-created monitors, both tagged `fleet:llm-obs` / `service:agent-fleet`,
+both routed into the incident summarizer (RC1-375), both with
+`notify_no_data` off — a quiet fleet is not a failure. Neither is generated:
+they watch integration metrics, not anything the instrument stage rewrites.
+
+**Daily spend guardrail — 318097614.** `sum(last_1d)` of
+`ml_obs.span.llm.total.cost` / 1e9 (the metric is nanodollars). Created by
+RC1-349 at warn $1.50 / alert $3, about 15× the ~$0.20/day the fleet cost
+before the PR review agent started reviewing every merge. That line lasted
+three days: the daily total tracks how many PRs merge, and 2026-08-30 →
+09-02 read $2.65 · $2.92 · $1.03 · $5.56 (a dozen reviews at $0.30–0.45
+each). Once RC1-375 made an Alert an incident, a threshold that fires on
+shipping days manufactured incidents. RC1-377 (2026-09-03) moved it to
+**warn $6 / alert $12** — runaway territory: ten uncached reviews or a loop
+cross $12 inside an hour or two, and no legitimate day has come near it.
+
+**Cost per call — 318833109.** The signal the daily total cannot see. A
+runaway loop, a broken prompt-cache prefix (RC1-350: an uncached review is
+~$0.06/call against ~$0.015 cached), a model swap or prompt growth all raise
+the price of a call; a busy day does not. Query:
+
+```
+sum(last_4h): cost / clamp_min(llm-span count, 10) / 1e9  >  0.05
+```
+
+Thresholds **warn $0.035 / alert $0.05** are 2× and 3× the trailing-7-day
+mean of $0.017/call measured on 2026-09-03; re-derive them when the fleet's
+model mix changes. `clamp_min(…, 10)` floors the denominator at ten calls so
+one expensive call cannot trip it on its own — the KPI agent's own opus
+define / instrument / narrate calls run $0.08–0.12 each, two or three at a
+time, and are the one known benign trigger at the warn line. Datadog
+validated the formula-with-`clamp_min` shape as a monitor query; the
+`ml_obs.span{span_kind:llm}` count is the same series the fleet dashboard's
+"avg cost per model call" tile divides by.
+
+**Rejected: anomaly and forecast monitors.** Two weeks of history is not
+enough for a seasonal model, and the driver — how much shipped that day —
+has no weekly shape to learn. Per-app caps were rejected too: one app is
+90 % of spend, so a cap on it is the fleet cap under another name.
+
+Triage for either alert is on the fleet dashboard (`bwm-uny-qqs`): the
+caching row says whether the prefix broke, cost by model says what ran on
+what, cost by ml_app names the spender.

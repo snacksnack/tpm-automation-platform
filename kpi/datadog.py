@@ -561,6 +561,10 @@ def dashboard_payload(
         ),
         "layout_type": "ordered",
         "widgets": widgets,
+        # No `generated:kpi-datadog` tag here, unlike the monitors and SLOs:
+        # the dashboard API takes only `team:` and `ai:` tag keys ("Invalid tag
+        # format", 400). `kpi.datadog_sync` therefore guards this kind by the
+        # title above instead — keep the two in step.
     }
 
 

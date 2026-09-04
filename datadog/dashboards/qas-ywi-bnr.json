@@ -1,0 +1,498 @@
+{
+  "description": "The estate watching its own meters: month-to-date usage vs ceilings (LLM Obs free tier, synthetics budget, custom metrics), trend lines where a dead lane or runaway meter shows first, and every monitor in the account. Hand-created (RC1-348).",
+  "id": "qas-ywi-bnr",
+  "layout_type": "ordered",
+  "notify_list": null,
+  "reflow_type": "fixed",
+  "restricted_roles": [],
+  "template_variables": null,
+  "title": "Datadog Usage & Cost",
+  "widgets": [
+    {
+      "definition": {
+        "background_color": "transparent",
+        "content": "The estate watching its own meters. **Read the ceiling tiles at the Month-to-Date timeframe** — their color bands assume a monthly window. `datadog.estimated_usage.*` lags real usage by up to a few hours. Fixed budget lines not on a meter here: CI Visibility $8/mo (1 committer, 400k pipeline spans included — no per-span usage metric exists on this account), synthetics ~$1.44/mo, RUM <$1/mo. Threshold bands are provisional (RC1-348) — true ceilings live on [Plan & Usage](https://app.datadoghq.com/account/usage). Spend on model calls has its own watchdog: the [fleet spend guardrail](https://app.datadoghq.com/monitors/318097614).",
+        "font_size": "14",
+        "has_padding": true,
+        "show_tick": false,
+        "text_align": "left",
+        "type": "note"
+      },
+      "id": 7139675416423771,
+      "layout": {
+        "height": 2,
+        "width": 12,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Metered ceilings — read at Month to Date",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "conditional_formats": [
+                    {
+                      "comparator": "<",
+                      "palette": "white_on_green",
+                      "value": 20000
+                    },
+                    {
+                      "comparator": "<",
+                      "palette": "white_on_yellow",
+                      "value": 32000
+                    },
+                    {
+                      "comparator": ">=",
+                      "palette": "white_on_red",
+                      "value": 32000
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "sum",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:ml_obs.span{span_kind:llm}.as_count()"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "LLM Obs spans — 40k/mo free",
+              "type": "query_value"
+            },
+            "id": 7212400561930165,
+            "layout": {
+              "height": 2,
+              "width": 4,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "conditional_formats": [
+                    {
+                      "comparator": "<",
+                      "palette": "white_on_green",
+                      "value": 100
+                    },
+                    {
+                      "comparator": "<",
+                      "palette": "white_on_yellow",
+                      "value": 150
+                    },
+                    {
+                      "comparator": ">=",
+                      "palette": "white_on_red",
+                      "value": 150
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "max:datadog.estimated_usage.metrics.custom{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Custom metrics (current count)",
+              "type": "query_value"
+            },
+            "id": 1207465246420675,
+            "layout": {
+              "height": 2,
+              "width": 6,
+              "x": 6,
+              "y": 2
+            }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "conditional_formats": [
+                    {
+                      "comparator": "<",
+                      "palette": "white_on_green",
+                      "value": 150
+                    },
+                    {
+                      "comparator": "<",
+                      "palette": "white_on_yellow",
+                      "value": 300
+                    },
+                    {
+                      "comparator": ">=",
+                      "palette": "white_on_red",
+                      "value": 300
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "sum",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:datadog.estimated_usage.synthetics.browser_test_runs{*}.as_count()"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Browser test runs — ~120/mo budgeted",
+              "type": "query_value"
+            },
+            "id": 153081822181616,
+            "layout": {
+              "height": 2,
+              "width": 4,
+              "x": 4,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "conditional_formats": [
+                    {
+                      "comparator": "<",
+                      "palette": "white_on_green",
+                      "value": 9000
+                    },
+                    {
+                      "comparator": "<",
+                      "palette": "white_on_yellow",
+                      "value": 12000
+                    },
+                    {
+                      "comparator": ">=",
+                      "palette": "white_on_red",
+                      "value": 12000
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "sum",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:datadog.estimated_usage.synthetics.api_test_runs{*}.as_count()"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "API test runs — ~5.8k/mo expected",
+              "type": "query_value"
+            },
+            "id": 4229915263468920,
+            "layout": {
+              "height": 2,
+              "width": 4,
+              "x": 8,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "sum",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:datadog.estimated_usage.rum.sessions{*}.as_count()"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "RUM sessions",
+              "type": "query_value"
+            },
+            "id": 6815266874526063,
+            "layout": {
+              "height": 2,
+              "width": 6,
+              "x": 0,
+              "y": 2
+            }
+          }
+        ]
+      },
+      "id": 3575386712972914,
+      "layout": {
+        "height": 5,
+        "width": 12,
+        "x": 0,
+        "y": 2
+      }
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Trends — where a quiet lane or a runaway meter shows first",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "alias": "api",
+                      "formula": "q0"
+                    },
+                    {
+                      "alias": "browser",
+                      "formula": "q1"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:datadog.estimated_usage.synthetics.api_test_runs{*}.as_count()"
+                    },
+                    {
+                      "data_source": "metrics",
+                      "name": "q1",
+                      "query": "sum:datadog.estimated_usage.synthetics.browser_test_runs{*}.as_count()"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Synthetics runs",
+              "type": "timeseries"
+            },
+            "id": 2357259178485585,
+            "layout": {
+              "height": 3,
+              "width": 6,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "alias": "ingested",
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:datadog.estimated_usage.apm.ingested_spans{*}.as_count()"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "APM ingested spans (LLM Obs rides this)",
+              "type": "timeseries"
+            },
+            "id": 376485244389489,
+            "layout": {
+              "height": 3,
+              "width": 6,
+              "x": 6,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "max",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "max:datadog.estimated_usage.metrics.custom.by_metric{*} by {metric_name}"
+                    }
+                  ],
+                  "response_format": "scalar",
+                  "sort": {
+                    "count": 25,
+                    "order_by": [
+                      {
+                        "index": 0,
+                        "order": "desc",
+                        "type": "formula"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "title": "Custom metrics by name — the billable list",
+              "type": "toplist"
+            },
+            "id": 4272167346300072,
+            "layout": {
+              "height": 3,
+              "width": 6,
+              "x": 0,
+              "y": 3
+            }
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "alias": "custom events",
+                      "formula": "q0"
+                    },
+                    {
+                      "alias": "rum sessions",
+                      "formula": "q1"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:datadog.estimated_usage.events.custom_events{*}.as_count()"
+                    },
+                    {
+                      "data_source": "metrics",
+                      "name": "q1",
+                      "query": "sum:datadog.estimated_usage.rum.sessions{*}.as_count()"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Sessions & events — the why-events and GitHub lanes live here",
+              "type": "timeseries"
+            },
+            "id": 3907802685431708,
+            "layout": {
+              "height": 3,
+              "width": 6,
+              "x": 6,
+              "y": 3
+            }
+          }
+        ]
+      },
+      "id": 1106126467261169,
+      "layout": {
+        "height": 7,
+        "width": 12,
+        "x": 0,
+        "y": 7
+      }
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Every real monitor in the account",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "color_preference": "background",
+              "count": 50,
+              "display_format": "countsAndList",
+              "hide_zero_counts": true,
+              "last_triggered_format": "relative",
+              "query": "-tag:\"monitor_pack:host\"",
+              "show_investigation": false,
+              "show_last_triggered": false,
+              "show_priority": false,
+              "show_status": true,
+              "sort": "status,asc",
+              "start": 0,
+              "summary_type": "monitors",
+              "title": "All real monitors — Datadog's 7 stock host-pack monitors are filtered out (no host agent runs in this estate)",
+              "type": "manage_status"
+            },
+            "id": 797779262502307,
+            "layout": {
+              "height": 4,
+              "width": 12,
+              "x": 0,
+              "y": 0
+            }
+          }
+        ]
+      },
+      "id": 7144181705621054,
+      "layout": {
+        "height": 5,
+        "width": 12,
+        "x": 0,
+        "y": 14
+      }
+    }
+  ]
+}

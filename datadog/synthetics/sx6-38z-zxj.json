@@ -1,0 +1,56 @@
+{
+  "config": {
+    "assertions": [],
+    "request": {
+      "method": "GET",
+      "url": "https://www.hihelloreid.com/work"
+    },
+    "variables": []
+  },
+  "locations": [
+    "aws:us-east-1"
+  ],
+  "message": "The client-rendered /work page loaded but did not render — the HTTP uptime check cannot see this failure (the shell still returns 200). Check the browser console in the failed run's screenshot/replay. @hire.reid.collins@gmail.com\n@webhook-incident-summarizer",
+  "name": "Portfolio renders — /work (browser)",
+  "options": {
+    "device_ids": [
+      "chrome.laptop_large"
+    ],
+    "min_location_failed": 1,
+    "monitor_name": "Portfolio render check — hihelloreid.com/work",
+    "monitor_priority": 3,
+    "retry": {
+      "count": 1,
+      "interval": 60000
+    },
+    "tick_every": 21600
+  },
+  "public_id": "sx6-38z-zxj",
+  "status": "live",
+  "steps": [
+    {
+      "allowFailure": false,
+      "name": "thesis line rendered (React executed)",
+      "params": {
+        "value": "shipped systems on one thesis"
+      },
+      "timeout": 30,
+      "type": "assertPageContains"
+    },
+    {
+      "allowFailure": false,
+      "name": "project rows rendered (data loaded)",
+      "params": {
+        "value": "Agent Evals"
+      },
+      "timeout": 30,
+      "type": "assertPageContains"
+    }
+  ],
+  "tags": [
+    "site:hihelloreid",
+    "rc1:340",
+    "service:hihelloreid.com"
+  ],
+  "type": "browser"
+}

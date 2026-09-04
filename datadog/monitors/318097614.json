@@ -1,0 +1,29 @@
+{
+  "draft_status": "published",
+  "id": 318097614,
+  "message": "{{#is_alert}}Fleet LLM spend in the trailing 24h is over $12 — runaway territory. The busiest shipping day so far (2026-09-02, a dozen PR reviews) was $5.56; ten uncached reviews or a loop get here in an hour or two.{{/is_alert}}\n{{#is_warning}}Fleet LLM spend in the trailing 24h is over $6 — above any day seen so far; a glance, not a page.{{/is_warning}}\n\nTriage on the [fleet dashboard](https://app.datadoghq.com/dashboard/bwm-uny-qqs):\n- **Avg cost per model call** flat -> volume spike (who shipped a lot? a PR train is benign — 2026-09-02 was $5.56 at a normal $0.017/call).\n- **Avg cost per call** stepped up -> price change: model swap, prompt growth, or a broken cache prefix (check the caching row). The companion monitor \"Fleet LLM cost per call — price signal\" watches this directly.\n- **Cost by ml_app** names the spender; **cost by model** says what it ran on.\n\nMetric is nanodollars; the query divides by 1e9 so thresholds read in dollars. Guardrail from RC1-349; thresholds raised by RC1-377 (2026-09-03) from $1.50/$3 after four of five days crossed the old warn line — the daily total tracks PR volume, so this line is set where only a failure can reach it.\n\n@hire.reid.collins@gmail.com\n@webhook-incident-summarizer",
+  "multi": false,
+  "name": "Fleet LLM spend guardrail — daily",
+  "options": {
+    "include_tags": false,
+    "new_host_delay": 300,
+    "notify_audit": false,
+    "notify_no_data": false,
+    "renotify_interval": 0,
+    "thresholds": {
+      "critical": 12.0,
+      "warning": 6.0
+    }
+  },
+  "priority": 3,
+  "query": "sum(last_1d):sum:ml_obs.span.llm.total.cost{*}.as_count() / 1000000000 > 12",
+  "restricted_roles": null,
+  "tags": [
+    "rc1:349",
+    "fleet:llm-obs",
+    "generated:manual",
+    "service:agent-fleet",
+    "rc1:377"
+  ],
+  "type": "query alert"
+}

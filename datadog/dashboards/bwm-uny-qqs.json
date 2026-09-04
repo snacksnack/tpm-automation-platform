@@ -1,0 +1,702 @@
+{
+  "description": "One pane for the five ml_apps' billed model calls: the fleet-reliability SLO with its hits/errors inputs, traffic and latency by service, and LLM Obs cost/tokens by ml_app and by model. Hand-created (RC1-346). Cost metrics are nanodollars, divided by 1e9.",
+  "id": "bwm-uny-qqs",
+  "layout_type": "ordered",
+  "notify_list": null,
+  "reflow_type": "fixed",
+  "restricted_roles": [],
+  "template_variables": [
+    {
+      "available_values": [],
+      "default": "*",
+      "name": "ml_app",
+      "prefix": "ml_app"
+    },
+    {
+      "available_values": [],
+      "default": "*",
+      "name": "service",
+      "prefix": "service"
+    }
+  ],
+  "title": "Agent Fleet — LLM Observability",
+  "widgets": [
+    {
+      "definition": {
+        "background_color": "transparent",
+        "content": "Every billed Anthropic call from the five ml_apps — **kpi-agent · drift-digest · tpm-platform · launch-planner · pr-review-agent** — as traffic, latency, cost and tokens. Drill down in the [LLM Obs trace explorer](https://app.datadoghq.com/llm/traces). Per-case eval verdicts live on the case spans there, deliberately not charted here — gated-pass-rate on the [eval-run-store dashboard](https://app.datadoghq.com/dashboard/qz5-nmb-i9d) is their aggregate. RC1-322 · 324 · 339 · 346.",
+        "font_size": "14",
+        "has_padding": true,
+        "show_tick": false,
+        "text_align": "left",
+        "type": "note"
+      },
+      "id": 5947308897804285,
+      "layout": {
+        "height": 2,
+        "width": 12,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Reliability — the fleet SLO and its inputs (RC1-324)",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "global_time_target": "0",
+              "show_error_budget": true,
+              "slo_id": "d559154cac8257e8a40695d28b9d77b5",
+              "time_windows": [
+                "30d"
+              ],
+              "title": "Agent fleet reliability — 97% / 30d",
+              "type": "slo",
+              "view_mode": "overall",
+              "view_type": "detail"
+            },
+            "id": 7803893628592990,
+            "layout": {
+              "height": 4,
+              "width": 6,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "default_zero(q0)"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "sum",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:trace.anthropic.request.hits{$service}.as_count()"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Model calls",
+              "type": "query_value"
+            },
+            "id": 3939989149378494,
+            "layout": {
+              "height": 2,
+              "width": 3,
+              "x": 6,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "conditional_formats": [
+                    {
+                      "comparator": "<=",
+                      "palette": "white_on_green",
+                      "value": 0
+                    },
+                    {
+                      "comparator": ">",
+                      "palette": "white_on_red",
+                      "value": 0
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "default_zero(q0)"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "sum",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:trace.anthropic.request.errors{$service}.as_count()"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Errored calls",
+              "type": "query_value"
+            },
+            "id": 7900047901240721,
+            "layout": {
+              "height": 2,
+              "width": 3,
+              "x": 9,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "custom_unit": "%",
+              "precision": 2,
+              "requests": [
+                {
+                  "conditional_formats": [
+                    {
+                      "comparator": "<",
+                      "palette": "white_on_green",
+                      "value": 1
+                    },
+                    {
+                      "comparator": "<",
+                      "palette": "white_on_yellow",
+                      "value": 3
+                    },
+                    {
+                      "comparator": ">=",
+                      "palette": "white_on_red",
+                      "value": 3
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "default_zero((q0 / q1) * 100)"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "sum",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:trace.anthropic.request.errors{$service}.as_count()"
+                    },
+                    {
+                      "aggregator": "sum",
+                      "data_source": "metrics",
+                      "name": "q1",
+                      "query": "sum:trace.anthropic.request.hits{$service}.as_count()"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Error rate",
+              "type": "query_value"
+            },
+            "id": 4357157300032536,
+            "layout": {
+              "height": 2,
+              "width": 6,
+              "x": 6,
+              "y": 2
+            }
+          }
+        ]
+      },
+      "id": 4531452478129580,
+      "layout": {
+        "height": 5,
+        "width": 12,
+        "x": 0,
+        "y": 2
+      }
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Traffic & latency — by service",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:trace.anthropic.request.hits{$service} by {service}.as_count()"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Model calls",
+              "type": "timeseries"
+            },
+            "id": 5120364871907617,
+            "layout": {
+              "height": 3,
+              "width": 6,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "p75:trace.anthropic.request{$service} by {service}"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Latency p75",
+              "type": "timeseries"
+            },
+            "id": 2132735404250382,
+            "layout": {
+              "height": 3,
+              "width": 6,
+              "x": 6,
+              "y": 0
+            }
+          }
+        ]
+      },
+      "id": 6805981956765340,
+      "layout": {
+        "height": 4,
+        "width": 12,
+        "x": 0,
+        "y": 7
+      }
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Cost & tokens — LLM Obs (RC1-322)",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "autoscale": false,
+              "custom_unit": "$",
+              "precision": 2,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0 / 1000000000"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "sum",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:ml_obs.span.llm.total.cost{$ml_app}.as_count()"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Fleet spend",
+              "type": "query_value"
+            },
+            "id": 7883821604506055,
+            "layout": {
+              "height": 3,
+              "width": 3,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0 / 1000000000"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "sum",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:ml_obs.span.llm.total.cost{$ml_app} by {model_name}.as_count()"
+                    }
+                  ],
+                  "response_format": "scalar",
+                  "sort": {
+                    "count": 10,
+                    "order_by": [
+                      {
+                        "index": 0,
+                        "order": "desc",
+                        "type": "formula"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "title": "Cost by model — the RC1-332 lens",
+              "type": "toplist"
+            },
+            "id": 3395876107690603,
+            "layout": {
+              "height": 3,
+              "width": 4,
+              "x": 3,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0 / 1000000000"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "sum",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:ml_obs.span.llm.total.cost{$ml_app} by {ml_app}.as_count()"
+                    }
+                  ],
+                  "response_format": "scalar",
+                  "sort": {
+                    "count": 10,
+                    "order_by": [
+                      {
+                        "index": 0,
+                        "order": "desc",
+                        "type": "formula"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "title": "Cost by ml_app",
+              "type": "toplist"
+            },
+            "id": 1934105180537842,
+            "layout": {
+              "height": 3,
+              "width": 5,
+              "x": 7,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "formula": "q0 / 1000000000"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:ml_obs.span.llm.total.cost{$ml_app} by {ml_app}.as_count()"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Spend over time by ml_app",
+              "type": "timeseries"
+            },
+            "id": 6655676262774374,
+            "layout": {
+              "height": 3,
+              "width": 6,
+              "x": 0,
+              "y": 3
+            }
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:ml_obs.span.llm.total.tokens{$ml_app} by {ml_app}.as_count()"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Tokens by ml_app",
+              "type": "timeseries"
+            },
+            "id": 3619359533716302,
+            "layout": {
+              "height": 3,
+              "width": 6,
+              "x": 6,
+              "y": 3
+            }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "custom_unit": "$",
+              "precision": 3,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "(q0 / 1000000000) / q1"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "sum",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:ml_obs.span.llm.total.cost{$ml_app}.as_count()"
+                    },
+                    {
+                      "aggregator": "sum",
+                      "data_source": "metrics",
+                      "name": "q1",
+                      "query": "sum:ml_obs.span{span_kind:llm,$ml_app}.as_count()"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Avg cost per model call",
+              "type": "query_value"
+            },
+            "id": 6013114856771933,
+            "layout": {
+              "height": 3,
+              "width": 3,
+              "x": 0,
+              "y": 6
+            }
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "formula": "(q0 / 1000000000) / q1"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:ml_obs.span.llm.total.cost{$ml_app} by {ml_app}.as_count()"
+                    },
+                    {
+                      "data_source": "metrics",
+                      "name": "q1",
+                      "query": "sum:ml_obs.span{span_kind:llm,$ml_app} by {ml_app}.as_count()"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Avg cost per model call by ml_app — volume vs price, disentangled",
+              "type": "timeseries"
+            },
+            "id": 3537240680405714,
+            "layout": {
+              "height": 3,
+              "width": 9,
+              "x": 3,
+              "y": 6
+            }
+          }
+        ]
+      },
+      "id": 7969977151954228,
+      "layout": {
+        "height": 10,
+        "width": 12,
+        "x": 0,
+        "y": 11
+      }
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Prompt caching — pulled for PR reviews (RC1-350)",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "background_color": "transparent",
+              "content": "Cache reads are ~10x cheaper than fresh input tokens. **pr-review-agent ships `cache_control` since 2026-08-31** (RC1-350, deploy `6a50e40`): verified ~75% input-cost cut per review — turns 2+ send 1 fresh token each. Expect its line to hold well above zero; **a drop back toward 0% now means something volatile broke the prefix.** The other apps stay deliberately uncached (~1 call/day — the write premium would go unread). Data before 2026-08-31 evening is the pre-caching era.",
+              "font_size": "14",
+              "has_padding": true,
+              "show_tick": false,
+              "text_align": "left",
+              "type": "note"
+            },
+            "id": 5602560165931865,
+            "layout": {
+              "height": 1,
+              "width": 12,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "custom_unit": "%",
+              "precision": 1,
+              "requests": [
+                {
+                  "conditional_formats": [
+                    {
+                      "comparator": ">=",
+                      "palette": "white_on_green",
+                      "value": 50
+                    },
+                    {
+                      "comparator": ">=",
+                      "palette": "white_on_yellow",
+                      "value": 20
+                    },
+                    {
+                      "comparator": "<",
+                      "palette": "white_on_red",
+                      "value": 20
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "default_zero((q0 / q1) * 100)"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "sum",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:ml_obs.span.llm.input.cache_read.tokens{$ml_app}.as_count()"
+                    },
+                    {
+                      "aggregator": "sum",
+                      "data_source": "metrics",
+                      "name": "q1",
+                      "query": "sum:ml_obs.span.llm.input.tokens{$ml_app}.as_count()"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Input tokens served from cache",
+              "type": "query_value"
+            },
+            "id": 8751287733040843,
+            "layout": {
+              "height": 3,
+              "width": 3,
+              "x": 0,
+              "y": 1
+            }
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "formula": "default_zero((q0 / q1) * 100)"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:ml_obs.span.llm.input.cache_read.tokens{$ml_app} by {ml_app}.as_count()"
+                    },
+                    {
+                      "data_source": "metrics",
+                      "name": "q1",
+                      "query": "sum:ml_obs.span.llm.input.tokens{$ml_app} by {ml_app}.as_count()"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Cache hit % by ml_app",
+              "type": "timeseries"
+            },
+            "id": 8312777563082065,
+            "layout": {
+              "height": 3,
+              "width": 9,
+              "x": 3,
+              "y": 1
+            }
+          }
+        ]
+      },
+      "id": 5766420874691000,
+      "layout": {
+        "height": 5,
+        "width": 12,
+        "x": 0,
+        "y": 21
+      }
+    }
+  ]
+}

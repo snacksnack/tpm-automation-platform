@@ -1,0 +1,27 @@
+{
+  "draft_status": "published",
+  "id": 317968584,
+  "message": "The client-rendered /work page loaded but did not render — the HTTP uptime check cannot see this failure (the shell still returns 200). Check the browser console in the failed run's screenshot/replay. @hire.reid.collins@gmail.com\n@webhook-incident-summarizer",
+  "multi": false,
+  "name": "Portfolio render check — hihelloreid.com/work",
+  "options": {
+    "include_tags": true,
+    "new_host_delay": 300,
+    "notify_audit": false,
+    "on_missing_data": "show_no_data",
+    "synthetics_check_id": "sx6-38z-zxj"
+  },
+  "priority": 3,
+  "query": "no_query",
+  "restricted_roles": null,
+  "tags": [
+    "site:hihelloreid",
+    "rc1:340",
+    "service:hihelloreid.com",
+    "probe_dc:aws:us-east-1",
+    "check_type:browser",
+    "check_status:live",
+    "ci_execution_rule:blocking"
+  ],
+  "type": "synthetics alert"
+}

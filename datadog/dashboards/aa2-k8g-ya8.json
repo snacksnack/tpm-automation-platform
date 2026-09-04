@@ -1,0 +1,734 @@
+{
+  "description": "Both public sites on one pane: availability SLOs, synthetic uptime/render checks, SSL expiry, and RUM. Hand-created (like the RC1-342 SLOs) — covers RC1-325, RC1-340–344.",
+  "id": "aa2-k8g-ya8",
+  "layout_type": "ordered",
+  "notify_list": null,
+  "reflow_type": "fixed",
+  "restricted_roles": [],
+  "template_variables": null,
+  "title": "Site Observability — hihelloreid",
+  "widgets": [
+    {
+      "definition": {
+        "background_color": "transparent",
+        "content": "Both public sites on one pane — **www.hihelloreid.com** (portfolio, Heroku) and **incidents.hihelloreid.com** (Vercel). The SLOs sit on the synthetic monitors; SSL is an early warning outside the SLI. RC1-340–344.",
+        "font_size": "14",
+        "has_padding": true,
+        "show_tick": false,
+        "text_align": "left",
+        "type": "note"
+      },
+      "id": 344684681638188,
+      "layout": {
+        "height": 1,
+        "width": 12,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Availability SLOs (RC1-342)",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "global_time_target": "0",
+              "show_error_budget": true,
+              "slo_id": "7fa581f8928851c8bf0886bc4906f64a",
+              "time_windows": [
+                "30d"
+              ],
+              "title": "Portfolio — 99.9% / 30d",
+              "type": "slo",
+              "view_mode": "overall",
+              "view_type": "detail"
+            },
+            "id": 4010032391832989,
+            "layout": {
+              "height": 4,
+              "width": 6,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "global_time_target": "0",
+              "show_error_budget": true,
+              "slo_id": "96e9733af74753faa8124c5be22f0026",
+              "time_windows": [
+                "30d"
+              ],
+              "title": "Incidents dashboard — 99.9% / 30d",
+              "type": "slo",
+              "view_mode": "overall",
+              "view_type": "detail"
+            },
+            "id": 6836452154419153,
+            "layout": {
+              "height": 4,
+              "width": 6,
+              "x": 6,
+              "y": 0
+            }
+          }
+        ]
+      },
+      "id": 4441027740022985,
+      "layout": {
+        "height": 5,
+        "width": 12,
+        "x": 0,
+        "y": 1
+      }
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Synthetic checks — uptime & render (RC1-325 · RC1-340)",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "color_preference": "background",
+              "count": 50,
+              "display_format": "countsAndList",
+              "hide_zero_counts": true,
+              "query": "tag:(\"portfolio\" OR \"site:hihelloreid\")",
+              "sort": "status,asc",
+              "start": 0,
+              "summary_type": "monitors",
+              "title": "Monitor status — all site checks",
+              "type": "manage_status"
+            },
+            "id": 5843120277568141,
+            "layout": {
+              "height": 4,
+              "width": 4,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "alias": "portfolio",
+                      "formula": "q0"
+                    },
+                    {
+                      "alias": "incidents",
+                      "formula": "q1"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:synthetics.http.response.time{check_id:n2q-jat-ybg}"
+                    },
+                    {
+                      "data_source": "metrics",
+                      "name": "q1",
+                      "query": "avg:synthetics.http.response.time{check_id:efb-3qr-mkc}"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Uptime checks — response time",
+              "type": "timeseries"
+            },
+            "id": 1719707258620382,
+            "layout": {
+              "height": 4,
+              "width": 4,
+              "x": 4,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:synthetics.test_runs{*} by {check_id,status}.as_count()"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Test results by check & status",
+              "type": "timeseries"
+            },
+            "id": 6910538657892455,
+            "layout": {
+              "height": 4,
+              "width": 4,
+              "x": 8,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "alias": "render run",
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:synthetics.browser.test_duration{check_id:sx6-38z-zxj}"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Render check — full run duration (/work in real Chrome)",
+              "type": "timeseries"
+            },
+            "id": 7757028566343313,
+            "layout": {
+              "height": 3,
+              "width": 6,
+              "x": 0,
+              "y": 4
+            }
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "alias": "LCP",
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:synthetics.browser.step.largest_contentful_paint{check_id:sx6-38z-zxj}"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Render check — Largest Contentful Paint",
+              "type": "timeseries"
+            },
+            "id": 1369558015465057,
+            "layout": {
+              "height": 3,
+              "width": 6,
+              "x": 6,
+              "y": 4
+            }
+          }
+        ]
+      },
+      "id": 4229792773486161,
+      "layout": {
+        "height": 8,
+        "width": 12,
+        "x": 0,
+        "y": 6
+      }
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "SSL certificates (RC1-341)",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "autoscale": false,
+              "custom_unit": "days",
+              "precision": 0,
+              "requests": [
+                {
+                  "conditional_formats": [
+                    {
+                      "comparator": ">",
+                      "palette": "white_on_green",
+                      "value": 30
+                    },
+                    {
+                      "comparator": ">",
+                      "palette": "white_on_yellow",
+                      "value": 15
+                    },
+                    {
+                      "comparator": "<=",
+                      "palette": "white_on_red",
+                      "value": 15
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "q0 / 1440"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:synthetics.ssl.time_to_expiry{check_id:d2p-mci-y92}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "time": {
+                "live_span": "1w"
+              },
+              "title": "www — days to expiry",
+              "type": "query_value"
+            },
+            "id": 6289011088793326,
+            "layout": {
+              "height": 2,
+              "width": 3,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "custom_unit": "days",
+              "precision": 0,
+              "requests": [
+                {
+                  "conditional_formats": [
+                    {
+                      "comparator": ">",
+                      "palette": "white_on_green",
+                      "value": 30
+                    },
+                    {
+                      "comparator": ">",
+                      "palette": "white_on_yellow",
+                      "value": 15
+                    },
+                    {
+                      "comparator": "<=",
+                      "palette": "white_on_red",
+                      "value": 15
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "q0 / 1440"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:synthetics.ssl.time_to_expiry{check_id:pcx-j8w-96n}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "time": {
+                "live_span": "1w"
+              },
+              "title": "incidents — days to expiry",
+              "type": "query_value"
+            },
+            "id": 2669236986062165,
+            "layout": {
+              "height": 2,
+              "width": 3,
+              "x": 3,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "alias": "www",
+                      "formula": "q0"
+                    },
+                    {
+                      "alias": "incidents",
+                      "formula": "q1"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:synthetics.ssl.time_to_expiry{check_id:d2p-mci-y92}/1440"
+                    },
+                    {
+                      "data_source": "metrics",
+                      "name": "q1",
+                      "query": "avg:synthetics.ssl.time_to_expiry{check_id:pcx-j8w-96n}/1440"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "time": {
+                "live_span": "1w"
+              },
+              "title": "Days to expiry — trend",
+              "type": "timeseries"
+            },
+            "id": 2151251872012213,
+            "layout": {
+              "height": 2,
+              "width": 6,
+              "x": 6,
+              "y": 0
+            }
+          }
+        ]
+      },
+      "id": 4728804761975487,
+      "layout": {
+        "height": 3,
+        "width": 12,
+        "x": 0,
+        "y": 14
+      }
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Real User Monitoring (RC1-343 · RC1-344)",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "alias": "portfolio",
+                      "formula": "q0"
+                    },
+                    {
+                      "alias": "incidents",
+                      "formula": "q1"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "rum",
+                      "group_by": [],
+                      "name": "q0",
+                      "search": {
+                        "query": "@type:session @application.id:e2a55e56-e66c-41c8-996b-59bda2bfa011"
+                      }
+                    },
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "rum",
+                      "group_by": [],
+                      "name": "q1",
+                      "search": {
+                        "query": "@type:session @application.id:3001bfdf-1f05-440d-bae0-d31948e5dce9"
+                      }
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Sessions",
+              "type": "timeseries"
+            },
+            "id": 6533950418071375,
+            "layout": {
+              "height": 3,
+              "width": 6,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "custom_unit": "s",
+              "precision": 2,
+              "requests": [
+                {
+                  "conditional_formats": [
+                    {
+                      "comparator": "<=",
+                      "palette": "white_on_green",
+                      "value": 2.5
+                    },
+                    {
+                      "comparator": "<=",
+                      "palette": "white_on_yellow",
+                      "value": 4
+                    },
+                    {
+                      "comparator": ">",
+                      "palette": "white_on_red",
+                      "value": 4
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "q0 / 1000000000"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "pc75",
+                        "metric": "@view.largest_contentful_paint"
+                      },
+                      "data_source": "rum",
+                      "group_by": [],
+                      "name": "q0",
+                      "search": {
+                        "query": "@type:view @application.id:e2a55e56-e66c-41c8-996b-59bda2bfa011"
+                      }
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "LCP p75 — portfolio (real users)",
+              "type": "query_value"
+            },
+            "id": 8670820025170374,
+            "layout": {
+              "height": 3,
+              "width": 3,
+              "x": 6,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "custom_unit": "s",
+              "precision": 2,
+              "requests": [
+                {
+                  "conditional_formats": [
+                    {
+                      "comparator": "<=",
+                      "palette": "white_on_green",
+                      "value": 2.5
+                    },
+                    {
+                      "comparator": "<=",
+                      "palette": "white_on_yellow",
+                      "value": 4
+                    },
+                    {
+                      "comparator": ">",
+                      "palette": "white_on_red",
+                      "value": 4
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "q0 / 1000000000"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "pc75",
+                        "metric": "@view.largest_contentful_paint"
+                      },
+                      "data_source": "rum",
+                      "group_by": [],
+                      "name": "q0",
+                      "search": {
+                        "query": "@type:view @application.id:3001bfdf-1f05-440d-bae0-d31948e5dce9"
+                      }
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "LCP p75 — incidents (real users)",
+              "type": "query_value"
+            },
+            "id": 8076006158438771,
+            "layout": {
+              "height": 3,
+              "width": 3,
+              "x": 9,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "rum",
+                      "group_by": [
+                        {
+                          "facet": "@view.url_path",
+                          "limit": 10,
+                          "sort": {
+                            "aggregation": "count",
+                            "order": "desc"
+                          }
+                        }
+                      ],
+                      "name": "q0",
+                      "search": {
+                        "query": "@type:view"
+                      }
+                    }
+                  ],
+                  "response_format": "scalar",
+                  "sort": {
+                    "count": 10,
+                    "order_by": [
+                      {
+                        "index": 0,
+                        "order": "desc",
+                        "type": "formula"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "title": "Top pages (both sites)",
+              "type": "toplist"
+            },
+            "id": 3633621162768032,
+            "layout": {
+              "height": 3,
+              "width": 6,
+              "x": 0,
+              "y": 3
+            }
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "alias": "portfolio",
+                      "formula": "q0"
+                    },
+                    {
+                      "alias": "incidents",
+                      "formula": "q1"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "rum",
+                      "group_by": [],
+                      "name": "q0",
+                      "search": {
+                        "query": "@type:error @application.id:e2a55e56-e66c-41c8-996b-59bda2bfa011"
+                      }
+                    },
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "rum",
+                      "group_by": [],
+                      "name": "q1",
+                      "search": {
+                        "query": "@type:error @application.id:3001bfdf-1f05-440d-bae0-d31948e5dce9"
+                      }
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Frontend errors",
+              "type": "timeseries"
+            },
+            "id": 2130382357659428,
+            "layout": {
+              "height": 3,
+              "width": 6,
+              "x": 6,
+              "y": 3
+            }
+          }
+        ]
+      },
+      "id": 3592407473768682,
+      "layout": {
+        "height": 7,
+        "width": 12,
+        "x": 0,
+        "y": 17
+      }
+    }
+  ]
+}

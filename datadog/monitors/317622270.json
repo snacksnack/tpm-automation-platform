@@ -1,0 +1,27 @@
+{
+  "draft_status": "published",
+  "id": 317622270,
+  "message": "Portfolio up — hihelloreid.com is failing — the resume site (Heroku app hihelloreid) is down or slow. This site is an interview artifact; check it before anyone else does. (RC1-325)\n\n@hire.reid.collins@gmail.com\n@webhook-incident-summarizer",
+  "multi": false,
+  "name": "[Synthetics] Portfolio up — www.hihelloreid.com",
+  "options": {
+    "include_tags": true,
+    "new_host_delay": 300,
+    "notify_audit": false,
+    "on_missing_data": "show_no_data",
+    "synthetics_check_id": "n2q-jat-ybg"
+  },
+  "priority": 2,
+  "query": "no_query",
+  "restricted_roles": null,
+  "tags": [
+    "portfolio",
+    "generated:rc1-325",
+    "service:hihelloreid.com",
+    "probe_dc:aws:us-east-1",
+    "check_type:api",
+    "check_status:live",
+    "ci_execution_rule:blocking"
+  ],
+  "type": "synthetics alert"
+}

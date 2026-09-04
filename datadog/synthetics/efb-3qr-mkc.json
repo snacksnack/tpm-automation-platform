@@ -1,0 +1,44 @@
+{
+  "config": {
+    "assertions": [
+      {
+        "operator": "is",
+        "target": 200,
+        "type": "statusCode"
+      },
+      {
+        "operator": "lessThan",
+        "target": 10000,
+        "type": "responseTime"
+      }
+    ],
+    "request": {
+      "method": "GET",
+      "timeout": 30,
+      "url": "https://incidents.hihelloreid.com"
+    }
+  },
+  "locations": [
+    "aws:us-east-1"
+  ],
+  "message": "Incidents dashboard up — incidents.hihelloreid.com is failing — the incident summarizer dashboard (Vercel) is down or slow. This site is an interview artifact; check it before anyone else does. (RC1-325)\n\n@hire.reid.collins@gmail.com\n@webhook-incident-summarizer",
+  "name": "Incidents dashboard up — incidents.hihelloreid.com",
+  "options": {
+    "min_location_failed": 1,
+    "monitor_priority": 2,
+    "retry": {
+      "count": 1,
+      "interval": 60000
+    },
+    "tick_every": 900
+  },
+  "public_id": "efb-3qr-mkc",
+  "status": "live",
+  "subtype": "http",
+  "tags": [
+    "portfolio",
+    "generated:rc1-325",
+    "service:incidents.hihelloreid.com"
+  ],
+  "type": "api"
+}

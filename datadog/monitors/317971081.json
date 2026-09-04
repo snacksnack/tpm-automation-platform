@@ -1,0 +1,27 @@
+{
+  "draft_status": "published",
+  "id": 317971081,
+  "message": "The TLS certificate for incidents.hihelloreid.com expires in under 15 days. Heroku/Vercel normally auto-renew — if this fires, renewal is stuck and the site goes hard-down at expiry. @hire.reid.collins@gmail.com\n@webhook-incident-summarizer",
+  "multi": false,
+  "name": "[Synthetics] SSL cert — incidents.hihelloreid.com",
+  "options": {
+    "include_tags": true,
+    "new_host_delay": 300,
+    "notify_audit": false,
+    "on_missing_data": "show_no_data",
+    "synthetics_check_id": "pcx-j8w-96n"
+  },
+  "priority": 3,
+  "query": "no_query",
+  "restricted_roles": null,
+  "tags": [
+    "site:hihelloreid",
+    "rc1:341",
+    "service:incidents.hihelloreid.com",
+    "probe_dc:aws:us-east-1",
+    "check_type:api-ssl",
+    "check_status:live",
+    "ci_execution_rule:blocking"
+  ],
+  "type": "synthetics alert"
+}

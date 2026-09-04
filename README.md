@@ -284,7 +284,7 @@ dashboard can be minted (and revoked) through the API on demand.
 | [Program KPIs — simulated-program](https://app.datadoghq.com/dashboard/jvm-dbn-8ta) | dashboard | The six simulated-program KPIs grouped by unit, plus per-KPI health (0 ok / 1 stale / 2 broken), tripped thresholds, and the why-event stream. The planted events (slip, cost spike, source break) burn onto it in real time. |
 | [Program KPIs — eval-run-store](https://app.datadoghq.com/dashboard/qz5-nmb-i9d) | dashboard | The six real-program KPIs — pass-rate gate, $/run economics, freshness — same health/tripped/why layout. |
 | [Monitors](https://app.datadoghq.com/monitors/manage?query=tag%3A%22generated%3Akpi-datadog%22) | 6 monitors | Per program: **tripped** (multi-alert by KPI — a crossed so-what threshold pages), **unmeasured** (warning on stale, alert on broken — the honesty rule's alarm), **heartbeat** (26h of no data means the daily job or shipper died). |
-| [Synthetics](https://app.datadoghq.com/synthetics/tests) | 2 uptime tests | www.hihelloreid.com and incidents.hihelloreid.com, every 15 min from us-east-1 — the demo sites answer before anyone else notices they don't. |
+| [Synthetics](https://app.datadoghq.com/synthetics/tests) | 5 tests | www.hihelloreid.com and incidents.hihelloreid.com, every 15 min from us-east-1 — the demo sites answer before anyone else notices they don't — plus a browser check that the client-rendered `/work` page actually renders (RC1-340) and SSL expiry on both hosts (RC1-341). Hand-built, so exported rather than generated; see below. |
 | [SLOs](https://app.datadoghq.com/slo/manage?query=tag%3A%28%22generated%3Akpi-datadog%22%29) | 7 objectives | Error budgets on the program (RC1-324): per program, measurement health and pipeline liveness at 99 %/30d, program health at 95 %/30d — the instruments get less rot than the program gets red — plus a fleet-wide 97 % on model calls completing without error. The sim's planted events are scripted to burn these budgets. `docs/kpi/slos.md` has the layering argument. |
 
 The stale/broken/tripped readings also post their `reason` and `detail` as
@@ -299,6 +299,31 @@ python -m kpi.datadog monitors --push      # create/update the six monitors
 `DD_API_KEY` rides the daily job for the metric/event writes; `DD_APP_KEY`
 is needed only for the pushes; `DD_ALERT_HANDLE` (baked at push time) is who
 gets paged.
+
+#### The hand-built half (RC1-378)
+
+The rest of the account was made by hand, because dragging widgets beats
+writing widget JSON: four dashboards — [site
+observability](https://app.datadoghq.com/dashboard/aa2-k8g-ya8), [agent
+fleet](https://app.datadoghq.com/dashboard/bwm-uny-qqs),
+[delivery](https://app.datadoghq.com/dashboard/izc-5s7-tz8), [usage &
+cost](https://app.datadoghq.com/dashboard/qas-ywi-bnr) — ten monitors, the
+five synthetics tests and two availability SLOs. Those had no source in any
+repo until they were exported to `datadog/`, one pretty-printed file per
+object, listed with a reason in `datadog/manifest.json`.
+
+```bash
+python -m kpi.datadog_sync pull   # account -> datadog/*.json
+python -m kpi.datadog_sync diff   # exit 1 if they disagree
+python -m kpi.datadog_sync push   # datadog/*.json -> account
+```
+
+Edit in the UI and `pull`, or edit the file and `push` — either way the repo
+ends up holding what the account holds, and a daily CI job (`datadog-drift`)
+fails if it doesn't. The generated objects above are refused by the exporter
+on purpose: two sources of truth for one dashboard is the failure it exists to
+prevent. `docs/datadog-as-code.md` has the JSON-not-Terraform argument and
+what the API taught us.
 
 The billed stages also trace themselves into [LLM
 Observability](https://app.datadoghq.com/llm/applications) (RC1-322): every

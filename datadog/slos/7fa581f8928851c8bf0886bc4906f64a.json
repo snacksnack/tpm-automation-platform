@@ -1,0 +1,25 @@
+{
+  "description": "Reachable AND rendered: the uptime check (n2q-jat-ybg) and the browser render check (sx6-38z-zxj) both count — a blank client-rendered page spends this budget (RC1-342).",
+  "id": "7fa581f8928851c8bf0886bc4906f64a",
+  "monitor_ids": [
+    317622270,
+    317968584
+  ],
+  "monitor_tags": [],
+  "name": "Portfolio availability — hihelloreid.com",
+  "tags": [
+    "rc1:342",
+    "site:hihelloreid"
+  ],
+  "target_threshold": 99.9,
+  "thresholds": [
+    {
+      "target": 99.9,
+      "target_display": "99.9",
+      "timeframe": "30d"
+    }
+  ],
+  "timeframe": "30d",
+  "type": "monitor",
+  "type_id": 0
+}

@@ -1,0 +1,29 @@
+{
+  "draft_status": "published",
+  "id": 318833109,
+  "message": "{{#is_alert}}The fleet's average cost per model call over the last 4h is over $0.05 — 3x the ~$0.017/call the fleet ran at over the week of 2026-08-27 → 09-03. Something changed the price, not the volume.{{/is_alert}}\n{{#is_warning}}Average cost per model call over the last 4h is over $0.035 — 2x the weekly baseline; worth a look at what ran.{{/is_warning}}\n\nThis is the price signal the daily spend guardrail cannot see: a runaway loop, a broken prompt-cache prefix (RC1-350 — pr-review-agent uncached is ~$0.06/call vs ~$0.015 cached), a model swap, or prompt growth all raise cost per call; a busy shipping day does not.\n\nTriage on the [fleet dashboard](https://app.datadoghq.com/dashboard/bwm-uny-qqs):\n- **Prompt caching row**: pr-review-agent cache hit % should sit near 80% during a review; near 0% means the shared prefix broke.\n- **Cost by model**: a sonnet subject suddenly on opus shows here first.\n- **Cost by ml_app**: the kpi-agent's opus define/instrument/narrate calls are legitimately ~$0.08–0.12 each — a handful in one window can reach the warn line; that is the one known benign trigger.\n\nQuery: cost / clamp_min(calls, 10) / 1e9 — the denominator floors at 10 calls so one expensive call cannot trip it on its own. Threshold set from the trailing-7d mean on 2026-09-03 (RC1-377); re-derive it when the fleet's model mix changes.\n\n@hire.reid.collins@gmail.com\n@webhook-incident-summarizer",
+  "multi": false,
+  "name": "Fleet LLM cost per call — price signal",
+  "options": {
+    "include_tags": false,
+    "new_host_delay": 300,
+    "notify_audit": false,
+    "notify_no_data": false,
+    "renotify_interval": 0,
+    "require_full_window": false,
+    "thresholds": {
+      "critical": 0.05,
+      "warning": 0.035
+    }
+  },
+  "priority": 3,
+  "query": "sum(last_4h):sum:ml_obs.span.llm.total.cost{*}.as_count() / clamp_min(sum:ml_obs.span{span_kind:llm}.as_count(), 10) / 1000000000 > 0.05",
+  "restricted_roles": null,
+  "tags": [
+    "rc1:377",
+    "fleet:llm-obs",
+    "generated:manual",
+    "service:agent-fleet"
+  ],
+  "type": "query alert"
+}

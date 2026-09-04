@@ -1,0 +1,58 @@
+# Does the Datadog account still match datadog/*.json? (RC1-378)
+#
+# The hand-built dashboards, monitors, synthetics and SLOs are exported to the
+# repo, but nothing stops someone dragging a widget in the UI at 11pm. This
+# job reads each object back once a day and fails if it disagrees with the
+# file. A failure is information, not an incident: either the UI edit was
+# wanted — `python -m kpi.datadog_sync pull` and commit it — or it was not —
+# `push` and it is gone.
+#
+# Deliberately never pushes. A workflow that could rewrite the account from a
+# branch would make every PR a live change to production observability.
+name: Datadog drift
+
+on:
+  schedule:
+    # Off the top of the hour, same reason as drift-daily.yml (RC1-335):
+    # :00 crons sit in GitHub's most congested queue and run hours late.
+    - cron: "23 13 * * *" # 13:23 UTC daily
+  workflow_dispatch: {}
+  # A PR that edits the exports gets the same check, so a hand-edit that would
+  # never survive a pull is caught before it is merged rather than the next
+  # morning.
+  pull_request:
+    paths:
+      - "datadog/**"
+      - "kpi/datadog_sync.py"
+
+permissions:
+  contents: read
+
+jobs:
+  diff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Diff the account against the repo
+        env:
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+          DD_APP_KEY: ${{ secrets.DD_APP_KEY }}
+        run: |
+          if [ -z "$DD_API_KEY" ] || [ -z "$DD_APP_KEY" ]; then
+            echo "DD_API_KEY / DD_APP_KEY secrets not set — skipping."
+            echo "Set both repo secrets to enable the drift check."
+            exit 0
+          fi
+          python -m kpi.datadog_sync diff

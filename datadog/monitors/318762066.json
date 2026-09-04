@@ -1,0 +1,27 @@
+{
+  "draft_status": "published",
+  "id": 318762066,
+  "message": "Test signal for the incident summarizer's Datadog ingest path (RC1-370).\nPush `incident_summarizer.test_signal` = 1 to trigger, 0 to recover. Nobody is paged.\n@webhook-incident-summarizer",
+  "multi": false,
+  "name": "incident-summarizer webhook test signal",
+  "options": {
+    "include_tags": true,
+    "new_host_delay": 300,
+    "notify_audit": false,
+    "notify_no_data": false,
+    "renotify_interval": 0,
+    "require_full_window": false,
+    "thresholds": {
+      "critical": 0.0
+    }
+  },
+  "priority": 3,
+  "query": "max(last_1m):max:incident_summarizer.test_signal{*} > 0",
+  "restricted_roles": null,
+  "tags": [
+    "service:incident-summarizer-test",
+    "kind:webhook-test",
+    "generated:rc1-370"
+  ],
+  "type": "metric alert"
+}

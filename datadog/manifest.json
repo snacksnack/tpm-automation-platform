@@ -1,0 +1,113 @@
+{
+  "_readme": [
+    "The hand-built Datadog objects (RC1-378). One entry per object; the file",
+    "beside it in dashboards/, monitors/, synthetics/ or slos/ is its export.",
+    "Generated objects — the two 'Program KPIs' dashboards, the six KPI",
+    "monitors, the seven program SLOs — belong to `python -m kpi.datadog` and",
+    "are refused here on purpose: see docs/datadog-as-code.md.",
+    "Datadog's own host monitor pack (283790038-45, tag monitor_pack:host) is",
+    "installed by the Agent integration, not by us, and is left alone."
+  ],
+  "dashboards": [
+    {
+      "id": "aa2-k8g-ya8",
+      "why": "RC1-345 site observability — SLOs, Synthetics, SSL and RUM for hihelloreid.com in one pane"
+    },
+    {
+      "id": "bwm-uny-qqs",
+      "why": "RC1-346 agent fleet — one LLM Observability pane over the five ml_apps"
+    },
+    {
+      "id": "izc-5s7-tz8",
+      "why": "RC1-347 delivery — CI pipelines, deploy events and the DORA group across the four repos"
+    },
+    {
+      "id": "qas-ywi-bnr",
+      "why": "RC1-348 usage & cost — the estate watching its own Datadog bill"
+    }
+  ],
+  "monitors": [
+    {
+      "id": 318097614,
+      "why": "RC1-349/377 fleet LLM spend guardrail — daily ceiling, warn $6 / alert $12"
+    },
+    {
+      "id": 318833109,
+      "why": "RC1-377 fleet LLM cost per call — the price signal, warn $0.035 / alert $0.05"
+    },
+    {
+      "id": 318355169,
+      "why": "RC1-335 CI pipeline failed — delivery repos"
+    },
+    {
+      "id": 318355170,
+      "why": "RC1-335/354 production deploy failed — the Fly and Heroku paths"
+    },
+    {
+      "id": 318762066,
+      "why": "RC1-370 incident-summarizer webhook test signal — the end of the summarizer pipeline"
+    },
+    {
+      "id": 317622270,
+      "why": "RC1-325 portfolio uptime alert, owned by synthetics test n2q-jat-ybg",
+      "push": false,
+      "push_note": "Datadog creates this monitor from the test; edit synthetics/n2q-jat-ybg.json instead"
+    },
+    {
+      "id": 317622273,
+      "why": "RC1-325 incidents dashboard uptime alert, owned by synthetics test efb-3qr-mkc",
+      "push": false,
+      "push_note": "Datadog creates this monitor from the test; edit synthetics/efb-3qr-mkc.json instead"
+    },
+    {
+      "id": 317968584,
+      "why": "RC1-340 portfolio render alert, owned by synthetics test sx6-38z-zxj",
+      "push": false,
+      "push_note": "Datadog creates this monitor from the test; edit synthetics/sx6-38z-zxj.json instead"
+    },
+    {
+      "id": 317971078,
+      "why": "RC1-341 SSL expiry alert for www, owned by synthetics test d2p-mci-y92",
+      "push": false,
+      "push_note": "Datadog creates this monitor from the test; edit synthetics/d2p-mci-y92.json instead"
+    },
+    {
+      "id": 317971081,
+      "why": "RC1-341 SSL expiry alert for incidents, owned by synthetics test pcx-j8w-96n",
+      "push": false,
+      "push_note": "Datadog creates this monitor from the test; edit synthetics/pcx-j8w-96n.json instead"
+    }
+  ],
+  "synthetics": [
+    {
+      "id": "n2q-jat-ybg",
+      "why": "RC1-325 API uptime check — www.hihelloreid.com"
+    },
+    {
+      "id": "efb-3qr-mkc",
+      "why": "RC1-325 API uptime check — incidents.hihelloreid.com"
+    },
+    {
+      "id": "sx6-38z-zxj",
+      "why": "RC1-340 browser check — the client-rendered /work page actually renders"
+    },
+    {
+      "id": "d2p-mci-y92",
+      "why": "RC1-341 SSL certificate expiry — www.hihelloreid.com"
+    },
+    {
+      "id": "pcx-j8w-96n",
+      "why": "RC1-341 SSL certificate expiry — incidents.hihelloreid.com"
+    }
+  ],
+  "slos": [
+    {
+      "id": "7fa581f8928851c8bf0886bc4906f64a",
+      "why": "RC1-342 portfolio availability — 99.9% over 30d, reachable AND rendered"
+    },
+    {
+      "id": "96e9733af74753faa8124c5be22f0026",
+      "why": "RC1-342 incidents dashboard availability — 99.9% over 30d"
+    }
+  ]
+}

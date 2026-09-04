@@ -1,0 +1,30 @@
+{
+  "draft_status": "published",
+  "id": 318355170,
+  "message": "**A production deploy workflow failed** (`Fly Deploy`, or `Heroku Release` — the www.hihelloreid.com reporter, RC1-354). The service may be running the previous image/slug, or mid-rollout.\n\nCheck, in order:\n1. The failing job on the [CI Visibility pipeline list](https://app.datadoghq.com/ci/pipelines) — build vs. release stage tells you whether anything shipped.\n2. Fly apps: `fly status` / `fly logs`. Portfolio: `heroku releases -a hihelloreid` — a failed `Heroku Release` run means the site is still on the previous slug (release failed) or the DORA event went unrecorded (POST failed; the run log says which).\n3. The [Site Observability dashboard](https://app.datadoghq.com/dashboard/aa2-k8g-ya8) for availability fallout.\n\n**Why this monitor exists:** RC1-322 — the #39 boot crash-loop shipped silently because the deploy workflow doesn't gate on boot health. This catches the failed-deploy half of that class. The deploy-succeeded-but-boot-failed half still needs the health gate in the workflow itself; this monitor is not a substitute for it.\n\n@hire.reid.collins@gmail.com\n@webhook-incident-summarizer",
+  "multi": true,
+  "name": "Production deploy failed — Fly & Heroku paths",
+  "options": {
+    "groupby_simple_monitor": false,
+    "include_tags": true,
+    "new_host_delay": 300,
+    "notify_audit": false,
+    "notify_no_data": false,
+    "renotify_interval": 0,
+    "thresholds": {
+      "critical": 0.0
+    }
+  },
+  "priority": 2,
+  "query": "ci-pipelines(\"ci_level:pipeline @ci.status:error (@ci.pipeline.name:\\\"Fly Deploy\\\" OR @ci.pipeline.name:\\\"Heroku Release\\\")\").rollup(\"count\").by(\"@git.repository.name\").last(\"15m\") > 0",
+  "restricted_roles": null,
+  "tags": [
+    "rc1:335",
+    "rc1:322",
+    "delivery:deploy",
+    "generated:manual",
+    "rc1:354",
+    "service:delivery-pipeline"
+  ],
+  "type": "ci-pipelines alert"
+}

@@ -1,0 +1,38 @@
+{
+  "config": {
+    "assertions": [
+      {
+        "operator": "isInMoreThan",
+        "target": 15,
+        "type": "certificate"
+      }
+    ],
+    "request": {
+      "host": "www.hihelloreid.com",
+      "port": 443
+    }
+  },
+  "locations": [
+    "aws:us-east-1"
+  ],
+  "message": "The TLS certificate for www.hihelloreid.com expires in under 15 days. Heroku/Vercel normally auto-renew — if this fires, renewal is stuck and the site goes hard-down at expiry. @hire.reid.collins@gmail.com\n@webhook-incident-summarizer",
+  "name": "SSL cert — www.hihelloreid.com",
+  "options": {
+    "min_location_failed": 1,
+    "monitor_priority": 3,
+    "retry": {
+      "count": 1,
+      "interval": 60000
+    },
+    "tick_every": 86400
+  },
+  "public_id": "d2p-mci-y92",
+  "status": "live",
+  "subtype": "ssl",
+  "tags": [
+    "site:hihelloreid",
+    "rc1:341",
+    "service:hihelloreid.com"
+  ],
+  "type": "api"
+}

@@ -1,0 +1,28 @@
+{
+  "draft_status": "published",
+  "id": 318355169,
+  "message": "A CI pipeline failed on one of the four delivery repos. The failing repo and workflow are in the monitor tags below.\n\nOpen the run from the [CI Visibility pipeline list](https://app.datadoghq.com/ci/pipelines) — the failing job and its step log are on the execution's flame graph, and git metadata on the run names the branch and commit.\n\nTriage:\n- **One repo, one workflow** -> a real test or lint break; the branch is on the run.\n- **Several repos at once** -> shared cause: a harness bump, an Actions runner image change, or an expired token.\n- **A rerun passes unchanged** -> flake; worth noting before it becomes routine.\n\nFirst CI monitor on the estate (RC1-335) — before this, a red run notified nobody. Fly Deploy failures are deliberately excluded here; they have their own, higher-priority monitor.\n\n@hire.reid.collins@gmail.com\n@webhook-incident-summarizer",
+  "multi": true,
+  "name": "CI pipeline failed — delivery repos",
+  "options": {
+    "groupby_simple_monitor": false,
+    "include_tags": true,
+    "new_host_delay": 300,
+    "notify_audit": false,
+    "notify_no_data": false,
+    "renotify_interval": 0,
+    "thresholds": {
+      "critical": 0.0
+    }
+  },
+  "priority": 3,
+  "query": "ci-pipelines(\"ci_level:pipeline @ci.status:error -@ci.pipeline.name:\\\"Fly Deploy\\\"\").rollup(\"count\").by(\"@git.repository.name,@ci.pipeline.name\").last(\"15m\") > 0",
+  "restricted_roles": null,
+  "tags": [
+    "rc1:335",
+    "delivery:ci",
+    "generated:manual",
+    "service:delivery-pipeline"
+  ],
+  "type": "ci-pipelines alert"
+}

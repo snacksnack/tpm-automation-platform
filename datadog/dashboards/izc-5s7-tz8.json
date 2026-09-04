@@ -1,0 +1,1195 @@
+{
+  "description": "CI Visibility across the four delivery repos: pipeline outcomes, Fly deploys, durations, and the GitHub event stream. Hand-created for RC1-347 under the RC1-333 GitHub->Datadog epic. Read the banner before trusting any duration number.",
+  "id": "izc-5s7-tz8",
+  "layout_type": "ordered",
+  "notify_list": [],
+  "reflow_type": "fixed",
+  "restricted_roles": [],
+  "template_variables": [],
+  "title": "Delivery — CI pipelines & deploys",
+  "widgets": [
+    {
+      "definition": {
+        "background_color": "yellow",
+        "content": "**Delivery pipelines across the four repos** — tpm-automation-platform, agent-evals, pr_agent, launch-planner-agent.\n\n⚠️ **CI Visibility was enabled 2026-08-30; the first runs landed 2026-08-31.** Set the time picker to **Past 1 Week** or wider — a short window will read empty. Counts and outcomes are trustworthy now; **duration percentiles are not** (1–6 runs per workflow), which is why this dashboard shows averages and counts rather than p95. Add percentile widgets once each workflow has a few dozen runs.\n\nRC1-347 · alerting lives in *CI pipeline failed — delivery repos* and *Fly Deploy failed — production deploy path* (RC1-335).",
+        "font_size": "14",
+        "has_padding": true,
+        "show_tick": false,
+        "text_align": "left",
+        "tick_edge": "left",
+        "tick_pos": "50%",
+        "type": "note",
+        "vertical_align": "top"
+      },
+      "id": 3825421375511234,
+      "layout": {
+        "height": 2,
+        "width": 12,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Pipeline outcomes (RC1-335)",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "ci_pipelines",
+                      "group_by": [],
+                      "indexes": [
+                        "*"
+                      ],
+                      "name": "q0",
+                      "search": {
+                        "query": "ci_level:pipeline"
+                      }
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Pipeline runs",
+              "type": "query_value"
+            },
+            "id": 8975179097026450,
+            "layout": {
+              "height": 2,
+              "width": 2,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "conditional_formats": [
+                    {
+                      "comparator": "<=",
+                      "palette": "white_on_green",
+                      "value": 0
+                    },
+                    {
+                      "comparator": ">",
+                      "palette": "white_on_red",
+                      "value": 0
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "default_zero(q0)"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "ci_pipelines",
+                      "group_by": [],
+                      "indexes": [
+                        "*"
+                      ],
+                      "name": "q0",
+                      "search": {
+                        "query": "ci_level:pipeline @ci.status:error"
+                      }
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Failed runs",
+              "type": "query_value"
+            },
+            "id": 8190562951998463,
+            "layout": {
+              "height": 2,
+              "width": 2,
+              "x": 2,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "custom_unit": "%",
+              "precision": 1,
+              "requests": [
+                {
+                  "conditional_formats": [
+                    {
+                      "comparator": ">=",
+                      "palette": "white_on_green",
+                      "value": 100
+                    },
+                    {
+                      "comparator": "<",
+                      "palette": "white_on_yellow",
+                      "value": 100
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "(q1 / q0) * 100"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "ci_pipelines",
+                      "group_by": [],
+                      "indexes": [
+                        "*"
+                      ],
+                      "name": "q0",
+                      "search": {
+                        "query": "ci_level:pipeline"
+                      }
+                    },
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "ci_pipelines",
+                      "group_by": [],
+                      "indexes": [
+                        "*"
+                      ],
+                      "name": "q1",
+                      "search": {
+                        "query": "ci_level:pipeline @ci.status:success"
+                      }
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Success rate",
+              "type": "query_value"
+            },
+            "id": 5748216733221326,
+            "layout": {
+              "height": 2,
+              "width": 2,
+              "x": 4,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count",
+                        "interval": 3600000
+                      },
+                      "data_source": "ci_pipelines",
+                      "group_by": [
+                        {
+                          "facet": "@ci.status",
+                          "limit": 10,
+                          "sort": {
+                            "aggregation": "count",
+                            "order": "desc"
+                          }
+                        }
+                      ],
+                      "indexes": [
+                        "*"
+                      ],
+                      "name": "q0",
+                      "search": {
+                        "query": "ci_level:pipeline"
+                      }
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Runs by outcome",
+              "type": "timeseries"
+            },
+            "id": 2627443659693377,
+            "layout": {
+              "height": 2,
+              "width": 6,
+              "x": 6,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "ci_pipelines",
+                      "group_by": [
+                        {
+                          "facet": "@git.repository.name",
+                          "limit": 10,
+                          "sort": {
+                            "aggregation": "count",
+                            "order": "desc"
+                          }
+                        }
+                      ],
+                      "indexes": [
+                        "*"
+                      ],
+                      "name": "q0",
+                      "search": {
+                        "query": "ci_level:pipeline"
+                      }
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Runs by repo",
+              "type": "toplist"
+            },
+            "id": 4677447903177200,
+            "layout": {
+              "height": 3,
+              "width": 6,
+              "x": 0,
+              "y": 2
+            }
+          },
+          {
+            "definition": {
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "ci_pipelines",
+                      "group_by": [
+                        {
+                          "facet": "@ci.pipeline.name",
+                          "limit": 10,
+                          "sort": {
+                            "aggregation": "count",
+                            "order": "desc"
+                          }
+                        }
+                      ],
+                      "indexes": [
+                        "*"
+                      ],
+                      "name": "q0",
+                      "search": {
+                        "query": "ci_level:pipeline"
+                      }
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Runs by workflow",
+              "type": "toplist"
+            },
+            "id": 5039438540108962,
+            "layout": {
+              "height": 3,
+              "width": 6,
+              "x": 6,
+              "y": 2
+            }
+          }
+        ]
+      },
+      "id": 1311425106354604,
+      "layout": {
+        "height": 6,
+        "width": 12,
+        "x": 0,
+        "y": 2
+      }
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Deploys — Fly & Pages only (read the note)",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "ci_pipelines",
+                      "group_by": [],
+                      "indexes": [
+                        "*"
+                      ],
+                      "name": "q0",
+                      "search": {
+                        "query": "ci_level:pipeline (@ci.pipeline.name:\"Fly Deploy\" OR @ci.pipeline.name:\"Heroku Release\" OR @ci.pipeline.name:\"pages-build-deployment\" OR @ci.pipeline.name:\"Deploy\")"
+                      }
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "All visible deploys",
+              "type": "query_value"
+            },
+            "id": 3993948336937205,
+            "layout": {
+              "height": 2,
+              "width": 3,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "ci_pipelines",
+                      "group_by": [],
+                      "indexes": [
+                        "*"
+                      ],
+                      "name": "q0",
+                      "search": {
+                        "query": "ci_level:pipeline @ci.pipeline.name:\"Fly Deploy\""
+                      }
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Fly — 3 apps (RC1-353)",
+              "type": "query_value"
+            },
+            "id": 4495173362912916,
+            "layout": {
+              "height": 2,
+              "width": 2,
+              "x": 3,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "ci_pipelines",
+                      "group_by": [],
+                      "indexes": [
+                        "*"
+                      ],
+                      "name": "q0",
+                      "search": {
+                        "query": "ci_level:pipeline @ci.pipeline.name:\"pages-build-deployment\""
+                      }
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Pages — agent-evals",
+              "type": "query_value"
+            },
+            "id": 163651772458762,
+            "layout": {
+              "height": 2,
+              "width": 2,
+              "x": 5,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "ci_pipelines",
+                      "group_by": [],
+                      "indexes": [
+                        "*"
+                      ],
+                      "name": "q0",
+                      "search": {
+                        "query": "ci_level:pipeline @ci.pipeline.name:\"Deploy\""
+                      }
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "AWS — incidents/bot",
+              "type": "query_value"
+            },
+            "id": 2447527772006329,
+            "layout": {
+              "height": 2,
+              "width": 2,
+              "x": 7,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "conditional_formats": [
+                    {
+                      "comparator": "<=",
+                      "palette": "white_on_green",
+                      "value": 0
+                    },
+                    {
+                      "comparator": ">",
+                      "palette": "white_on_red",
+                      "value": 0
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "default_zero(q0)"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "ci_pipelines",
+                      "group_by": [],
+                      "indexes": [
+                        "*"
+                      ],
+                      "name": "q0",
+                      "search": {
+                        "query": "ci_level:pipeline (@ci.pipeline.name:\"Fly Deploy\" OR @ci.pipeline.name:\"Heroku Release\" OR @ci.pipeline.name:\"pages-build-deployment\" OR @ci.pipeline.name:\"Deploy\") @ci.status:error"
+                      }
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Failed deploys",
+              "type": "query_value"
+            },
+            "id": 2056311719724785,
+            "layout": {
+              "height": 2,
+              "width": 3,
+              "x": 9,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count",
+                        "interval": 3600000
+                      },
+                      "data_source": "ci_pipelines",
+                      "group_by": [
+                        {
+                          "facet": "@ci.pipeline.name",
+                          "limit": 10,
+                          "sort": {
+                            "aggregation": "count",
+                            "order": "desc"
+                          }
+                        }
+                      ],
+                      "indexes": [
+                        "*"
+                      ],
+                      "name": "q0",
+                      "search": {
+                        "query": "ci_level:pipeline (@ci.pipeline.name:\"Fly Deploy\" OR @ci.pipeline.name:\"Heroku Release\" OR @ci.pipeline.name:\"pages-build-deployment\" OR @ci.pipeline.name:\"Deploy\")"
+                      }
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Deploy runs by workflow",
+              "type": "timeseries"
+            },
+            "id": 768903083417832,
+            "layout": {
+              "height": 3,
+              "width": 12,
+              "x": 0,
+              "y": 2
+            }
+          },
+          {
+            "definition": {
+              "background_color": "gray",
+              "content": "**What counts as a deploy here — and what doesn't.**\n\nThese tiles count *GitHub Actions workflow runs that ship something*. All 11 repos are enabled in CI Visibility as of 2026-09-01 (RC1-352).\n\n| Path | Ships | Trigger | Counted |\n|---|---|---|---|\n| `Fly Deploy` — tpm-automation-platform, pr_agent, launch-planner-agent | Fly apps `tpm-drift-detector`, `pr-review-agent-snacksnack`, `launch-planner-agent` | push to `main` | ✅ all three since RC1-353 |\n| `pages-build-deployment` — agent-evals | GitHub Pages eval site | push to `gh-pages` | ✅ |\n| `Deploy` — ai-incident-summarizer | **incidents.hihelloreid.com** (AWS) | push to `main` | ✅ since RC1-352 |\n| `Deploy` — stale-ticket-bot | AWS CloudFormation stack | push to `main` | ✅ enabled, unverified — dormant since 2026-04-29 |\n| `Heroku Release` — reid_basic | **www.hihelloreid.com** (Heroku) | push to `main`, after CI passes | ✅ since RC1-354 |\n\n**www.hihelloreid.com deploys from Actions since RC1-354** (Heroku auto-deploy is off — it deadlocked with a reporter check; see the ticket). Its deploy shows in these tiles as `Heroku Release` *and* as a DORA event in the group below.\n\nA commit is not a deploy: feature-branch pushes run CI only.\n\nA deploy that succeeds then crash-loops on boot now **fails its workflow** (RC1-355 boot-health gate) and pages via *Fly Deploy failed*. Deploy *frequency/lead-time* live in the **DORA group below** — a different data source these tiles do not query.",
+              "font_size": "12",
+              "has_padding": true,
+              "show_tick": false,
+              "text_align": "left",
+              "tick_edge": "left",
+              "tick_pos": "50%",
+              "type": "note",
+              "vertical_align": "top"
+            },
+            "id": 3465254444624968,
+            "layout": {
+              "height": 5,
+              "width": 12,
+              "x": 0,
+              "y": 5
+            }
+          }
+        ]
+      },
+      "id": 7720919518486996,
+      "layout": {
+        "height": 11,
+        "width": 12,
+        "x": 0,
+        "y": 8
+      }
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "DORA — deployment frequency & lead time (RC1-336)",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "background_color": "yellow",
+              "content": "**A different data source from the deploy tiles above.** These read DORA deployment events, pushed from each `Fly Deploy` workflow *after* the boot-health gate passes (RC1-336) — a deployment here means the app actually booted. Sources today: the three Fly apps. **www.hihelloreid.com joins via RC1-354** (Heroku → DORA API).\n\n**Change lead time** (seconds; p25/p50/p75, weekly rollups) computes from the git range between consecutive deployment SHAs — verified live 2026-09-01. Percentiles are honest but thin until deploy volume grows.\n\n**Change failure rate and time to restore are deliberately absent** — no failure/incident source is wired yet; a CFR tile would read 0% and lie (RC1-336 descope).\n\nCount widgets pinned to **Past 1 Week**; frequency panel shows weekly rollups over a month.",
+              "font_size": "14",
+              "has_padding": true,
+              "show_tick": false,
+              "tick_edge": "left",
+              "tick_pos": "50%",
+              "type": "note"
+            },
+            "id": 3591361343396166,
+            "layout": {
+              "height": 2,
+              "width": 12,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "dora",
+                      "indexes": [
+                        "deployment"
+                      ],
+                      "name": "q0"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "time": {
+                "live_span": "1w"
+              },
+              "title": "Deployments (1w)",
+              "type": "query_value"
+            },
+            "id": 540710206931935,
+            "layout": {
+              "height": 3,
+              "width": 2,
+              "x": 0,
+              "y": 2
+            }
+          },
+          {
+            "definition": {
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "alias": "Number of deployments",
+                      "formula": "deployments"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count",
+                        "rollup": {
+                          "alignment": "monday",
+                          "timezone": "America/New_York",
+                          "type": "week"
+                        }
+                      },
+                      "data_source": "dora",
+                      "indexes": [
+                        "deployment"
+                      ],
+                      "name": "deployments"
+                    }
+                  ],
+                  "response_format": "timeseries",
+                  "style": {
+                    "line_type": "solid",
+                    "line_width": "normal",
+                    "palette": "dog_classic"
+                  }
+                }
+              ],
+              "time": {
+                "type": "live",
+                "unit": "month",
+                "value": 1
+              },
+              "title": "Deployment frequency (per week, past 1mo)",
+              "title_align": "left",
+              "title_size": "16",
+              "type": "timeseries"
+            },
+            "id": 4536857051796275,
+            "layout": {
+              "height": 3,
+              "width": 5,
+              "x": 2,
+              "y": 2
+            }
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "dora",
+                      "group_by": [
+                        {
+                          "facet": "service",
+                          "limit": 10,
+                          "sort": {
+                            "aggregation": "count",
+                            "order": "desc"
+                          }
+                        }
+                      ],
+                      "indexes": [
+                        "deployment"
+                      ],
+                      "name": "q0"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "time": {
+                "live_span": "1w"
+              },
+              "title": "Deployments by service (1w)",
+              "type": "timeseries"
+            },
+            "id": 2842050287535336,
+            "layout": {
+              "height": 3,
+              "width": 5,
+              "x": 7,
+              "y": 2
+            }
+          },
+          {
+            "definition": {
+              "requests": [
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "alias": "p75",
+                      "formula": "current_period_lead_pc75"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "pc75",
+                        "metric": "change_lead_time",
+                        "rollup": {
+                          "alignment": "monday",
+                          "timezone": "America/New_York",
+                          "type": "week"
+                        }
+                      },
+                      "data_source": "dora",
+                      "indexes": [
+                        "commit"
+                      ],
+                      "name": "current_period_lead_pc75"
+                    }
+                  ],
+                  "response_format": "timeseries",
+                  "style": {
+                    "line_type": "dashed",
+                    "line_width": "normal",
+                    "palette": "blue"
+                  }
+                },
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "alias": "p50",
+                      "formula": "current_period_lead_pc50"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "pc50",
+                        "metric": "change_lead_time",
+                        "rollup": {
+                          "alignment": "monday",
+                          "timezone": "America/New_York",
+                          "type": "week"
+                        }
+                      },
+                      "data_source": "dora",
+                      "indexes": [
+                        "commit"
+                      ],
+                      "name": "current_period_lead_pc50"
+                    }
+                  ],
+                  "response_format": "timeseries",
+                  "style": {
+                    "line_type": "solid",
+                    "line_width": "normal",
+                    "palette": "dog_classic"
+                  }
+                },
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "alias": "p25",
+                      "formula": "current_period_lead_pc25"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "pc25",
+                        "metric": "change_lead_time",
+                        "rollup": {
+                          "alignment": "monday",
+                          "timezone": "America/New_York",
+                          "type": "week"
+                        }
+                      },
+                      "data_source": "dora",
+                      "indexes": [
+                        "commit"
+                      ],
+                      "name": "current_period_lead_pc25"
+                    }
+                  ],
+                  "response_format": "timeseries",
+                  "style": {
+                    "line_type": "dashed",
+                    "line_width": "normal",
+                    "palette": "blue"
+                  }
+                }
+              ],
+              "time": {
+                "type": "live",
+                "unit": "month",
+                "value": 1
+              },
+              "title": "Change lead time — p25/p50/p75 (past 1mo)",
+              "title_align": "left",
+              "title_size": "16",
+              "type": "timeseries"
+            },
+            "id": 4281060652988877,
+            "layout": {
+              "height": 3,
+              "width": 6,
+              "x": 0,
+              "y": 5
+            }
+          },
+          {
+            "definition": {
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "dora",
+                      "indexes": [
+                        "deployment"
+                      ],
+                      "name": "q0",
+                      "search": {
+                        "query": "service:hihelloreid"
+                      }
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": false,
+              "time": {
+                "live_span": "1w"
+              },
+              "title": "Portfolio deploys — www.hihelloreid.com via Heroku (RC1-354)",
+              "type": "timeseries"
+            },
+            "id": 650105370840655,
+            "layout": {
+              "height": 3,
+              "width": 6,
+              "x": 6,
+              "y": 5
+            }
+          }
+        ]
+      },
+      "id": 6279957676312298,
+      "layout": {
+        "height": 8,
+        "width": 12,
+        "x": 0,
+        "y": 19
+      }
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Duration — averages only, see banner",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "formula": "q0 / 1000000000"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "avg",
+                        "interval": 3600000,
+                        "metric": "@duration"
+                      },
+                      "data_source": "ci_pipelines",
+                      "group_by": [
+                        {
+                          "facet": "@ci.pipeline.name",
+                          "limit": 10,
+                          "sort": {
+                            "aggregation": "count",
+                            "order": "desc"
+                          }
+                        }
+                      ],
+                      "indexes": [
+                        "*"
+                      ],
+                      "name": "q0",
+                      "search": {
+                        "query": "ci_level:pipeline"
+                      }
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Avg pipeline duration by workflow (s)",
+              "type": "timeseries"
+            },
+            "id": 8557774969799715,
+            "layout": {
+              "height": 3,
+              "width": 8,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0 / 1000000000"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "avg",
+                        "metric": "@duration"
+                      },
+                      "data_source": "ci_pipelines",
+                      "group_by": [
+                        {
+                          "facet": "@ci.pipeline.name",
+                          "limit": 10,
+                          "sort": {
+                            "aggregation": "count",
+                            "order": "desc"
+                          }
+                        }
+                      ],
+                      "indexes": [
+                        "*"
+                      ],
+                      "name": "q0",
+                      "search": {
+                        "query": "ci_level:pipeline"
+                      }
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Avg duration by workflow (s)",
+              "type": "toplist"
+            },
+            "id": 7226512547982829,
+            "layout": {
+              "height": 3,
+              "width": 4,
+              "x": 8,
+              "y": 0
+            }
+          }
+        ]
+      },
+      "id": 4943250097075547,
+      "layout": {
+        "height": 4,
+        "width": 12,
+        "x": 0,
+        "y": 13
+      }
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Recent activity",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "requests": [
+                {
+                  "columns": [
+                    {
+                      "field": "timestamp",
+                      "width": "auto"
+                    },
+                    {
+                      "field": "status_line",
+                      "width": "auto"
+                    },
+                    {
+                      "field": "content",
+                      "width": "auto"
+                    }
+                  ],
+                  "query": {
+                    "data_source": "ci_pipeline_stream",
+                    "indexes": [],
+                    "query_string": "ci_level:pipeline"
+                  },
+                  "response_format": "event_list"
+                }
+              ],
+              "title": "Recent pipeline runs",
+              "type": "list_stream"
+            },
+            "id": 7440176047908746,
+            "layout": {
+              "height": 4,
+              "width": 12,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "event_size": "s",
+              "query": "source:github",
+              "title": "GitHub events — pushes & PRs",
+              "type": "event_stream"
+            },
+            "id": 5411369841983008,
+            "layout": {
+              "height": 4,
+              "width": 12,
+              "x": 0,
+              "y": 4
+            }
+          }
+        ]
+      },
+      "id": 5375248019194029,
+      "layout": {
+        "height": 9,
+        "width": 12,
+        "x": 0,
+        "y": 17
+      }
+    }
+  ]
+}

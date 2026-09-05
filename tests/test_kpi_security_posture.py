@@ -50,9 +50,7 @@ def test_an_unknown_level_from_the_api_is_folded_into_none_not_copied():
 
 
 def test_summary_lines_use_a_fixed_severity_order():
-    posture = {
-        "r": {"code": sp.count_by_severity([_alert("low"), _alert("critical")]), "secret": 3}
-    }
+    posture = {"r": {"code": sp.count_by_severity([_alert("low"), _alert("critical")]), "leaks": 3}}
     (line,) = sp.summary_lines(posture)
     assert "critical 1, low 1" in line
     assert line.endswith("secret-scan open: 3")
@@ -65,10 +63,10 @@ def test_no_alerts_is_all_zeros():
 # --- series_for ------------------------------------------------------------------------------
 
 
-def test_each_repo_gets_four_code_series_one_secret_series_and_an_error_gauge():
+def test_each_repo_gets_four_code_series_one_leak_series_and_an_error_gauge():
     posture = {
-        "reid_basic": {"code": {"critical": 0, "high": 7, "medium": 0, "low": 0}, "secret": 0},
-        "pr_agent": {"code": {"critical": 0, "high": 0, "medium": 0, "low": 0}, "secret": 1},
+        "reid_basic": {"code": {"critical": 0, "high": 7, "medium": 0, "low": 0}, "leaks": 0},
+        "pr_agent": {"code": {"critical": 0, "high": 0, "medium": 0, "low": 0}, "leaks": 1},
     }
     series = sp.series_for(posture)
     assert len(series) == 12
@@ -80,7 +78,7 @@ def test_each_repo_gets_four_code_series_one_secret_series_and_an_error_gauge():
     assert isinstance(high["points"][0]["timestamp"], int)
     assert by_tags[("repo:reid_basic", "severity:critical")]["points"][0]["value"] == 0.0
     secret = [
-        x for x in series if x["metric"] == sp.SECRET_METRIC and x["tags"] == ["repo:pr_agent"]
+        x for x in series if x["metric"] == sp.LEAK_SCAN_METRIC and x["tags"] == ["repo:pr_agent"]
     ]
     assert secret[0]["points"][0]["value"] == 1.0
     errors = [x for x in series if x["metric"] == sp.ERROR_METRIC]
@@ -90,7 +88,7 @@ def test_each_repo_gets_four_code_series_one_secret_series_and_an_error_gauge():
 def test_a_repo_that_could_not_be_read_gets_a_gap_and_an_error_flag():
     posture = {
         "pr_agent": {"error": "HTTP 403 on /repos/snacksnack/pr_agent/code-scanning/alerts"},
-        "reid_basic": {"code": sp.count_by_severity([]), "secret": 0},
+        "reid_basic": {"code": sp.count_by_severity([]), "leaks": 0},
     }
     series = sp.series_for(posture)
     pr_agent = [x for x in series if "repo:pr_agent" in x["tags"]]
@@ -108,18 +106,16 @@ def test_a_repo_that_could_not_be_read_gets_a_gap_and_an_error_flag():
 
 def test_the_none_bucket_is_emitted_only_when_populated():
     quiet = {
-        "a": {"code": {"critical": 0, "high": 0, "medium": 0, "low": 0, "none": 0}, "secret": 0}
+        "a": {"code": {"critical": 0, "high": 0, "medium": 0, "low": 0, "none": 0}, "leaks": 0}
     }
-    loud = {
-        "a": {"code": {"critical": 0, "high": 0, "medium": 0, "low": 0, "none": 2}, "secret": 0}
-    }
+    loud = {"a": {"code": {"critical": 0, "high": 0, "medium": 0, "low": 0, "none": 2}, "leaks": 0}}
     assert ("repo:a", "severity:none") not in _by_tags(sp.series_for(quiet))
     none_series = _by_tags(sp.series_for(loud))[("repo:a", "severity:none")]
     assert none_series["points"][0]["value"] == 2.0
 
 
 def test_the_series_payload_is_json_serializable():
-    posture = {"a": {"code": sp.count_by_severity([_alert("critical")]), "secret": 0}}
+    posture = {"a": {"code": sp.count_by_severity([_alert("critical")]), "leaks": 0}}
     json.dumps({"series": sp.series_for(posture)})
 
 
@@ -197,9 +193,9 @@ def test_collect_reads_both_kinds_for_every_repo():
     with _client(handler) as http:
         posture = sp.collect(http, repos=("reid_basic", "pr_agent"))
     assert posture["reid_basic"]["code"]["high"] == 1
-    assert posture["reid_basic"]["secret"] == 0
+    assert posture["reid_basic"]["leaks"] == 0
     assert posture["pr_agent"]["code"]["high"] == 0
-    assert posture["pr_agent"]["secret"] == 1
+    assert posture["pr_agent"]["leaks"] == 1
 
 
 # --- main ------------------------------------------------------------------------------------
@@ -212,7 +208,7 @@ def test_without_the_token_main_exits_2_and_says_which_secret(monkeypatch, capsy
 
 
 def _fixed_posture(*_args, **_kwargs) -> dict[str, dict]:
-    return {"reid_basic": {"code": sp.count_by_severity([_alert("high")]), "secret": 0}}
+    return {"reid_basic": {"code": sp.count_by_severity([_alert("high")]), "leaks": 0}}
 
 
 def test_dry_run_prints_the_payload_and_ships_nothing(monkeypatch, capsys):
@@ -251,7 +247,7 @@ def test_with_both_secrets_main_ships_once(monkeypatch):
 def _one_failed_posture(*_args, **_kwargs) -> dict[str, dict]:
     return {
         "pr_agent": {"error": "HTTP 403 on /repos/snacksnack/pr_agent/code-scanning/alerts"},
-        "reid_basic": {"code": sp.count_by_severity([_alert("high")]), "secret": 0},
+        "reid_basic": {"code": sp.count_by_severity([_alert("high")]), "leaks": 0},
     }
 
 

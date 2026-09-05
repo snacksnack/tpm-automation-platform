@@ -1,0 +1,59 @@
+# Open GitHub scanner alerts → Datadog, once a day (RC1-359).
+#
+# Datadog's own GitHub telemetry never produced a point for this account: the
+# collector is organization-scoped and snacksnack is a personal account (the
+# `/orgs/...` alert endpoints it needs return 404). So the platform reads the
+# repo-level endpoints for the five repos and posts the counts itself. The
+# security-posture group on delivery dashboard izc-5s7-tz8 reads these.
+#
+# Daily on purpose. Custom metrics bill on the average number of series alive
+# per hour across the month; ~25 series present one hour in twenty-four is
+# about one billable custom metric. Hourly would be 24× that for counts that
+# change a few times a week.
+name: Security posture
+
+on:
+  schedule:
+    # Off the top of the hour, same reason as drift-daily.yml (RC1-335).
+    - cron: "41 11 * * *" # 11:41 UTC daily
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Read the five repos' open alerts and post the gauges
+        env:
+          # A fine-grained PAT, read-only: Code scanning alerts + Secret
+          # scanning alerts on the five repos. The default GITHUB_TOKEN is
+          # scoped to this repo and cannot read the other four.
+          SECURITY_ALERTS_TOKEN: ${{ secrets.SECURITY_ALERTS_TOKEN }}
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+        run: |
+          # Skips rather than fails when the secrets are missing: the CI
+          # pipeline-failed monitor routes to the incident summarizer, and a
+          # missing secret is a to-do, not an outage. A skipped job looks like
+          # a passing one in the run list (RC1-378 lesson), so it also leaves
+          # a warning annotation you can see from the Actions tab.
+          if [ -z "$SECURITY_ALERTS_TOKEN" ] || [ -z "$DD_API_KEY" ]; then
+            echo "::warning title=Security posture skipped::SECURITY_ALERTS_TOKEN / DD_API_KEY not set — no gauges posted today."
+            echo "Set both repo secrets to enable the daily post." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          python -m kpi.security_posture | tee -a "$GITHUB_STEP_SUMMARY"

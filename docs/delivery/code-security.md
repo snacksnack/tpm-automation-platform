@@ -219,6 +219,15 @@ endpoints (`/repos/{owner}/{repo}/code-scanning/alerts?state=open`, same for
 |---|---|---|
 | `delivery.security.code_scan_alerts_open` | `repo`, `severity` (critical/high/medium/low, zero-filled; `none` only when > 0) | open CodeQL alerts by security severity |
 | `delivery.security.secret_scan_alerts_open` | `repo` | open secret-scanning alerts |
+| `delivery.security.collector_errors` | `repo` | 1 when that repo's alerts could not be read this run, else 0 |
+
+One repo failing does not cost the other four their point: the collector
+records the error, ships what it could read, leaves a *gap* (no alert series)
+for the failed repo rather than a zero, prints a GitHub `::error` annotation
+and exits non-zero, so the run is red. The first dispatched run found this
+the hard way — the token had missed `pr_agent`, the 403 aborted all five
+repos, and the run still showed green because the output was piped through
+`tee` without `pipefail`. Both fixed the same day.
 
 The `Security posture` workflow runs it daily at 11:41 UTC. It needs
 `SECURITY_ALERTS_TOKEN` — a fine-grained PAT, read-only on Code scanning
@@ -230,7 +239,7 @@ to the incident summarizer, and a to-do is not an outage.
 **Cost, measured not guessed.** Custom metrics bill on the average number of
 unique series present per hour across the month; this account averaged 1.5
 in early September for half a cent. ~25 series present one hour in
-twenty-four adds about one to that average — cents. Hourly would be 24×.
+twenty-four adds about one to that average — cents (30 series with the error gauge). Hourly would be 24×.
 Alert counts change a few times a week; daily is the right cadence, and the
 dashboard tiles pin a 1-week live span so a short window's *no data* reads as
 cadence, not outage (same rule as the TLS-expiry widgets).

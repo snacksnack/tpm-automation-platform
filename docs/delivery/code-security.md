@@ -197,6 +197,54 @@ other four repos are settings-page clicks.
 Still open: the Datadog GitHub App's read on the three alert types. The
 dashboard row follows it.
 
+## Alert metrics in Datadog — own collector (RC1-359, 2026-09-05)
+
+Step 4 of the enabling story assumed Datadog's GitHub integration would carry
+the alert counts for free. It registers the metric names
+(`github.code_scan_alert`, `github.secret_scan_alert`, integration
+`github_telemetry`) the moment the Telemetry toggles are on, and then never
+produces a point for this account. Three days of nothing, with GitHub holding
+11 open code-scan alerts and the same App delivering PR and push events for
+every repo, narrowed it to one thing: the docs describe "the organization's
+Alert state", GitHub only lists alerts account-wide at `/orgs/{org}/...`, and
+those endpoints return 404 for `snacksnack`, which is a User. Same class of
+limitation as validity checks. A Datadog support question is worth asking,
+but the dashboard row should not wait on it.
+
+**What runs instead.** `python -m kpi.security_posture` reads the repo-level
+endpoints (`/repos/{owner}/{repo}/code-scanning/alerts?state=open`, same for
+`secret-scanning`), which work for a personal account, and posts two gauges:
+
+| metric | tags | meaning |
+|---|---|---|
+| `delivery.security.code_scan_alerts_open` | `repo`, `severity` (critical/high/medium/low, zero-filled; `none` only when > 0) | open CodeQL alerts by security severity |
+| `delivery.security.secret_scan_alerts_open` | `repo` | open secret-scanning alerts |
+
+The `Security posture` workflow runs it daily at 11:41 UTC. It needs
+`SECURITY_ALERTS_TOKEN` — a fine-grained PAT, read-only on Code scanning
+alerts and Secret scanning alerts for the five repos, because the default
+Actions token cannot read the other four — and `DD_API_KEY`. Missing secrets
+skip with a warning annotation rather than fail: the CI-failed monitor routes
+to the incident summarizer, and a to-do is not an outage.
+
+**Cost, measured not guessed.** Custom metrics bill on the average number of
+unique series present per hour across the month; this account averaged 1.5
+in early September for half a cent. ~25 series present one hour in
+twenty-four adds about one to that average — cents. Hourly would be 24×.
+Alert counts change a few times a week; daily is the right cadence, and the
+dashboard tiles pin a 1-week live span so a short window's *no data* reads as
+cadence, not outage (same rule as the TLS-expiry widgets).
+
+**Where it shows.** Delivery dashboard `izc-5s7-tz8`, group "Security
+posture — GitHub scanners": critical+high code-scan count, secret-scan count,
+by-repo toplist, by-severity trend over a month. Exported with the rest of
+the hand-built objects in `datadog/`, so the drift job guards it.
+
+**What it does not do.** Nothing here writes to GitHub or to PR threads; the
+one-reviewer-voice rule from the spike holds. If Datadog ever supports
+personal-account telemetry, the collector and its workflow are the two files
+to delete and the tiles re-point to the integration metrics.
+
 ## Enablement gaps found by the spike (all free, none on at the time)
 
 | repo | Dependabot alerts | code scanning (CodeQL) | secret scanning + push protection |
@@ -234,7 +282,8 @@ each.
    updates on all five repos; CodeQL default setup on all five; secret
    scanning, push protection and validity checks on pr_agent and
    reid_basic; grant the Datadog GitHub App read on the three alert types
-   and add the alert metrics to the delivery dashboard `izc-5s7-tz8`;
+   and add the alert metrics to the delivery dashboard `izc-5s7-tz8`
+   (done 2026-09-05 with the platform's own collector — see above);
    decide lockfiles for the platform and pr_agent images. Scanner output
    goes to the Security tab and Datadog, never as PR comments.
 2. **RC1-360 — portfolio site dependencies (under RC1-215):** bump `chromadb` off 1.5.9 and take the

@@ -1201,7 +1201,7 @@
           {
             "definition": {
               "background_color": "gray",
-              "content": "**Open alerts from GitHub's free scanners — CodeQL, secret scanning — on the five repos, read once a day.** Source is the platform's `Security posture` workflow (`python -m kpi.security_posture`, 11:41 UTC), not Datadog's GitHub telemetry: that collector is organization-scoped and never produced a point for this personal account (RC1-359). One point per day, so the tiles pin a 1-week span — a short window shows *no data*, which is cadence, not an outage. Triage happens in each repo's Security tab; nothing here posts to PRs.",
+              "content": "**Open alerts from GitHub's free scanners — CodeQL, secret scanning — on the five repos, read once a day.** Source is the platform's `Security posture` workflow (`python -m kpi.security_posture`, 11:41 UTC), not Datadog's GitHub telemetry: that collector is organization-scoped and never produced a point for this personal account (RC1-359). One point per day, so the tiles pin a 1-week span — a short window shows *no data*, which is cadence, not an outage. A repo the collector could not read gets no alert point that day and a 1 on `collector_errors` — a gap, not a zero. Triage happens in each repo's Security tab; nothing here posts to PRs.",
               "font_size": "14",
               "has_padding": true,
               "show_tick": false,
@@ -1248,7 +1248,7 @@
             "id": 6481837827252194,
             "layout": {
               "height": 2,
-              "width": 3,
+              "width": 2,
               "x": 0,
               "y": 2
             }
@@ -1284,8 +1284,44 @@
             "id": 4298771593746424,
             "layout": {
               "height": 2,
-              "width": 3,
-              "x": 3,
+              "width": 2,
+              "x": 2,
+              "y": 2
+            }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:delivery.security.collector_errors{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "time": {
+                "live_span": "1w"
+              },
+              "title": "Repos the collector could not read",
+              "type": "query_value"
+            },
+            "id": 785231680495398,
+            "layout": {
+              "height": 2,
+              "width": 2,
+              "x": 4,
               "y": 2
             }
           },

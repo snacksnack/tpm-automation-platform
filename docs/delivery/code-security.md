@@ -249,6 +249,15 @@ posture — GitHub scanners": critical+high code-scan count, secret-scan count,
 by-repo toplist, by-severity trend over a month. Exported with the rest of
 the hand-built objects in `datadog/`, so the drift job guards it.
 
+**A naming note.** CodeQL's `py/clear-text-logging-sensitive-data` query
+treats any identifier containing "secret" as sensitive and flagged the
+collector's own `SECRET_METRIC` constant and `counts["secret"]` key — a metric
+name and an integer — on every print they reached. Dismissing did not stick:
+the next edit to those lines raised fresh alerts. The identifiers are now
+`LEAK_SCAN_METRIC` and `leaks`; the Datadog metric name still says
+`secret_scan`, because that is what GitHub calls the feature and the string
+is not what the heuristic reads.
+
 **What it does not do.** Nothing here writes to GitHub or to PR threads; the
 one-reviewer-voice rule from the spike holds. If Datadog ever supports
 personal-account telemetry, the collector and its workflow are the two files

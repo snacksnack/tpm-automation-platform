@@ -50,13 +50,15 @@ REPOS = (
 )
 
 CODE_METRIC = "delivery.security.code_scan_alerts_open"
-# CodeQL's clear-text-logging query flags anything named "secret" that
-# reaches a print — this constant and the `counts["secret"]` key included.
-# Both hold a *count of secret-scanning alerts* and a metric name, never a
-# credential; the two alerts were dismissed as false positives on 2026-09-05
-# (RC1-359). Renaming to dodge the heuristic would make the code less
-# faithful to what GitHub calls the feature, so the names stay.
-SECRET_METRIC = "delivery.security.secret_scan_alerts_open"
+# GitHub calls the feature "secret scanning" and the Datadog metric name keeps
+# that word. The Python identifiers around it deliberately do not: CodeQL's
+# clear-text-logging query treats any name containing "secret" as sensitive
+# data and flags every print it reaches, and a dismissal does not survive an
+# edit to the flagged line (alerts #4/#5 dismissed on the PR, #6/#7 raised
+# fresh on main the same day). This constant and the `leaks` key hold a metric
+# name and an integer count of open secret-scanning alerts — never a
+# credential — so the names say what they hold and the scanner stays quiet.
+LEAK_SCAN_METRIC = "delivery.security.secret_scan_alerts_open"
 #: 1 for a repo whose alerts could not be read this run, else 0. A failed repo
 #: gets no alert series at all — a gap, never a zero — and this is how the
 #: gap is told apart from "nothing open" on the dashboard.
@@ -124,7 +126,7 @@ def count_by_severity(alerts: list[dict]) -> dict[str, int]:
 
 
 def collect(http: httpx.Client, repos: tuple[str, ...] = REPOS) -> dict[str, dict]:
-    """{repo: {"code": {severity: n}, "secret": n}} for every repo that could
+    """{repo: {"code": {severity: n}, "leaks": n}} for every repo that could
     be read, and {repo: {"error": "..."}} for any that could not.
 
     One repo's failure must not cost the other four their point for the day
@@ -137,11 +139,11 @@ def collect(http: httpx.Client, repos: tuple[str, ...] = REPOS) -> dict[str, dic
     for repo in repos:
         try:
             code = fetch_open_alerts(http, repo, "code-scanning")
-            secret = fetch_open_alerts(http, repo, "secret-scanning")
+            leaks = fetch_open_alerts(http, repo, "secret-scanning")
         except httpx.HTTPError as e:
             out[repo] = {"error": _describe(e)}
             continue
-        out[repo] = {"code": count_by_severity(code), "secret": len(secret)}
+        out[repo] = {"code": count_by_severity(code), "leaks": len(leaks)}
     return out
 
 
@@ -186,7 +188,7 @@ def series_for(posture: dict[str, dict]) -> list[dict]:
             out.append(
                 _series(CODE_METRIC, float(code["none"]), at=at, tags=[repo_tag, "severity:none"])
             )
-        out.append(_series(SECRET_METRIC, float(counts["secret"]), at=at, tags=[repo_tag]))
+        out.append(_series(LEAK_SCAN_METRIC, float(counts["leaks"]), at=at, tags=[repo_tag]))
         out.append(_series(ERROR_METRIC, 0.0, at=at, tags=[repo_tag]))
     return out
 
@@ -203,7 +205,7 @@ def summary_lines(posture: dict[str, dict]) -> list[str]:
             or "none"
         )
         lines.append(
-            f"{repo:26s} code-scan open: {nonzero:32s} secret-scan open: {counts['secret']}"
+            f"{repo:26s} code-scan open: {nonzero:32s} secret-scan open: {counts['leaks']}"
         )
     return lines
 

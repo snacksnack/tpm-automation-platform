@@ -7,7 +7,7 @@
 # security-posture group on delivery dashboard izc-5s7-tz8 reads these.
 #
 # Daily on purpose. Custom metrics bill on the average number of series alive
-# per hour across the month; ~25 series present one hour in twenty-four is
+# per hour across the month; ~30 series present one hour in twenty-four is
 # about one billable custom metric. Hourly would be 24× that for counts that
 # change a few times a week.
 name: Security posture
@@ -46,6 +46,10 @@ jobs:
           SECURITY_ALERTS_TOKEN: ${{ secrets.SECURITY_ALERTS_TOKEN }}
           DD_API_KEY: ${{ secrets.DD_API_KEY }}
         run: |
+          # The collector is piped through tee; without pipefail the step
+          # takes tee's exit code and a traceback ships as a green run. It
+          # did, once (2026-09-05).
+          set -o pipefail
           # Skips rather than fails when the secrets are missing: the CI
           # pipeline-failed monitor routes to the incident summarizer, and a
           # missing secret is a to-do, not an outage. A skipped job looks like

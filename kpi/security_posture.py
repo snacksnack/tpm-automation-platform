@@ -96,11 +96,20 @@ def fetch_open_alerts(http: httpx.Client, repo: str, kind: str) -> list[dict]:
 
 
 def count_by_severity(alerts: list[dict]) -> dict[str, int]:
-    """Open code-scan alerts bucketed by CodeQL's security severity."""
+    """Open code-scan alerts bucketed by CodeQL's security severity.
+
+    Keys are always drawn from our own vocabulary — the four in `SEVERITIES`
+    plus `none` — never copied from the response. That keeps the metric's tag
+    set bounded if GitHub ever adds a level, and keeps response strings out
+    of the log and the payload: CodeQL's own clear-text-logging query taints
+    everything read through a client that carries the token, and it is right
+    that the only things we print are our labels and our counts.
+    """
     counts = dict.fromkeys(SEVERITIES, 0)
     for alert in alerts:
-        level = (alert.get("rule") or {}).get("security_severity_level") or "none"
-        counts[level] = counts.get(level, 0) + 1
+        level = (alert.get("rule") or {}).get("security_severity_level")
+        key = level if level in SEVERITIES else "none"
+        counts[key] = counts.get(key, 0) + 1
     return counts
 
 
@@ -123,16 +132,27 @@ def _series(metric: str, value: float, *, at: int, tags: list[str]) -> dict:
     }
 
 
-def series_for(posture: dict[str, dict], *, at: int) -> list[dict]:
-    """The v2 series payload. Pure — the tests read this, not a network."""
+def series_for(posture: dict[str, dict]) -> list[dict]:
+    """The v2 series payload, stamped with the current time. Pure apart from
+    the clock — the tests read this, not a network.
+
+    The four canonical severities are always emitted, zeros included; the
+    `none` bucket (alerts CodeQL left without a security severity) only when
+    it holds something, so a repo with none of those has no series for it.
+    """
+    at = int(time.time())
     out: list[dict] = []
     for repo, counts in posture.items():
         repo_tag = f"repo:{repo}"
-        for severity, n in counts["code"].items():
-            if severity not in SEVERITIES and n == 0:
-                continue
+        code = counts["code"]
+        for severity in SEVERITIES:
+            n = code.get(severity, 0)
             out.append(
                 _series(CODE_METRIC, float(n), at=at, tags=[repo_tag, f"severity:{severity}"])
+            )
+        if code.get("none", 0):
+            out.append(
+                _series(CODE_METRIC, float(code["none"]), at=at, tags=[repo_tag, "severity:none"])
             )
         out.append(_series(SECRET_METRIC, float(counts["secret"]), at=at, tags=[repo_tag]))
     return out
@@ -142,7 +162,10 @@ def summary_lines(posture: dict[str, dict]) -> list[str]:
     lines = []
     for repo, counts in posture.items():
         code = counts["code"]
-        nonzero = ", ".join(f"{k} {v}" for k, v in code.items() if v) or "none"
+        nonzero = (
+            ", ".join(f"{sev} {code[sev]}" for sev in (*SEVERITIES, "none") if code.get(sev))
+            or "none"
+        )
         lines.append(
             f"{repo:26s} code-scan open: {nonzero:32s} secret-scan open: {counts['secret']}"
         )
@@ -173,7 +196,7 @@ def main(argv: list[str] | None = None) -> int:
 
     with github_client(token) as http:
         posture = collect(http)
-    series = series_for(posture, at=int(time.time()))
+    series = series_for(posture)
     print("\n".join(summary_lines(posture)))
 
     if args.dry_run:

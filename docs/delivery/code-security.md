@@ -4,10 +4,12 @@
 scanners instead — they are free on public repositories, and all five repos
 in this estate are public — and let the Datadog GitHub integration carry
 their alert state onto the delivery dashboard, which costs nothing either.**
-The pr-review-agent keeps the pull-request conversation to itself; scanners
-report to the Security tab and to Datadog, not into the PR thread.
-Enabling is a separate story, RC1-359, filed from this spike; the SKU question
-reopens if a repo goes private or a second committer shows up.
+The pr-review-agent stays the only *narrative* reviewer in a PR; scanner
+findings may appear on a PR as their own check, and their alert state lives
+in the Security tab and on the delivery dashboard. (Amended 2026-09-05 — the
+spike's original rule kept scanners out of PRs entirely; see "Rule amended"
+below.) Enabling is a separate story, RC1-359, filed from this spike; the
+SKU question reopens if a repo goes private or a second committer shows up.
 
 Time-boxed to one session, as the ticket asked. The price list and the
 account's own bill settled the cost question in the first hour; the rest
@@ -94,12 +96,30 @@ So both are wanted. What is **not** wanted is three voices in one PR thread:
 the agent's review, a scanner's inline comments, and Dependabot's own PRs.
 The agent already carries the one-voice rule in its prompt ("over-flagging
 trains people to ignore reviews"), and its `leaked_secret` category is the
-only gate. The rule this spike sets: **scanners post to the Security tab
+only gate. The rule this spike set: **scanners post to the Security tab
 and to Datadog, not into the PR conversation; push protection blocks at
 push time, before there is a PR; the agent stays the single reviewer
 voice.** If a scanner finding should reach the PR, the right shape is the
 one the n8n cost check already uses — feed it to the agent as context so
 it lands in the one review — and that is RC1-106 work, not this epic's.
+
+**Rule amended 2026-09-05, after the first scanner findings on a real PR.**
+The rule above was written before any scanner had run. On PR #58 CodeQL's
+pull-request check posted two inline alerts — false positives, as it turned
+out, but they were read, traced and fixed *before merge*. Had they gone only
+to the Security tab they would have landed on `main` and shown up as "2
+high" on the dashboard tile that very PR was adding, with nobody looking at
+why. Two things the original rule under-weighted: CodeQL does dataflow
+analysis (this string reaches that sink), which overlaps less with an LLM
+reviewer's read of intent than assumed; and PR time is the cheapest moment
+to act on a security finding. So: **scanner findings may appear on a PR as
+their own check — CodeQL's PR alerts and Copilot Autofix stay on; the
+pr-review-agent stays the only narrative reviewer.** The one-voice concern
+that survives is Dependabot's own PRs, which the agent skips
+(`REVIEW_SKIP_AUTHORS`) and which stay off (alerts only, no security
+updates). False positives are a triage cost, not a reason to silence the
+check; the collector's own naming false positive was fixed by a rename
+(PR #60), which is the durable shape for that class.
 
 ## What a scanner would find today (measured)
 
@@ -189,10 +209,13 @@ it). GitHub's own tokens are validity-checked automatically. The free scope
 here is secret scanning plus push protection, both on. The spike's table
 below listed validity checks as free; it is free only where it exists.
 
-CodeQL default setup also switched on **Copilot Autofix**, which posts
-suggested fixes into PR threads and so breaks the one-reviewer-voice rule.
-Turned off on pr_agent 2026-09-02; there is no REST endpoint for it, so the
-other four repos are settings-page clicks.
+CodeQL default setup also switched on **Copilot Autofix**, which attaches a
+suggested patch to a code-scanning alert on a PR. It was turned off on
+pr_agent on 2026-09-02 under the original one-voice rule; under the amended
+rule it stays on for the other four repos, and turning it back on for
+pr_agent is a settings-page click whenever wanted (no REST endpoint). A
+proposed patch on a real dataflow finding is a time-saver for a solo
+developer who reviews every PR anyway.
 
 Still open: the Datadog GitHub App's read on the three alert types. The
 dashboard row follows it.
@@ -302,8 +325,9 @@ each.
    reid_basic; grant the Datadog GitHub App read on the three alert types
    and add the alert metrics to the delivery dashboard `izc-5s7-tz8`
    (done 2026-09-05 with the platform's own collector — see above);
-   decide lockfiles for the platform and pr_agent images. Scanner output
-   goes to the Security tab and Datadog, never as PR comments.
+   decide lockfiles for the platform and pr_agent images. Scanner findings
+   may appear on a PR as their own check (rule amended 2026-09-05); the
+   pr-review-agent stays the only narrative reviewer. **Done 2026-09-05.**
 2. **RC1-360 — portfolio site dependencies (under RC1-215):** bump `chromadb` off 1.5.9 and take the
    six `npm audit` fixes in reid_basic; the seven in launch-planner's
    `apps/web` ride along with whoever next touches that app.

@@ -50,6 +50,12 @@ REPOS = (
 )
 
 CODE_METRIC = "delivery.security.code_scan_alerts_open"
+# CodeQL's clear-text-logging query flags anything named "secret" that
+# reaches a print — this constant and the `counts["secret"]` key included.
+# Both hold a *count of secret-scanning alerts* and a metric name, never a
+# credential; the two alerts were dismissed as false positives on 2026-09-05
+# (RC1-359). Renaming to dodge the heuristic would make the code less
+# faithful to what GitHub calls the feature, so the names stay.
 SECRET_METRIC = "delivery.security.secret_scan_alerts_open"
 
 #: Always emitted, zero-filled, so "0 critical" is a point and a monitor on

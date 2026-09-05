@@ -325,6 +325,13 @@ on purpose: two sources of truth for one dashboard is the failure it exists to
 prevent. `docs/datadog-as-code.md` has the JSON-not-Terraform argument and
 what the API taught us.
 
+A second daily job, `security-posture`, reads the five repos' open CodeQL and
+secret-scanning alerts from GitHub and posts them as two gauges
+(`delivery.security.*`) for the delivery dashboard's security group — Datadog's
+own GitHub telemetry is organization-scoped and never produced a point for a
+personal account. `docs/delivery/code-security.md` has the trail and the
+cost math (daily cadence ≈ one billable custom metric).
+
 The billed stages also trace themselves into [LLM
 Observability](https://app.datadoghq.com/llm/applications) (RC1-322): every
 model call a span with tokens, latency and estimated cost, under `kpi-agent`

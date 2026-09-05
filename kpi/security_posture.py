@@ -11,7 +11,7 @@ them and posts the counts itself.
 
 Cost, because that was the question: Datadog bills custom metrics on the
 average number of unique series present per hour over the month. This runs
-once a day, so its ~25 series occupy one hour in twenty-four and add about
+once a day, so its ~30 series occupy one hour in twenty-four and add about
 one custom metric to the monthly average — cents. Do not make it hourly to
 "get fresher data": alert counts change a few times a week and the bill
 would go up 24×.
@@ -57,6 +57,10 @@ CODE_METRIC = "delivery.security.code_scan_alerts_open"
 # (RC1-359). Renaming to dodge the heuristic would make the code less
 # faithful to what GitHub calls the feature, so the names stay.
 SECRET_METRIC = "delivery.security.secret_scan_alerts_open"
+#: 1 for a repo whose alerts could not be read this run, else 0. A failed repo
+#: gets no alert series at all — a gap, never a zero — and this is how the
+#: gap is told apart from "nothing open" on the dashboard.
+ERROR_METRIC = "delivery.security.collector_errors"
 
 #: Always emitted, zero-filled, so "0 critical" is a point and a monitor on
 #: `critical > 0` has data to read. Anything CodeQL leaves without a security
@@ -120,13 +124,31 @@ def count_by_severity(alerts: list[dict]) -> dict[str, int]:
 
 
 def collect(http: httpx.Client, repos: tuple[str, ...] = REPOS) -> dict[str, dict]:
-    """{repo: {"code": {severity: n}, "secret": n}} for every repo."""
+    """{repo: {"code": {severity: n}, "secret": n}} for every repo that could
+    be read, and {repo: {"error": "..."}} for any that could not.
+
+    One repo's failure must not cost the other four their point for the day
+    (a token that misses one repo, a GitHub 5xx on one call). The error is
+    kept, not swallowed: it becomes a 1 on `ERROR_METRIC`, an `::error`
+    annotation, and a non-zero exit — the run is red, the data that could be
+    read still shipped.
+    """
     out: dict[str, dict] = {}
     for repo in repos:
-        code = fetch_open_alerts(http, repo, "code-scanning")
-        secret = fetch_open_alerts(http, repo, "secret-scanning")
+        try:
+            code = fetch_open_alerts(http, repo, "code-scanning")
+            secret = fetch_open_alerts(http, repo, "secret-scanning")
+        except httpx.HTTPError as e:
+            out[repo] = {"error": _describe(e)}
+            continue
         out[repo] = {"code": count_by_severity(code), "secret": len(secret)}
     return out
+
+
+def _describe(e: httpx.HTTPError) -> str:
+    if isinstance(e, httpx.HTTPStatusError):
+        return f"HTTP {e.response.status_code} on {e.request.url.path}"
+    return f"{type(e).__name__} on {e.request.url.path}"
 
 
 def _series(metric: str, value: float, *, at: int, tags: list[str]) -> dict:
@@ -144,12 +166,16 @@ def series_for(posture: dict[str, dict]) -> list[dict]:
 
     The four canonical severities are always emitted, zeros included; the
     `none` bucket (alerts CodeQL left without a security severity) only when
-    it holds something, so a repo with none of those has no series for it.
+    it holds something. A repo that could not be read gets no alert series
+    and `ERROR_METRIC` = 1; every other repo gets `ERROR_METRIC` = 0.
     """
     at = int(time.time())
     out: list[dict] = []
     for repo, counts in posture.items():
         repo_tag = f"repo:{repo}"
+        if "error" in counts:
+            out.append(_series(ERROR_METRIC, 1.0, at=at, tags=[repo_tag]))
+            continue
         code = counts["code"]
         for severity in SEVERITIES:
             n = code.get(severity, 0)
@@ -161,12 +187,16 @@ def series_for(posture: dict[str, dict]) -> list[dict]:
                 _series(CODE_METRIC, float(code["none"]), at=at, tags=[repo_tag, "severity:none"])
             )
         out.append(_series(SECRET_METRIC, float(counts["secret"]), at=at, tags=[repo_tag]))
+        out.append(_series(ERROR_METRIC, 0.0, at=at, tags=[repo_tag]))
     return out
 
 
 def summary_lines(posture: dict[str, dict]) -> list[str]:
     lines = []
     for repo, counts in posture.items():
+        if "error" in counts:
+            lines.append(f"{repo:26s} NOT READ — {counts['error']}")
+            continue
         code = counts["code"]
         nonzero = (
             ", ".join(f"{sev} {code[sev]}" for sev in (*SEVERITIES, "none") if code.get(sev))
@@ -176,6 +206,10 @@ def summary_lines(posture: dict[str, dict]) -> list[str]:
             f"{repo:26s} code-scan open: {nonzero:32s} secret-scan open: {counts['secret']}"
         )
     return lines
+
+
+def errors(posture: dict[str, dict]) -> dict[str, str]:
+    return {repo: c["error"] for repo, c in posture.items() if "error" in c}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -204,11 +238,15 @@ def main(argv: list[str] | None = None) -> int:
         posture = collect(http)
     series = series_for(posture)
     print("\n".join(summary_lines(posture)))
+    failed = errors(posture)
+    for repo, why in failed.items():
+        # GitHub Actions renders this as an error annotation on the run.
+        print(f"::error title=Security posture: {repo} not read::{why}")
 
     if args.dry_run:
         print(json.dumps({"series": series}, indent=1))
         print(f"dry run — {len(series)} series not sent")
-        return 0
+        return 1 if failed else 0
 
     api_key = os.environ.get("DD_API_KEY")
     if not api_key:
@@ -216,7 +254,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     ship(series, api_key=api_key)
     print(f"shipped {len(series)} series to Datadog")
-    return 0
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

@@ -936,12 +936,71 @@
               "x": 6,
               "y": 4
             }
+          },
+          {
+            "definition": {
+              "requests": [
+                {
+                  "columns": [
+                    {
+                      "field": "timestamp",
+                      "width": "auto"
+                    },
+                    {
+                      "field": "@tags.repo",
+                      "width": "auto"
+                    },
+                    {
+                      "field": "@tags.pr",
+                      "width": "compact"
+                    },
+                    {
+                      "field": "@meta.metadata.mode",
+                      "width": "compact"
+                    },
+                    {
+                      "field": "@meta.metadata.scout",
+                      "width": "compact"
+                    },
+                    {
+                      "field": "@metrics.cost_usd",
+                      "width": "compact"
+                    },
+                    {
+                      "field": "@metrics.latency_s",
+                      "width": "compact"
+                    },
+                    {
+                      "field": "@tags.head_sha",
+                      "width": "auto"
+                    }
+                  ],
+                  "query": {
+                    "data_source": "llm_observability_stream",
+                    "indexes": [],
+                    "query_string": "@ml_app:pr-review-agent @name:pr_review"
+                  },
+                  "response_format": "event_list"
+                }
+              ],
+              "title": "Last reviews — one row per pr_review span, newest first (RC1-394)",
+              "title_align": "left",
+              "title_size": "16",
+              "type": "list_stream"
+            },
+            "id": 1708532315999812,
+            "layout": {
+              "height": 4,
+              "width": 12,
+              "x": 0,
+              "y": 7
+            }
           }
         ]
       },
       "id": 6536519153586797,
       "layout": {
-        "height": 8,
+        "height": 11,
         "width": 12,
         "x": 0,
         "y": 26

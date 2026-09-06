@@ -1,0 +1,29 @@
+{
+  "draft_status": "published",
+  "id": 319523084,
+  "message": "{{#is_alert}}The PR agent's p95 cost per review over the last day is over $1.00 — above the single loop's own range (48c–$1.10 per review in the RC1-393 record). Either the multi-agent flag went back off, or a review ran away.{{/is_alert}}\n{{#is_warning}}p95 cost per review over the last day is over $0.50 — above the multi-agent path's 18–45c range (RC1-393); worth reading the trace for the most expensive review.{{/is_warning}}\n\nThis is the per-*review* signal (RC1-395). The fleet's per-call monitor (RC1-377) measures something else: the multi-agent path replaces one long loop with five or six short calls, so cost per call goes *down* when the flag goes on whether or not the review got cheaper. One `pr_agent.review.cost_usd` point per review, priced at the end of the trace from all four token counts (cache writes 1.25x, reads 0.1x).\n\nTriage on the [fleet dashboard](https://app.datadoghq.com/dashboard/bwm-uny-qqs), \"Cost per review\" group:\n- **by mode**: `mode:single` at 50c–$1.10 is the flag off (`REVIEW_MULTI_AGENT` on the Fly app); `mode:multi` above 50c means the scout ran long — check `scout:ran` and the scout stage on the trace.\n- **by repo**: one repo carrying the p95 is a large PR, not a regression.\n- The [LLM Obs trace](https://app.datadoghq.com/llm/traces) for the review carries `cost_usd` and `stage_cost_usd.<stage>` on its `pr_review` workflow span.\n\nThresholds from the RC1-393 corpus run (2026-09-06): multi + 3-turn scout 18–45c, single loop 48c–$1.10. Re-derive when the model or the corpus changes.\n\n@hire.reid.collins@gmail.com\n@webhook-incident-summarizer",
+  "multi": false,
+  "name": "PR agent cost per review — p95 over 1d",
+  "options": {
+    "include_tags": false,
+    "new_host_delay": 300,
+    "notify_audit": false,
+    "notify_no_data": false,
+    "renotify_interval": 0,
+    "require_full_window": false,
+    "thresholds": {
+      "critical": 1.0,
+      "warning": 0.5
+    }
+  },
+  "priority": 3,
+  "query": "percentile(last_1d):p95:pr_agent.review.cost_usd{*} > 1",
+  "restricted_roles": null,
+  "tags": [
+    "rc1:395",
+    "fleet:llm-obs",
+    "generated:manual",
+    "service:agent-fleet"
+  ],
+  "type": "query alert"
+}

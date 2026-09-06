@@ -697,6 +697,255 @@
         "x": 0,
         "y": 21
       }
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Cost per review — pr-review-agent (RC1-395)",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "background_color": "transparent",
+              "content": "One `pr_agent.review.cost_usd` point **per review**, priced at the end of the trace from all four token counts (cache writes 1.25x, reads 0.1x). Per review, not per call: the per-call figures above go *down* when the multi-agent flag replaces one long loop with six short calls, whether or not the review got cheaper. Thresholds from the RC1-393 corpus run — multi + 3-turn scout 18–45c, single loop 48c–$1.10 — so the monitor warns at $0.50 and alerts at $1.00 on p95 over a day; `mode:single` above 50c is the flag off. Tags: repo · mode · scout · verified · model.",
+              "font_size": "14",
+              "has_padding": true,
+              "show_tick": false,
+              "text_align": "left",
+              "type": "note"
+            },
+            "id": 7539084937230686,
+            "layout": {
+              "height": 1,
+              "width": 12,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "custom_unit": "$",
+              "precision": 2,
+              "requests": [
+                {
+                  "conditional_formats": [
+                    {
+                      "comparator": "<",
+                      "palette": "white_on_green",
+                      "value": 0.5
+                    },
+                    {
+                      "comparator": ">=",
+                      "palette": "white_on_yellow",
+                      "value": 0.5
+                    },
+                    {
+                      "comparator": ">=",
+                      "palette": "white_on_red",
+                      "value": 1
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "avg",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "p50:pr_agent.review.cost_usd{$ml_app}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Cost per review — p50",
+              "type": "query_value"
+            },
+            "id": 3506355820285613,
+            "layout": {
+              "height": 3,
+              "width": 3,
+              "x": 0,
+              "y": 1
+            }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "custom_unit": "$",
+              "precision": 2,
+              "requests": [
+                {
+                  "conditional_formats": [
+                    {
+                      "comparator": "<",
+                      "palette": "white_on_green",
+                      "value": 0.5
+                    },
+                    {
+                      "comparator": ">=",
+                      "palette": "white_on_yellow",
+                      "value": 0.5
+                    },
+                    {
+                      "comparator": ">=",
+                      "palette": "white_on_red",
+                      "value": 1
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "avg",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "p95:pr_agent.review.cost_usd{$ml_app}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Cost per review — p95",
+              "type": "query_value"
+            },
+            "id": 6802565466019339,
+            "layout": {
+              "height": 3,
+              "width": 3,
+              "x": 3,
+              "y": 1
+            }
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "markers": [
+                {
+                  "display_type": "error dashed",
+                  "label": "alert $1.00",
+                  "value": "y = 1"
+                },
+                {
+                  "display_type": "warning dashed",
+                  "label": "warn $0.50",
+                  "value": "y = 0.5"
+                }
+              ],
+              "requests": [
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "p95:pr_agent.review.cost_usd{$ml_app} by {mode}"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Cost per review by mode — p95",
+              "type": "timeseries"
+            },
+            "id": 2710631003557630,
+            "layout": {
+              "height": 3,
+              "width": 6,
+              "x": 6,
+              "y": 1
+            }
+          },
+          {
+            "definition": {
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0",
+                      "limit": {
+                        "count": 10,
+                        "order": "desc"
+                      }
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "avg",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "p95:pr_agent.review.cost_usd{$ml_app} by {repo}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Cost per review by repo — p95",
+              "type": "toplist"
+            },
+            "id": 2824151312606414,
+            "layout": {
+              "height": 3,
+              "width": 6,
+              "x": 0,
+              "y": 4
+            }
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "p95:pr_agent.review.latency_s{$ml_app} by {mode}"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Latency per review by mode — p95 (s)",
+              "type": "timeseries"
+            },
+            "id": 6540354824643916,
+            "layout": {
+              "height": 3,
+              "width": 6,
+              "x": 6,
+              "y": 4
+            }
+          }
+        ]
+      },
+      "id": 6536519153586797,
+      "layout": {
+        "height": 8,
+        "width": 12,
+        "x": 0,
+        "y": 26
+      }
     }
   ]
 }

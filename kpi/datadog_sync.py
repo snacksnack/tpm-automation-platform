@@ -3,7 +3,7 @@
 `kpi.datadog` *generates* the two program dashboards, the six KPI monitors and
 the seven program SLOs from the adopted trees — those have a source, and
 regenerating them is one command. Everything else in the account was made by
-API calls in session scratchpads that are gone: the four dashboards, ten
+API calls in session scratchpads that are gone: the four dashboards, eleven
 monitors, five synthetics tests and two availability SLOs listed in
 `datadog/manifest.json`. An accidental delete or a bad edit had no undo beyond
 Datadog's own version history, no review, and no way to rebuild the account.

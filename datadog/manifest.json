@@ -36,6 +36,10 @@
       "why": "RC1-377 fleet LLM cost per call — the price signal, warn $0.035 / alert $0.05"
     },
     {
+      "id": 319523084,
+      "why": "RC1-395 PR agent cost per review — p95 over 1d, warn $0.50 / alert $1.00; per review where 318833109 is per call"
+    },
+    {
       "id": 318355169,
       "why": "RC1-335 CI pipeline failed — delivery repos"
     },

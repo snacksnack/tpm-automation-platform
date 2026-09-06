@@ -5,7 +5,7 @@ an object belongs to is the whole of this document.
 
 | | Generated | Exported |
 | --- | --- | --- |
-| What | 2 program dashboards, 6 KPI monitors, 7 program SLOs | 4 dashboards, 10 monitors, 5 synthetics tests, 2 SLOs |
+| What | 2 program dashboards, 6 KPI monitors, 7 program SLOs | 4 dashboards, 11 monitors, 5 synthetics tests, 2 SLOs |
 | Source | `kpi/datadog.py` builds them from the adopted trees | `datadog/*.json`, listed in `datadog/manifest.json` |
 | To change one | edit the generator, `python -m kpi.datadog dashboards --push` | edit the file, `python -m kpi.datadog_sync push` |
 | Identified by | tag `generated:kpi-datadog`, or the title `Program KPIs — <program>` | absence of the above |
@@ -94,4 +94,8 @@ service's configuration, already code, already reviewed. They are the reason
 `@webhook-incident-summarizer` appears in the monitor messages exported here.
 
 Also out of scope: the Notebooks and RUM application configs, and the GitHub
-integration tile's repository filter table, which has no API.
+integration tile's repository filter table, which has no API. Likewise a
+metric's own configuration — the percentile aggregation switched on for the
+`pr_agent.review.*` distributions (RC1-395) so p50/p95 can be queried — is
+set once through the metrics tag-configuration API and recorded in the
+pr_agent decision record, not exported here.

@@ -947,43 +947,43 @@
                       "width": "auto"
                     },
                     {
-                      "field": "@tags.repo",
+                      "field": "repo",
                       "width": "auto"
                     },
                     {
-                      "field": "@tags.pr",
-                      "width": "compact"
+                      "field": "pr",
+                      "width": "auto"
                     },
                     {
                       "field": "@meta.metadata.mode",
-                      "width": "compact"
+                      "width": "auto"
                     },
                     {
                       "field": "@meta.metadata.scout",
-                      "width": "compact"
+                      "width": "auto"
                     },
                     {
                       "field": "@metrics.cost_usd",
-                      "width": "compact"
+                      "width": "auto"
                     },
                     {
                       "field": "@metrics.latency_s",
-                      "width": "compact"
+                      "width": "auto"
                     },
                     {
-                      "field": "@tags.head_sha",
+                      "field": "head_sha",
                       "width": "auto"
                     }
                   ],
                   "query": {
                     "data_source": "llm_observability_stream",
                     "indexes": [],
-                    "query_string": "@ml_app:pr-review-agent @name:pr_review"
+                    "query_string": "@ml_app:pr-review-agent @name:pr_review -service:evals -repo:snacksnack/eval-fixture"
                   },
                   "response_format": "event_list"
                 }
               ],
-              "title": "Last reviews — one row per pr_review span, newest first (RC1-394)",
+              "title": "Last reviews — one row per production pr_review span, newest first (RC1-394, RC1-397)",
               "title_align": "left",
               "title_size": "16",
               "type": "list_stream"

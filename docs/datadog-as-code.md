@@ -99,3 +99,12 @@ metric's own configuration — the percentile aggregation switched on for the
 `pr_agent.review.*` distributions (RC1-395) so p50/p95 can be queried — is
 set once through the metrics tag-configuration API and recorded in the
 pr_agent decision record, not exported here.
+
+One more thing the API taught us (RC1-394): a dashboard list widget can read
+the LLM Observability span stream directly — `data_source:
+llm_observability_stream` in a `list_stream` request, accepted by the
+dashboard API on 2026-09-06 — so the fleet dashboard's "Last reviews" list
+is one row per `pr_review` span with no event emitted per review. The PR
+behind a review (`repo`, `pr`, `head_sha`) lives as tags on that span, on
+purpose not on the `pr_agent.review.*` metrics: a span tag is free, a metric
+tag is a billable custom metric per distinct value, five with percentiles.

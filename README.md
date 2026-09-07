@@ -341,6 +341,9 @@ evaluations — see `docs/kpi/llm-obs.md`.
 The delivery lane itself (epic RC1-333 — CI Visibility, DORA, the code
 security decision) is documented under `docs/delivery/`; the code-security
 spike's written decision is [`docs/delivery/code-security.md`](docs/delivery/code-security.md).
+The repository's conventions page is [`CLAUDE.md`](CLAUDE.md), kept under the
+review agent's 6,000-character cap; the before/after it bought on a real PR is
+[`docs/delivery/conventions-file.md`](docs/delivery/conventions-file.md) (RC1-399).
 
 ### The simulated program (RC1-299)
 

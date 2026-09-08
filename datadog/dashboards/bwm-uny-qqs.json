@@ -339,7 +339,13 @@
                 {
                   "formulas": [
                     {
-                      "formula": "q0 / 1000000000"
+                      "formula": "q0 / 1000000000",
+                      "number_format": {
+                        "unit": {
+                          "label": "$",
+                          "type": "custom_unit_label"
+                        }
+                      }
                     }
                   ],
                   "queries": [
@@ -380,7 +386,13 @@
                 {
                   "formulas": [
                     {
-                      "formula": "q0 / 1000000000"
+                      "formula": "q0 / 1000000000",
+                      "number_format": {
+                        "unit": {
+                          "label": "$",
+                          "type": "custom_unit_label"
+                        }
+                      }
                     }
                   ],
                   "queries": [
@@ -423,7 +435,13 @@
                   "display_type": "bars",
                   "formulas": [
                     {
-                      "formula": "q0 / 1000000000"
+                      "formula": "q0 / 1000000000",
+                      "number_format": {
+                        "unit": {
+                          "label": "$",
+                          "type": "custom_unit_label"
+                        }
+                      }
                     }
                   ],
                   "queries": [
@@ -529,7 +547,13 @@
                   "display_type": "line",
                   "formulas": [
                     {
-                      "formula": "(q0 / 1000000000) / q1"
+                      "formula": "(q0 / 1000000000) / q1",
+                      "number_format": {
+                        "unit": {
+                          "label": "$",
+                          "type": "custom_unit_label"
+                        }
+                      }
                     }
                   ],
                   "queries": [

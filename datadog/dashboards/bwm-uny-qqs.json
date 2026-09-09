@@ -1,5 +1,5 @@
 {
-  "description": "One pane for the fleet's billed model calls: the fleet-reliability SLO with its hits/errors inputs, traffic and latency by service, and LLM Obs cost/tokens by ml_app and by model. Seven apps in service plus two dormant RC1-322 smoke-test leftovers. The LLM Obs half filters on $ml_app and the APM half on $service — they cover different populations; see the header note. Hand-created (RC1-346). Cost metrics are nanodollars: formulas divide by 1e9 and pin the unit, because Datadog's own nanodollar metadata would otherwise apply the conversion twice (RC1-405).",
+  "description": "One pane for the fleet's billed model calls: the fleet-reliability SLO with its hits/errors inputs, traffic and latency by service, and LLM Obs cost/tokens by ml_app and by model. Seven apps in service plus two dormant RC1-322 smoke-test leftovers. The LLM Obs half filters on $ml_app and the APM half on $service — they cover different populations; see the header note. Hand-created (RC1-346). Cost metrics are nanodollars: formulas divide by 1e9 and pin the unit, because Datadog's own nanodollar metadata would otherwise apply the conversion twice (RC1-405). Cost, tokens and caching now also filter on $service (RC1-411): corpus sweeps and measure_pr.py runs report under the same ml_app as production traffic as service:evals and service:dry-run, so a fleet total that does not exclude them mixes measurement with billed production work.",
   "id": "bwm-uny-qqs",
   "layout_type": "ordered",
   "notify_list": null,
@@ -24,7 +24,7 @@
     {
       "definition": {
         "background_color": "transparent",
-        "content": "Every billed Anthropic call the fleet reports, as traffic, latency, cost and tokens.\n\n**Seven apps in service** — **pr-review-agent** (94% of fleet spend) · **launch-planner** · **drift-digest** · **tpm-platform** · **kpi-agent** · **concert-intelligence** (RC1-362, spans hand-built in n8n) · **hihelloreid-chat** (RC1-361) — plus two dormant RC1-322 smoke-test leftovers, `agent-fleet` and `agent-evals-harness`, left visible on purpose: a filter that hid them would hide a future misconfigured app too.\n\n**The two halves of this pane cover different populations.** Cost, tokens and caching are LLM Observability and filter on `$ml_app` — the nine above. Reliability and Traffic & latency are APM `trace.anthropic.request`, which carries no ml_app tag, so they filter on `$service` instead. Two things follow, and neither is a bug: the **incident-summarizer Lambda** is in the SLO and in Traffic but in no cost widget (APM spans, no LLM Obs spans), and **`concert-intelligence` is the mirror image** — its spans go straight to the LLM Obs intake and never reach APM, so **the 97%/30d fleet SLO does not cover the concert workflow.** Say \"fleet\" with that in mind.\n\nDrill down in the [LLM Obs trace explorer](https://app.datadoghq.com/llm/traces). Per-case eval verdicts live on the case spans there, deliberately not charted here — gated-pass-rate on the [eval-run-store dashboard](https://app.datadoghq.com/dashboard/qz5-nmb-i9d) is their aggregate. RC1-322 · 324 · 339 · 346 · 405 · 406.",
+        "content": "Every billed Anthropic call the fleet reports, as traffic, latency, cost and tokens.\n\n**Seven apps in service** — **pr-review-agent** (94% of fleet spend) · **launch-planner** · **drift-digest** · **tpm-platform** · **kpi-agent** · **concert-intelligence** (RC1-362, spans hand-built in n8n) · **hihelloreid-chat** (RC1-361) — plus two dormant RC1-322 smoke-test leftovers, `agent-fleet` and `agent-evals-harness`, left visible on purpose: a filter that hid them would hide a future misconfigured app too.\n\n**The two halves of this pane cover different populations.** Cost, tokens and caching are LLM Observability and filter on `$ml_app` — the nine above. Reliability and Traffic & latency are APM `trace.anthropic.request`, which carries no ml_app tag, so they filter on `$service` instead. Two things follow, and neither is a bug: the **incident-summarizer Lambda** is in the SLO and in Traffic but in no cost widget (APM spans, no LLM Obs spans), and **`concert-intelligence` is the mirror image** — its spans go straight to the LLM Obs intake and never reach APM, so **the 97%/30d fleet SLO does not cover the concert workflow.** Say \"fleet\" with that in mind.\n\nDrill down in the [LLM Obs trace explorer](https://app.datadoghq.com/llm/traces). Per-case eval verdicts live on the case spans there, deliberately not charted here — gated-pass-rate on the [eval-run-store dashboard](https://app.datadoghq.com/dashboard/qz5-nmb-i9d) is their aggregate. RC1-322 · 324 · 339 · 346 · 405 · 406.\n\n**Two populations inside LLM Obs, too (RC1-411).** Corpus sweeps and `measure_pr.py` runs report under the same `ml_app` as production traffic — they are separated only by `service`: `evals` and `dry-run` are measurement, everything else is billed production work. Over 2026-08-29 → 09-08 that was $10.33 of evals and $1.09 of dry-run against $26.23 of production. The cost widgets here default to `$service:*` and so show **all** of it, which is the honest total; select a service to separate them. The two spend guardrails exclude measurement, because paging on a corpus run is not the job.",
         "font_size": "14",
         "has_padding": true,
         "show_tick": false,
@@ -316,7 +316,7 @@
                       "aggregator": "sum",
                       "data_source": "metrics",
                       "name": "q0",
-                      "query": "sum:ml_obs.span.llm.total.cost{$ml_app}.as_count()"
+                      "query": "sum:ml_obs.span.llm.total.cost{$ml_app,$service}.as_count()"
                     }
                   ],
                   "response_format": "scalar"
@@ -353,7 +353,7 @@
                       "aggregator": "sum",
                       "data_source": "metrics",
                       "name": "q0",
-                      "query": "sum:ml_obs.span.llm.total.cost{$ml_app} by {model_name}.as_count()"
+                      "query": "sum:ml_obs.span.llm.total.cost{$ml_app,$service} by {model_name}.as_count()"
                     }
                   ],
                   "response_format": "scalar",
@@ -400,7 +400,7 @@
                       "aggregator": "sum",
                       "data_source": "metrics",
                       "name": "q0",
-                      "query": "sum:ml_obs.span.llm.total.cost{$ml_app} by {ml_app}.as_count()"
+                      "query": "sum:ml_obs.span.llm.total.cost{$ml_app,$service} by {ml_app}.as_count()"
                     }
                   ],
                   "response_format": "scalar",
@@ -448,7 +448,7 @@
                     {
                       "data_source": "metrics",
                       "name": "q0",
-                      "query": "sum:ml_obs.span.llm.total.cost{$ml_app} by {ml_app}.as_count()"
+                      "query": "sum:ml_obs.span.llm.total.cost{$ml_app,$service} by {ml_app}.as_count()"
                     }
                   ],
                   "response_format": "timeseries"
@@ -481,7 +481,7 @@
                     {
                       "data_source": "metrics",
                       "name": "q0",
-                      "query": "sum:ml_obs.span.llm.total.tokens{$ml_app} by {ml_app}.as_count()"
+                      "query": "sum:ml_obs.span.llm.total.tokens{$ml_app,$service} by {ml_app}.as_count()"
                     }
                   ],
                   "response_format": "timeseries"
@@ -516,13 +516,13 @@
                       "aggregator": "sum",
                       "data_source": "metrics",
                       "name": "q0",
-                      "query": "sum:ml_obs.span.llm.total.cost{$ml_app}.as_count()"
+                      "query": "sum:ml_obs.span.llm.total.cost{$ml_app,$service}.as_count()"
                     },
                     {
                       "aggregator": "sum",
                       "data_source": "metrics",
                       "name": "q1",
-                      "query": "sum:ml_obs.span{span_kind:llm,$ml_app}.as_count()"
+                      "query": "sum:ml_obs.span{span_kind:llm,$ml_app,$service}.as_count()"
                     }
                   ],
                   "response_format": "scalar"
@@ -560,12 +560,12 @@
                     {
                       "data_source": "metrics",
                       "name": "q0",
-                      "query": "sum:ml_obs.span.llm.total.cost{$ml_app} by {ml_app}.as_count()"
+                      "query": "sum:ml_obs.span.llm.total.cost{$ml_app,$service} by {ml_app}.as_count()"
                     },
                     {
                       "data_source": "metrics",
                       "name": "q1",
-                      "query": "sum:ml_obs.span{span_kind:llm,$ml_app} by {ml_app}.as_count()"
+                      "query": "sum:ml_obs.span{span_kind:llm,$ml_app,$service} by {ml_app}.as_count()"
                     }
                   ],
                   "response_format": "timeseries"
@@ -651,13 +651,13 @@
                       "aggregator": "sum",
                       "data_source": "metrics",
                       "name": "q0",
-                      "query": "sum:ml_obs.span.llm.input.cache_read.tokens{$ml_app}.as_count()"
+                      "query": "sum:ml_obs.span.llm.input.cache_read.tokens{$ml_app,$service}.as_count()"
                     },
                     {
                       "aggregator": "sum",
                       "data_source": "metrics",
                       "name": "q1",
-                      "query": "sum:ml_obs.span.llm.input.tokens{$ml_app}.as_count()"
+                      "query": "sum:ml_obs.span.llm.input.tokens{$ml_app,$service}.as_count()"
                     }
                   ],
                   "response_format": "scalar"
@@ -689,12 +689,12 @@
                     {
                       "data_source": "metrics",
                       "name": "q0",
-                      "query": "sum:ml_obs.span.llm.input.cache_read.tokens{$ml_app} by {ml_app}.as_count()"
+                      "query": "sum:ml_obs.span.llm.input.cache_read.tokens{$ml_app,$service} by {ml_app}.as_count()"
                     },
                     {
                       "data_source": "metrics",
                       "name": "q1",
-                      "query": "sum:ml_obs.span.llm.input.tokens{$ml_app} by {ml_app}.as_count()"
+                      "query": "sum:ml_obs.span.llm.input.tokens{$ml_app,$service} by {ml_app}.as_count()"
                     }
                   ],
                   "response_format": "timeseries"

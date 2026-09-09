@@ -29,11 +29,11 @@
   "monitors": [
     {
       "id": 318097614,
-      "why": "RC1-349/377 fleet LLM spend guardrail — daily ceiling, warn $6 / alert $12"
+      "why": "RC1-349/377/411 fleet LLM spend guardrail — daily ceiling on production only (excludes service:evals, service:dry-run), warn $8 / alert $16"
     },
     {
       "id": 318833109,
-      "why": "RC1-377 fleet LLM cost per call — the price signal, warn $0.035 / alert $0.05"
+      "why": "RC1-377/411 fleet LLM cost per call — the price signal, production only, warn $0.05 / alert $0.075"
     },
     {
       "id": 319523084,

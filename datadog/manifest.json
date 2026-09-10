@@ -15,7 +15,7 @@
     },
     {
       "id": "bwm-uny-qqs",
-      "why": "RC1-346 agent fleet — one LLM Observability pane over the fleet's ml_apps (seven in service, two dormant smoke-test leftovers); roster RC1-406, cost units RC1-405"
+      "why": "RC1-346 agent fleet — one LLM Observability pane over the fleet's ml_apps (eight in service, two dormant smoke-test leftovers); roster RC1-406 + RC1-419, cost units RC1-405"
     },
     {
       "id": "izc-5s7-tz8",

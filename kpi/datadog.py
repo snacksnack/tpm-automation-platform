@@ -19,9 +19,15 @@ The honesty rule crosses over intact:
 - **The state always ships**, as `kpi.program.health` (0 ok, 1 stale,
   2 broken) tagged with the KPI id, so a monitor can page on "unmeasured"
   even while the value series goes quiet.
-- **`kpi.program.tripped`** (0/1) ships per KPI, which is what lets the
-  planted events — the day-29 slip, the week-6 cost spike — fire real
-  Datadog monitors when they land.
+- **`kpi.program.tripped`** (0/1) ships per KPI: the standing level, which
+  is what the dashboard charts.
+- **`kpi.program.newly_tripped`** (0/1) ships beside it (RC1-418) and is 1
+  only on the day a KPI crosses into tripped. Some KPIs latch —
+  `scope-change-pct` measures against a fixed day-0 baseline, so added scope
+  can never un-add itself — and a monitor on the level sits red for the rest
+  of the program, taking the `Program health` SLO with it. The crossing is
+  the incident; the level is a status. This is the metric the planted events
+  — the day-29 slip, the week-6 cost spike — fire their monitors from.
 
 Tags are `program:` and (on the shared metrics) `kpi:` only. The sim-date is
 deliberately not a tag: every distinct tag combination is a billable custom
@@ -61,6 +67,7 @@ from kpi.reading import Reading
 VALUE_METRIC_PREFIX = "kpi.program."
 HEALTH_METRIC = "kpi.program.health"
 TRIPPED_METRIC = "kpi.program.tripped"
+NEWLY_TRIPPED_METRIC = "kpi.program.newly_tripped"
 
 HEALTH = {"ok": 0, "stale": 1, "broken": 2}
 
@@ -89,16 +96,46 @@ def _series(metric: str, value: float, *, at: int, tags: list[str]) -> dict:
     }
 
 
-def series_for(readings: list[Reading], *, program_id: str, at: int) -> list[dict]:
+def newly_tripped(
+    readings: list[Reading], previous: list[Reading] | None
+) -> dict[str, bool]:
+    """Which KPIs crossed *into* tripped on this day (RC1-418). Pure.
+
+    `previous` is the last day actually reported, not a recomputation: the
+    question the monitor asks is "have we already raised this?", and the
+    honest answer is what went out yesterday. A KPI absent from `previous`
+    — the program's first day, or a KPI new to the tree — counts as newly
+    tripped when it trips, because the first observation is the news.
+
+    A `broken` reading carrying yesterday's tripped state through a source
+    break falls out for free: it was tripped then and is tripped now, so
+    nothing crossed.
+    """
+    was = {r.kpi_id: r.tripped for r in previous or []}
+    return {r.kpi_id: r.tripped and not was.get(r.kpi_id, False) for r in readings}
+
+
+def series_for(
+    readings: list[Reading],
+    *,
+    program_id: str,
+    at: int,
+    previous: list[Reading] | None = None,
+) -> list[dict]:
     """The v2 series payload for one tracked day. Pure — the tests read this
     rather than a network.
 
     `at` is wall-clock submit time, not the sim-date: Datadog refuses points
     much older than an hour, and the daily job's one-tick-per-day cadence
     makes the real timeline the sim timeline drawn at 1:1.
+
+    `previous` is the previous day's readings, for the `newly_tripped` metric
+    (RC1-418). Omitted, every tripped KPI reads as newly tripped — the
+    correct reading of "nothing is known to have gone out before this".
     """
     out: list[dict] = []
     program_tag = f"program:{program_id}"
+    crossed = newly_tripped(readings, previous)
     for r in readings:
         kpi_tag = f"kpi:{r.kpi_id}"
         if r.state == "ok" and r.value is not None:
@@ -108,6 +145,17 @@ def series_for(readings: list[Reading], *, program_id: str, at: int) -> list[dic
         )
         out.append(
             _series(TRIPPED_METRIC, float(r.tripped), at=at, tags=[program_tag, kpi_tag])
+        )
+        # The 0 ships every day on purpose: the monitor resolves against a
+        # datapoint, and a metric that only appears on trip days would leave
+        # the alert with nothing to come back from.
+        out.append(
+            _series(
+                NEWLY_TRIPPED_METRIC,
+                float(crossed[r.kpi_id]),
+                at=at,
+                tags=[program_tag, kpi_tag],
+            )
         )
     return out
 
@@ -170,15 +218,25 @@ def ship_events(events: list[dict], *, api_key: str, site: str | None = None) ->
 
 
 def ship_readings(
-    readings: list[Reading], *, program_id: str, at: int | None = None
+    readings: list[Reading],
+    *,
+    program_id: str,
+    at: int | None = None,
+    previous: list[Reading] | None = None,
 ) -> tuple[int, int] | None:
     """Ship one tracked day: the numbers as series, the why as events.
     Returns (series, events) counts, or None when `DD_API_KEY` is unset
-    (the leg is optional; Postgres is not)."""
+    (the leg is optional; Postgres is not).
+
+    `previous` is the previous day's readings, which decide the RC1-418
+    `newly_tripped` metric.
+    """
     api_key = os.environ.get("DD_API_KEY")
     if not api_key:
         return None
-    series = series_for(readings, program_id=program_id, at=at or int(time.time()))
+    series = series_for(
+        readings, program_id=program_id, at=at or int(time.time()), previous=previous
+    )
     events = events_for(readings, program_id=program_id)
     if series:
         ship(series, api_key=api_key)
@@ -233,8 +291,11 @@ def monitor_payloads(
     """Three monitors per program, generated so they cannot drift from the
     metrics the shipper actually sends. Pure.
 
-    - **tripped**: a KPI's so-what threshold crossed — the planted sim events
-      land here. Multi-alert by `kpi` so each names itself.
+    - **tripped**: a KPI's so-what threshold *crossed* — the planted sim
+      events land here. Multi-alert by `kpi` so each names itself. It reads
+      `newly_tripped`, not the level: a latching KPI (RC1-418) would
+      otherwise hold the monitor, and the SLO built on it, red for the rest
+      of the program. The standing level stays on the dashboard.
     - **unmeasured**: warning on stale (1), alert on broken (2) — the honesty
       rule's alarm. The value chart goes quiet and this says why.
     - **heartbeat**: a threshold that never fires plus `notify_no_data` — the
@@ -246,9 +307,11 @@ def monitor_payloads(
         {
             "name": f"Program KPI tripped — {program_id}",
             "type": "metric alert",
-            "query": f"max(last_1d):max:{TRIPPED_METRIC}{scope} by {{kpi}} > 0",
+            "query": f"max(last_1d):max:{NEWLY_TRIPPED_METRIC}{scope} by {{kpi}} > 0",
             "message": _message(
-                f"{{{{kpi.name}}}} tripped its threshold on {program_id}.",
+                f"{{{{kpi.name}}}} crossed its threshold on {program_id} today. "
+                "This fires on the crossing, not on every day the KPI stays "
+                "tripped — the standing level is on the dashboard.",
                 handle=handle,
                 dashboard_url=dashboard_url,
             ),

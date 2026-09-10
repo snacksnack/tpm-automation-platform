@@ -198,6 +198,26 @@ class ReadingsStore:
             cur.execute(query, params)
             return [stored_from_row(row) for row in cur.fetchall()]
 
+    def readings_before(self, program_id: str, *, sim_date: date) -> list[Reading]:
+        """The most recent day's readings strictly before `sim_date` (RC1-418).
+
+        What the `newly_tripped` metric compares against — the last day that
+        actually went out, so a re-track of today does not read its own rows
+        as yesterday's. Empty when nothing precedes the day.
+        """
+        query = f"""
+            SELECT {_COLUMNS} FROM {TABLE}
+             WHERE program_id = %s
+               AND sim_date = (
+                   SELECT max(sim_date) FROM {TABLE}
+                    WHERE program_id = %s AND sim_date < %s
+               )
+             ORDER BY kpi_id
+        """
+        with self._conn.cursor() as cur:
+            cur.execute(query, (program_id, program_id, sim_date))
+            return [stored_from_row(row).reading for row in cur.fetchall()]
+
     def days(self, program_id: str) -> list[date]:
         """Every sim-date the program has readings for, oldest first. The
         'landing on schedule for a week' check reads this."""

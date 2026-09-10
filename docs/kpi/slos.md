@@ -21,7 +21,12 @@ one must never hide inside the other:
 
 | SLO | SLI | target |
 | --- | --- | --- |
-| Program health | % of time the *tripped* monitor sat in OK — no KPI over its so-what threshold | 95 % / 30d |
+| Program health | % of time the *tripped* monitor sat in OK — no KPI newly over its so-what threshold | 95 % / 30d |
+
+Since RC1-418 the tripped monitor fires on the *crossing*, not the standing
+level, so this budget counts days a KPI newly went red rather than days it sat
+red. That is the only form of the SLI a latching KPI cannot pin: see
+`docs/kpi/alerting.md`.
 
 The targets encode a deliberate asymmetry (a test enforces it): a program is
 *allowed* to run red 5 % of the window — red sometimes is what thresholds

@@ -105,6 +105,120 @@ def test_every_series_is_a_gauge():
     assert {s["type"] for s in series} == {datadog.GAUGE}
 
 
+# --- newly_tripped (RC1-418) -----------------------------------------------------------------
+
+
+def _newly(series: list[dict]) -> dict[str, float]:
+    return {
+        next(t for t in s["tags"] if t.startswith("kpi:")): s["points"][0]["value"]
+        for s in _by_metric(series)[datadog.NEWLY_TRIPPED_METRIC]
+    }
+
+
+def test_first_ever_trip_counts_as_new():
+    """No previous day at all — the first observation is the news."""
+    series = datadog.series_for(
+        [_ok(kpi_id="scope-change-pct", value=11.85, tripped=True)],
+        program_id="simulated-program",
+        at=AT,
+        previous=None,
+    )
+    assert _newly(series) == {"kpi:scope-change-pct": 1.0}
+
+
+def test_crossing_from_untripped_is_new():
+    yesterday = [_ok(kpi_id="scope-change-pct", value=9.63, tripped=False)]
+    series = datadog.series_for(
+        [_ok(kpi_id="scope-change-pct", value=11.85, tripped=True)],
+        program_id="simulated-program",
+        at=AT,
+        previous=yesterday,
+    )
+    assert _newly(series) == {"kpi:scope-change-pct": 1.0}
+
+
+def test_staying_tripped_is_not_new():
+    """The latching case: scope-change-pct holds 11.85 for the rest of the
+    program, and the monitor must not hold with it."""
+    yesterday = [_ok(kpi_id="scope-change-pct", value=11.85, tripped=True)]
+    series = datadog.series_for(
+        [_ok(kpi_id="scope-change-pct", value=11.85, tripped=True)],
+        program_id="simulated-program",
+        at=AT,
+        previous=yesterday,
+    )
+    assert _newly(series) == {"kpi:scope-change-pct": 0.0}
+
+
+def test_recovering_then_tripping_again_is_new():
+    yesterday = [_ok(kpi_id="forecast-slip-days", value=1.84, tripped=False)]
+    series = datadog.series_for(
+        [_ok(kpi_id="forecast-slip-days", value=6.2, tripped=True)],
+        program_id="simulated-program",
+        at=AT,
+        previous=yesterday,
+    )
+    assert _newly(series) == {"kpi:forecast-slip-days": 1.0}
+
+
+def test_tripped_carried_through_a_source_break_is_not_new():
+    """A broken reading carries value, tripped and as_of from the last good
+    day (docs/kpi/ledger.md). Carrying is not crossing."""
+    yesterday = [_ok(kpi_id="critical-path-slack-days", value=-11.0, tripped=True)]
+    carried = Reading(
+        kpi_id="critical-path-slack-days", sim_date=DAY, value=-11.0, state="broken",
+        tripped=True, reason="source broken since day 43; carrying day 42",
+    )
+    series = datadog.series_for(
+        [carried], program_id="simulated-program", at=AT, previous=yesterday
+    )
+    assert _newly(series) == {"kpi:critical-path-slack-days": 0.0}
+
+
+def test_the_zero_ships_every_day_so_the_alert_can_resolve():
+    """A metric that only appeared on trip days would leave the monitor with
+    no datapoint to come back from."""
+    series = datadog.series_for(
+        [_ok(), _stale(), _broken()], program_id="simulated-program", at=AT
+    )
+    newly = _newly(series)
+    assert len(newly) == 3
+    assert set(newly.values()) == {0.0}
+
+
+def test_newly_tripped_is_independent_per_kpi():
+    yesterday = [
+        _ok(kpi_id="scope-change-pct", value=11.85, tripped=True),
+        _ok(kpi_id="forecast-slip-days", value=1.8, tripped=False),
+    ]
+    series = datadog.series_for(
+        [
+            _ok(kpi_id="scope-change-pct", value=11.85, tripped=True),
+            _ok(kpi_id="forecast-slip-days", value=6.2, tripped=True),
+        ],
+        program_id="simulated-program",
+        at=AT,
+        previous=yesterday,
+    )
+    assert _newly(series) == {
+        "kpi:scope-change-pct": 0.0,
+        "kpi:forecast-slip-days": 1.0,
+    }
+
+
+def test_the_level_still_ships_beside_the_crossing():
+    """`kpi.program.tripped` is unchanged — the dashboard reads the level."""
+    yesterday = [_ok(kpi_id="scope-change-pct", value=11.85, tripped=True)]
+    series = datadog.series_for(
+        [_ok(kpi_id="scope-change-pct", value=11.85, tripped=True)],
+        program_id="simulated-program",
+        at=AT,
+        previous=yesterday,
+    )
+    assert _by_metric(series)[datadog.TRIPPED_METRIC][0]["points"][0]["value"] == 1.0
+    assert _newly(series) == {"kpi:scope-change-pct": 0.0}
+
+
 # --- ship_readings ---------------------------------------------------------------------------
 
 
@@ -129,10 +243,11 @@ def test_with_a_key_the_series_and_event_counts_come_back(monkeypatch):
     counts = datadog.ship_readings(
         [_ok(), _stale()], program_id="simulated-program", at=AT
     )
-    # ok → value + health + tripped; stale → health + tripped; the stale
-    # reading is also the one event with something to explain.
-    assert counts == (5, 1)
-    assert len(sent["series"]) == 5
+    # ok → value + health + tripped + newly_tripped; stale → the same minus
+    # the value; the stale reading is also the one event with something to
+    # explain.
+    assert counts == (7, 1)
+    assert len(sent["series"]) == 7
     assert len(sent["events"]) == 1
     assert sent["api_key"] == "test-key"
 
@@ -189,12 +304,21 @@ def test_three_monitors_per_program():
     }
 
 
-def test_tripped_monitor_is_multi_alert_on_the_tripped_metric():
+def test_tripped_monitor_is_multi_alert_on_the_crossing_not_the_level():
+    """RC1-418: on the level, a latching KPI holds this monitor — and the
+    `Program health` SLO built on it — red for the rest of the program."""
     m = _monitors()["Program KPI tripped — simulated-program"]
     assert m["query"] == (
-        "max(last_1d):max:kpi.program.tripped{program:simulated-program} by {kpi} > 0"
+        "max(last_1d):max:kpi.program.newly_tripped{program:simulated-program} by {kpi} > 0"
     )
     assert m["options"]["notify_no_data"] is False
+
+
+def test_tripped_monitor_keeps_its_name_so_the_slo_wiring_survives():
+    """`push_monitors` matches by name and the SLOs resolve monitor ids from
+    the same lead, so the rename that would orphan them must not happen."""
+    assert "Program KPI tripped — simulated-program" in _monitors()
+    assert any(lead == "Program KPI tripped" for _, lead, _ in datadog._SLO_ON_MONITOR)
 
 
 def test_unmeasured_monitor_warns_on_stale_and_alerts_on_broken():

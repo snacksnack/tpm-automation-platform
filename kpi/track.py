@@ -228,6 +228,10 @@ def main(argv: list[str] | None = None) -> int:
         from kpi.readings_store import ReadingsStore
 
         with ReadingsStore(dsn) as store:
+            # Read yesterday before today lands, or a re-track of the same day
+            # reads its own rows back as the previous day and every standing
+            # trip looks new again (RC1-418).
+            previous = store.readings_before(result.program_id, sim_date=result.sim_date)
             stored = store.save(result.program_id, result.readings, run_id=result.run_id)
 
         # The Datadog leg (dual-write, RC1-305 revisited): Postgres is the
@@ -236,7 +240,9 @@ def main(argv: list[str] | None = None) -> int:
         from kpi import datadog
 
         try:
-            shipped = datadog.ship_readings(result.readings, program_id=result.program_id)
+            shipped = datadog.ship_readings(
+                result.readings, program_id=result.program_id, previous=previous
+            )
         except Exception as exc:
             print(f"datadog: shipping failed, readings are in Postgres: {exc}", file=sys.stderr)
         else:

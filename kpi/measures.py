@@ -714,6 +714,16 @@ def _simulated(kpi_id: str) -> Measure:
 
     def measure(program: Program, series: list[ProgramSnapshot]) -> Reading:
         snap = series[-1]
+        # RC1-417: a converge that failed part-way leaves Jira between two days.
+        # The sim-date on this snapshot names a day the world never reached, so
+        # every number computed from it would be filed under the wrong date —
+        # which is the honesty rule's "never a number computed from an absence"
+        # with the absence being the date rather than the data.
+        clock = next((h for h in snap.health if h.source == "clock"), None)
+        if clock is not None and clock.status == "error":
+            return _broken(
+                kpi_id, snap, f"the simulated world is mid-converge: {clock.detail}"
+            )
         by_day: dict[int, ProgramSnapshot] = {}
         for s in series:
             if s.sim_day is None:

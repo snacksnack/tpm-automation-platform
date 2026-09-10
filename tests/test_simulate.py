@@ -8,6 +8,7 @@ with nothing outstanding.
 from __future__ import annotations
 
 import copy
+import json
 import re
 from collections import defaultdict
 from pathlib import Path
@@ -373,6 +374,112 @@ def test_clock_manifest_and_spend_line(tmp_path: Path):
     assert '"epic": "PMA-1"' in state.manifest_path.read_text()
     state.forget()
     assert not state.clock_path.exists() and not (tmp_path / "sim").exists()
+
+
+# --- a converge that fails part-way (RC1-417) -------------------------------------------
+
+
+class _FlakyJira(FakeJira):
+    """Fails the Nth write, the way a Jira read timeout did on 2026-09-08."""
+
+    def __init__(self, fail_on: int) -> None:
+        super().__init__()
+        self.fail_on = fail_on
+        self.writes = 0
+
+    def _maybe_fail(self) -> None:
+        self.writes += 1
+        if self.writes == self.fail_on:
+            raise TimeoutError("the read operation timed out")
+
+    def set_estimation(self, key, points, board_id):
+        self._maybe_fail()
+        return super().set_estimation(key, points, board_id)
+
+    def create_story(self, *a, **kw):
+        self._maybe_fail()
+        return super().create_story(*a, **kw)
+
+
+def test_converge_that_fails_part_way_raises_with_what_landed():
+    jira = _FlakyJira(fail_on=3)
+    with pytest.raises(apply.ConvergeError) as caught:
+        apply.converge(jira, 0, board_id=1, log=_quiet)
+    exc = caught.value
+    assert exc.day == 0
+    assert isinstance(exc.__cause__, TimeoutError)
+    # `applied` is what landed — the action that raised is not in it, and the
+    # keys created before the failure are, so nothing that reached Jira is lost.
+    assert exc.applied, "some actions landed before the failure"
+    assert len(exc.applied) == len(jira.issues), "one landed action per issue in Jira"
+    assert exc.keys.get("epic") in jira.issues
+
+
+def test_a_dirty_converge_does_not_move_the_clock(tmp_path: Path):
+    """The 2026-09-08 bug: Jira advanced, the clock did not, and nothing said so."""
+    from simulate import __main__ as cli
+
+    state = SimState(tmp_path / "sim")
+    state.write(15, {"epic": "PMA-1"})
+    rc = cli._converge_to(_FlakyJira(fail_on=1), state, 16, dry_run=False)
+
+    assert rc == cli.EXIT_DIRTY
+    clock = state.read_clock()
+    assert clock.day == 15, "the clock must stay on the last day that fully landed"
+    assert clock.converged is False
+    assert clock.converging_to == 16
+
+
+def test_a_successful_converge_clears_the_dirty_marker(tmp_path: Path):
+    state = SimState(tmp_path / "sim")
+    state.mark_incomplete(16, {"epic": "PMA-1"})
+    assert state.read_clock().converged is False
+    state.write(16, {"epic": "PMA-1"})
+    clock = state.read_clock()
+    assert clock.converged is True and clock.converging_to is None and clock.day == 16
+
+
+def test_mark_incomplete_leaves_the_spend_line_and_ledger_alone(tmp_path: Path):
+    """They are functions of a day the world never reached."""
+    state = SimState(tmp_path / "sim")
+    state.write(15, {"epic": "PMA-1"})
+    before = state.spend_path.read_text()
+    state.mark_incomplete(16, {"epic": "PMA-1", "x-mobile": "PMA-198"})
+    assert state.spend_path.read_text() == before
+    assert '"x-mobile": "PMA-198"' in state.manifest_path.read_text(), (
+        "the keys a partial converge created must not be lost"
+    )
+
+
+def test_a_clock_written_before_the_flag_reads_as_converged(tmp_path: Path):
+    """Absence of the key is not a dirty world — it predates RC1-417."""
+    state = SimState(tmp_path / "sim")
+    state.write(15, {"epic": "PMA-1"})
+    doc = json.loads(state.clock_path.read_text())
+    del doc["converged"]
+    state.clock_path.write_text(json.dumps(doc))
+    assert state.read_clock().converged is True
+
+
+def test_tick_stops_on_a_dirty_converge_rather_than_stacking_days(monkeypatch, tmp_path: Path):
+    from simulate import __main__ as cli
+
+    jira = _FlakyJira(fail_on=2)
+
+    class _Ctx:
+        def __enter__(self):
+            return jira
+
+        def __exit__(self, *exc):
+            return False
+
+    monkeypatch.setattr(cli, "_jira", lambda: _Ctx())
+    monkeypatch.setattr(cli.settings, "kpi_sim_dir", str(tmp_path / "sim"))
+    SimState(tmp_path / "sim").write(0, {"epic": "PMA-1"})
+
+    assert cli.main(["tick", "--days", "5"]) == cli.EXIT_DIRTY
+    clock = SimState(tmp_path / "sim").read_clock()
+    assert clock.day == 0 and clock.converged is False
 
 
 # --- the CLI, wired to the fake ---------------------------------------------------------

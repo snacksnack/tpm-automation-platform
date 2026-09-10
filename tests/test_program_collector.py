@@ -145,6 +145,29 @@ def test_snapshot_carries_the_sim_clock_and_the_landed_spend(tmp_path):
     assert epic.due == scenario.sim_date(scenario.GA_DAY)
 
 
+def test_a_dirty_clock_is_an_error_not_a_date(tmp_path):
+    """RC1-417: a converge that failed part-way leaves Jira between two days.
+    The snapshot is still stored — that day is worth recording — but the clock
+    reads `error`, so nothing downstream dates a number from it."""
+    jira, state = FakeJira(), SimState(tmp_path / "sim")
+    _converge(jira, state, 15)
+    state.mark_incomplete(16, {"epic": "PMA-1"})
+
+    snap = collect.collect_program(_program(tmp_path), jira=FakeCollector(jira), now=NOW)
+    assert not snap.healthy
+    assert snap.source("clock").status == "error"
+    assert "day 16" in snap.source("clock").detail
+    assert snap.sim_day == 15, "the last day that fully landed still stamps the snapshot"
+    assert snap.jira is not None, "the Jira rows are still collected and stored"
+
+
+def test_a_clean_clock_stays_ok(tmp_path):
+    jira, state = FakeJira(), SimState(tmp_path / "sim")
+    _converge(jira, state, 15)
+    snap = collect.collect_program(_program(tmp_path), jira=FakeCollector(jira), now=NOW)
+    assert snap.source("clock").status == "ok"
+
+
 def test_the_source_break_is_collected_as_missing(tmp_path):
     jira, state = FakeJira(), SimState(tmp_path / "sim")
     _converge(jira, state, 45)

@@ -25,6 +25,12 @@ from simulate import ledger, scenario
 class Clock:
     day: int
     updated_at: str
+    #: False while a converge mutated Jira and then failed (RC1-417): `day` is
+    #: still the last day that fully landed, and the world is somewhere past
+    #: it. The next successful converge clears this.
+    converged: bool = True
+    #: The day that converge was reaching for when it failed, if any.
+    converging_to: int | None = None
 
     @property
     def sim_date(self):
@@ -43,28 +49,29 @@ class SimState:
         if not self.clock_path.exists():
             return None
         data = json.loads(self.clock_path.read_text())
-        return Clock(day=int(data["day"]), updated_at=data["updated_at"])
-
-    def write(self, day: int, keys: dict[str, str]) -> None:
-        self.dir.mkdir(parents=True, exist_ok=True)
-        now = datetime.now(UTC).isoformat(timespec="seconds")
-        self.clock_path.write_text(
-            json.dumps(
-                {
-                    "day": day,
-                    "sim_date": scenario.sim_date(day).isoformat(),
-                    "week": scenario.week_of(day),
-                    "kickoff": scenario.KICKOFF.isoformat(),
-                    "ga_day": scenario.GA_DAY,
-                    "last_day": scenario.LAST_DAY,
-                    "source_broken": scenario.source_broken_on(day),
-                    "active_events": [e.id for e in scenario.active_events(day)],
-                    "updated_at": now,
-                },
-                indent=2,
-            )
-            + "\n"
+        return Clock(
+            day=int(data["day"]),
+            updated_at=data["updated_at"],
+            # Absent on a clock written before RC1-417: a file that predates
+            # the flag was written by a converge that completed.
+            converged=bool(data.get("converged", True)),
+            converging_to=data.get("converging_to"),
         )
+
+    def _clock_doc(self, day: int, now: str) -> dict:
+        return {
+            "day": day,
+            "sim_date": scenario.sim_date(day).isoformat(),
+            "week": scenario.week_of(day),
+            "kickoff": scenario.KICKOFF.isoformat(),
+            "ga_day": scenario.GA_DAY,
+            "last_day": scenario.LAST_DAY,
+            "source_broken": scenario.source_broken_on(day),
+            "active_events": [e.id for e in scenario.active_events(day)],
+            "updated_at": now,
+        }
+
+    def _write_manifest(self, keys: dict[str, str], now: str) -> None:
         self.manifest_path.write_text(
             json.dumps(
                 {
@@ -78,6 +85,14 @@ class SimState:
             )
             + "\n"
         )
+
+    def write(self, day: int, keys: dict[str, str]) -> None:
+        """Record a day that fully landed. Clears any RC1-417 dirty marker."""
+        self.dir.mkdir(parents=True, exist_ok=True)
+        now = datetime.now(UTC).isoformat(timespec="seconds")
+        doc = self._clock_doc(day, now) | {"converged": True}
+        self.clock_path.write_text(json.dumps(doc, indent=2) + "\n")
+        self._write_manifest(keys, now)
         with self.spend_path.open("w", newline="") as fh:
             w = csv.writer(fh)
             w.writerow(["week", "week_start", "planned_usd", "actual_usd", "landed_on_day"])
@@ -92,6 +107,30 @@ class SimState:
                     ]
                 )
         self.ledger_path.write_text(ledger.to_csv(ledger.derive()))
+
+    def mark_incomplete(self, converging_to: int, keys: dict[str, str]) -> None:
+        """Record that a converge mutated Jira and then failed (RC1-417).
+
+        `day` stays on the last day that fully landed — there is no honest day
+        number for a world half-way between two — and `converged: false` says
+        the world past it is untrusted. The collector turns that into an
+        `error` on the clock source, so the day is *recorded* as unreadable
+        rather than silently mis-dated.
+
+        The spend line and the ledger are deliberately not rewritten: they are
+        functions of a day the world never reached. The manifest is, so the
+        keys a partial converge created are not lost.
+        """
+        self.dir.mkdir(parents=True, exist_ok=True)
+        now = datetime.now(UTC).isoformat(timespec="seconds")
+        last_good = self.read_clock()
+        day = last_good.day if last_good else max(converging_to - 1, 0)
+        doc = self._clock_doc(day, now) | {
+            "converged": False,
+            "converging_to": converging_to,
+        }
+        self.clock_path.write_text(json.dumps(doc, indent=2) + "\n")
+        self._write_manifest(keys, now)
 
     def forget(self) -> None:
         for p in (self.clock_path, self.manifest_path, self.spend_path, self.ledger_path):

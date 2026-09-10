@@ -242,6 +242,25 @@ class Report:
         return bool(self.actions)
 
 
+class ConvergeError(RuntimeError):
+    """A converge that mutated Jira and then failed (RC1-417).
+
+    Jira is now somewhere between two days and the clock must not be moved as
+    though it arrived. Carries the day it was converging *to*, the actions
+    that landed before the failure, and the keys observed or created so far,
+    so the caller can record a dirty world instead of a silent one.
+    """
+
+    def __init__(self, day: int, *, applied: list[Action], keys: dict[str, str]) -> None:
+        super().__init__(
+            f"converge to day {day} failed after {len(applied)} action(s); "
+            "Jira is part-way between days"
+        )
+        self.day = day
+        self.applied = applied
+        self.keys = keys
+
+
 def converge(
     jira: Jira,
     day: int,
@@ -266,52 +285,74 @@ def converge(
         return report
 
     account = None if dry_run else jira.my_account_id()
+    applied: list[Action] = []
     for a in actions:
         log(("[dry-run] " if dry_run else "") + str(a))
         if dry_run:
             keys.setdefault(a.slug, f"<{a.slug}>")
             continue
-        if a.kind == "create_epic":
-            keys["epic"] = jira.create_epic(
-                state.epic_summary, sorted(state.epic_labels), project=PROJECT,
-                due=_iso(state.epic_due),
-            )
-        elif a.kind == "epic_due":
-            jira.set_fields(keys["epic"], {"duedate": a.value})
-        elif a.kind == "epic_label_add":
-            jira.add_labels(keys["epic"], [str(a.value)])
-        elif a.kind == "epic_label_remove":
-            jira.remove_labels(keys["epic"], [str(a.value)])
-        elif a.kind == "create":
-            st = state.issues[a.slug]
-            story = scenario.BY_SLUG[a.slug]
-            planned_due = scenario.sim_date(story.due)  # the slip is applied as a later write
-            keys[a.slug] = jira.create_story(
-                st.summary, sorted(st.labels), due=_iso(planned_due), start=_iso(st.start),
-                assignee_id=account, parent=keys["epic"], project=PROJECT,
-                description=scenario.description_for(story),
-            )
-        elif a.kind == "due":
-            jira.set_fields(keys[a.slug], {"duedate": a.value})
-            if a.comment:
-                jira.add_comment(keys[a.slug], a.comment)
-        elif a.kind == "start":
-            jira.set_fields(keys[a.slug], {START_DATE_FIELD: a.value})
-        elif a.kind == "points":
-            jira.set_estimation(keys[a.slug], float(a.value), board_id)  # type: ignore[arg-type]
-        elif a.kind == "label_add":
-            jira.add_labels(keys[a.slug], [str(a.value)])
-        elif a.kind == "label_remove":
-            jira.remove_labels(keys[a.slug], [str(a.value)])
-        elif a.kind == "link":
-            jira.create_blocks_link(keys[a.slug], keys[str(a.value)])
-        elif a.kind == "status":
-            if jira.transition_to(keys[a.slug], str(a.value)) and a.comment:
-                jira.add_comment(keys[a.slug], a.comment)
-        else:  # pragma: no cover
-            raise ValueError(f"unknown action {a.kind}")
+        try:
+            _apply(jira, a, state, keys, account=account, board_id=board_id)
+        except Exception as exc:
+            # RC1-417: the write partly landed. Raising the bare error lets the
+            # caller move the clock as though nothing happened, and the next
+            # snapshot then dates a half-converged world with the old day.
+            raise ConvergeError(day, applied=applied, keys=keys) from exc
+        applied.append(a)
     report.keys = keys
     return report
+
+
+def _apply(
+    jira: Jira,
+    a: Action,
+    state,
+    keys: dict[str, str],
+    *,
+    account: str | None,
+    board_id: int,
+) -> None:
+    """One action against Jira. Split out of `converge` so a failure has a
+    single place to be caught (RC1-417)."""
+    if a.kind == "create_epic":
+        keys["epic"] = jira.create_epic(
+            state.epic_summary, sorted(state.epic_labels), project=PROJECT,
+            due=_iso(state.epic_due),
+        )
+    elif a.kind == "epic_due":
+        jira.set_fields(keys["epic"], {"duedate": a.value})
+    elif a.kind == "epic_label_add":
+        jira.add_labels(keys["epic"], [str(a.value)])
+    elif a.kind == "epic_label_remove":
+        jira.remove_labels(keys["epic"], [str(a.value)])
+    elif a.kind == "create":
+        st = state.issues[a.slug]
+        story = scenario.BY_SLUG[a.slug]
+        planned_due = scenario.sim_date(story.due)  # the slip is applied as a later write
+        keys[a.slug] = jira.create_story(
+            st.summary, sorted(st.labels), due=_iso(planned_due), start=_iso(st.start),
+            assignee_id=account, parent=keys["epic"], project=PROJECT,
+            description=scenario.description_for(story),
+        )
+    elif a.kind == "due":
+        jira.set_fields(keys[a.slug], {"duedate": a.value})
+        if a.comment:
+            jira.add_comment(keys[a.slug], a.comment)
+    elif a.kind == "start":
+        jira.set_fields(keys[a.slug], {START_DATE_FIELD: a.value})
+    elif a.kind == "points":
+        jira.set_estimation(keys[a.slug], float(a.value), board_id)  # type: ignore[arg-type]
+    elif a.kind == "label_add":
+        jira.add_labels(keys[a.slug], [str(a.value)])
+    elif a.kind == "label_remove":
+        jira.remove_labels(keys[a.slug], [str(a.value)])
+    elif a.kind == "link":
+        jira.create_blocks_link(keys[a.slug], keys[str(a.value)])
+    elif a.kind == "status":
+        if jira.transition_to(keys[a.slug], str(a.value)) and a.comment:
+            jira.add_comment(keys[a.slug], a.comment)
+    else:  # pragma: no cover
+        raise ValueError(f"unknown action {a.kind}")
 
 
 def verify(jira: Jira, day: int) -> list[Action]:

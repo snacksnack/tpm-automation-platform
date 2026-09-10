@@ -19,9 +19,18 @@
 #
 # Exit code: the worst of the steps (0 ok; 1 a tick refused, a source was
 # not ok, or a KPI read stale/broken; 2 a Jira error or a store that could
-# not be reached). Every step runs regardless — a finished program (tick
-# exits 1 on day 69) still gets snapshotted, and a broken source is exactly
-# the day worth recording.
+# not be reached; 3 a converge failed part-way and the world is dirty).
+# Every step runs regardless — a finished program (tick exits 1 on day 69)
+# still gets snapshotted, and a broken source is exactly the day worth
+# recording. A dirty world is recorded too: the collector marks the clock
+# source `error` and every KPI reads `broken` rather than being filed under
+# a day the world never reached (RC1-417).
+#
+# `verify` runs after the tick because a clock that agrees with Jira is the
+# precondition for every number below it. It reads Jira and writes nothing.
+# On 2026-09-08 a converge timed out part-way, the clock stayed a day behind
+# the world, and the snapshot that followed was dated a day early — verify
+# would have caught it that morning, and did not run.
 #
 # A `1` here is routine, not an alarm: the simulated program's spend line
 # has no landed week until day 7, so its two cost KPIs read stale and the
@@ -57,6 +66,7 @@ step() {  # step <name> <command...>
 }
 
 (( TICK )) && step tick "$PY" -m simulate tick
+step verify:simulated-program "$PY" -m simulate verify
 step snapshot:simulated-program "$PY" -m collectors snapshot simulated-program
 step snapshot:eval-run-store "$PY" -m collectors snapshot eval-run-store
 step track:simulated-program "$PY" -m kpi.track --program simulated-program

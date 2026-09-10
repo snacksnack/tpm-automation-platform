@@ -40,13 +40,25 @@ from collectors.programs import Program
 # --- sources ----------------------------------------------------------------------------
 
 
-def read_clock(clock_dir: str | Path) -> tuple[int, date] | None:
-    """(sim_day, sim_date) from the simulator's clock.json, or None if not seeded."""
+def read_clock(clock_dir: str | Path) -> tuple[int, date, bool, int | None] | None:
+    """(sim_day, sim_date, converged, converging_to) from the simulator's
+    clock.json, or None if not seeded.
+
+    `converged` is False while a converge mutated Jira and then failed
+    (RC1-417): the day is still the last one that fully landed, and the Jira
+    beside it has moved past it. A clock file written before the flag existed
+    has no `converged` key and was written by a converge that completed.
+    """
     path = Path(clock_dir) / "clock.json"
     if not path.exists():
         return None
     data = json.loads(path.read_text())
-    return int(data["day"]), date.fromisoformat(data["sim_date"])
+    return (
+        int(data["day"]),
+        date.fromisoformat(data["sim_date"]),
+        bool(data.get("converged", True)),
+        data.get("converging_to"),
+    )
 
 
 def read_spend_csv(path: str | Path) -> list[SpendRow]:
@@ -145,10 +157,25 @@ def collect_program(
             clock = None
             health.append(SourceHealth(source="clock", status="error", detail=str(exc)))
         if clock is not None:
-            sim_day, sim_date = clock
-            health.append(
-                SourceHealth(source="clock", status="ok", count=1, detail=f"day {sim_day}")
-            )
+            sim_day, sim_date, converged, converging_to = clock
+            if converged:
+                health.append(
+                    SourceHealth(source="clock", status="ok", count=1, detail=f"day {sim_day}")
+                )
+            else:
+                # RC1-417: the world is part-way between two days. The snapshot
+                # is still taken and stored — "the day the simulator was mid-
+                # converge" is a fact worth recording — but the clock is an
+                # error, and the KPI measures refuse to date a reading from it.
+                health.append(
+                    SourceHealth(
+                        source="clock", status="error", count=1,
+                        detail=(
+                            f"converge to day {converging_to} failed part-way; "
+                            f"day {sim_day} fully landed but Jira has moved past it"
+                        ),
+                    )
+                )
         elif not any(h.source == "clock" for h in health):
             health.append(
                 SourceHealth(

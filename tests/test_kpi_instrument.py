@@ -248,6 +248,36 @@ def test_simulated_measures_agree_with_the_ledger_and_refuse_gaps(tmp_path):
     assert r.state == "broken" and "day(s) 10, 11" in r.reason
 
 
+def test_a_mid_converge_snapshot_is_broken_not_dated(tmp_path):
+    """RC1-417: a converge that failed part-way leaves Jira between two days,
+    so the sim-date on the snapshot names a day the world never reached. Every
+    KPI must refuse rather than file a real number under the wrong date."""
+    from collectors.models import SourceHealth
+
+    prog, series = _sim_series(tmp_path, 20)
+    dirty = series[-1].model_copy(
+        update={
+            "health": [
+                SourceHealth(
+                    source="clock", status="error", count=1,
+                    detail="converge to day 21 failed part-way; day 20 fully landed "
+                           "but Jira has moved past it",
+                )
+            ]
+            + [h for h in series[-1].health if h.source != "clock"]
+        }
+    )
+    for kid in ledger.KPI_IDS:
+        r = measures.measure(kid, prog, series[:-1] + [dirty])
+        assert r.state == "broken", kid
+        assert r.value is None, kid
+        assert "mid-converge" in r.reason and "day 21" in r.reason, kid
+
+    # The same series with a healthy clock still computes — the guard is the
+    # clock's status, not the mere presence of the field.
+    assert measures.measure("scope-change-pct", prog, series).state == "ok"
+
+
 # --- verify: what the code enforces ------------------------------------------------------------
 
 

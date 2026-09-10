@@ -1,7 +1,16 @@
 """`python -m simulate` — seed, tick, jump, verify, status, teardown (RC1-299).
 
 Exit codes: 0 done; 1 `verify` found Jira out of step with the scenario, or a
-tick was refused (no seed, or the program is over); 2 a Jira error.
+tick was refused (no seed, or the program is over); 2 a Jira error; 3 a
+converge mutated Jira and then failed, so the world is part-way between two
+days (RC1-417).
+
+**1 and 3 are different failures and the daily job depends on it.** A 1 is
+routine — the program ends on day 69 and every tick after that is refused. A 3
+means the world is dirty: the clock is still on the last day that fully
+landed, `converged: false` is recorded, and nothing should read the simulated
+Jira as though it were any particular day until a later tick re-converges
+(converge is idempotent, so the next one repairs it).
 
 Needs JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN (config reads .env). The
 board id for story points and the state directory are KPI_SIM_BOARD_ID and
@@ -29,8 +38,25 @@ def _jira() -> JiraClient:
     )
 
 
+#: A converge that mutated Jira and then failed — see the module docstring.
+EXIT_DIRTY = 3
+
+
 def _converge_to(jira: JiraClient, state: SimState, day: int, *, dry_run: bool) -> int:
-    report = apply.converge(jira, day, board_id=settings.kpi_sim_board_id, dry_run=dry_run)
+    try:
+        report = apply.converge(jira, day, board_id=settings.kpi_sim_board_id, dry_run=dry_run)
+    except apply.ConvergeError as exc:
+        if not dry_run:
+            state.mark_incomplete(day, exc.keys)
+        print(
+            f"day {day:>2} ({scenario.sim_date(day)}): CONVERGE FAILED after "
+            f"{len(exc.applied)} action(s) — Jira is part-way between day "
+            f"{day - 1} and day {day}, and the clock stays on the last day that "
+            f"fully landed. Nothing should date a snapshot until a tick "
+            f"re-converges (converge is idempotent). Cause: {exc.__cause__}",
+            file=sys.stderr,
+        )
+        return EXIT_DIRTY
     if not dry_run:
         state.write(day, report.keys)
     n = len(report.actions)
@@ -48,13 +74,23 @@ def cmd_tick(args, jira, state) -> int:
     if clock is None:
         print("no clock — run `seed` first", file=sys.stderr)
         return 1
+    if not clock.converged:
+        print(
+            f"clock is dirty: a converge to day {clock.converging_to} failed part-way. "
+            f"Re-converging from day {clock.day}.",
+            file=sys.stderr,
+        )
     day = clock.day
     for _ in range(args.days):
         if day >= scenario.LAST_DAY:
             print(f"day {day} is the program's last day — nothing to advance", file=sys.stderr)
             return 1
         day += 1
-        _converge_to(jira, state, day, dry_run=args.dry_run)
+        # Stop on a dirty converge: walking on would stack a second half-applied
+        # day on the first, and the repair is a re-converge of *this* day.
+        rc = _converge_to(jira, state, day, dry_run=args.dry_run)
+        if rc:
+            return rc
     return 0
 
 

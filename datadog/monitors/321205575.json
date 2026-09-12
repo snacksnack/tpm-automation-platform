@@ -1,0 +1,29 @@
+{
+  "draft_status": "published",
+  "id": 321205575,
+  "message": "{{#is_alert}}The LLM Obs evaluation judges spent over $0.50 in the trailing 24h — ten times the current pipeline's rate. Either the judge is reading far more of each span than it did in the preview, the evaluation lost its service:webhook scope and is judging corpus runs, or a PR train landed. Check the evaluation's scope and sampling first.{{/is_alert}}\n{{#is_warning}}The evaluation judges spent over $0.25 in the trailing 24h — five times the current rate; a glance, not a page.{{/is_warning}}\n\nThis is the judges' own spend (RC1-408), separate from the reviews' spend that the fleet guardrail watches. Datadog meters it as `ml_obs.estimated_usage.llm.evaluation.estimated_cost.nanodollars`, tagged by `evaluation_name` and the judge `model_name`; since 2026-09-12 the calls bill to Reid's Anthropic workspace `datadog-llm-obs-evals`, which carries its own monthly spend cap — this monitor is the early signal, the workspace cap is the hard stop.\n\nThresholds were set from the free preview (2026-09-02 to 09-12): the prompt-injection judge read ~1.3M tokens/day (~$1/day) while the retired single loop ran, and ~23k tokens/day (~2c/day) on the pipeline since 2026-09-07; $5.04 over the whole preview. Re-derive if a second evaluation is enabled or the judge model changes.\n\n@hire.reid.collins@gmail.com\n@webhook-incident-summarizer",
+  "multi": false,
+  "name": "LLM Obs evaluation judge spend — daily",
+  "options": {
+    "include_tags": false,
+    "new_host_delay": 300,
+    "notify_audit": false,
+    "notify_no_data": false,
+    "renotify_interval": 0,
+    "require_full_window": false,
+    "thresholds": {
+      "critical": 0.5,
+      "warning": 0.25
+    }
+  },
+  "priority": 3,
+  "query": "sum(last_1d):sum:ml_obs.estimated_usage.llm.evaluation.estimated_cost.nanodollars{*}.as_count() / 1000000000 > 0.5",
+  "restricted_roles": null,
+  "tags": [
+    "rc1:408",
+    "fleet:llm-obs",
+    "generated:manual",
+    "service:agent-fleet"
+  ],
+  "type": "query alert"
+}

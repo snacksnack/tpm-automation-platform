@@ -983,10 +983,6 @@
                       "width": "auto"
                     },
                     {
-                      "field": "@meta.metadata.scout",
-                      "width": "auto"
-                    },
-                    {
                       "field": "@metrics.cost_usd",
                       "width": "auto"
                     },

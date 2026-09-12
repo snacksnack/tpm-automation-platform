@@ -80,6 +80,10 @@
       "why": "RC1-341 SSL expiry alert for incidents, owned by synthetics test pcx-j8w-96n",
       "push": false,
       "push_note": "Datadog creates this monitor from the test; edit synthetics/pcx-j8w-96n.json instead"
+    },
+    {
+      "id": 321205575,
+      "why": "RC1-408 LLM Obs evaluation judge spend — daily ceiling on the judges' own calls, billed to the datadog-llm-obs-evals workspace since 2026-09-12"
     }
   ],
   "synthetics": [

@@ -15,7 +15,7 @@
     },
     {
       "id": "bwm-uny-qqs",
-      "why": "RC1-346 agent fleet — one LLM Observability pane over the fleet's ml_apps (eight in service, two dormant smoke-test leftovers); roster RC1-406 + RC1-419, cost units RC1-405"
+      "why": "RC1-346 agent fleet — one LLM Observability pane over the fleet's ml_apps (eight in service, two dormant smoke-test leftovers); roster RC1-406 + RC1-419, cost units RC1-405, scout column dropped RC1-427"
     },
     {
       "id": "izc-5s7-tz8",
@@ -37,7 +37,7 @@
     },
     {
       "id": 319523084,
-      "why": "RC1-395 PR agent cost per review — p95 over 1d, warn $0.50 / alert $1.00; per review where 318833109 is per call"
+      "why": "RC1-395 PR agent cost per review — p95 over 1d, warn $0.50 / alert $1.00; per review where 318833109 is per call; message re-based on the no-scout pipeline RC1-427"
     },
     {
       "id": 318355169,

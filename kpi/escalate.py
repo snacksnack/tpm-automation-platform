@@ -24,10 +24,15 @@ Four detections, all deterministic — no model call anywhere in this stage:
   stage, because a changed shape invalidates the verification, not just
   the number.
 - **flatline**: an `ok` value unchanged past twice its declared
-  `stale_after` cadence. A stuck sensor reads exactly like a healthy
-  metric, which is why nobody notices one. A KPI resting at its own ideal
-  boundary (an error rate at 0, a pass rate at 100 %) is exempt — that is
-  a program behaving, not a sensor stuck.
+  `stale_after` cadence *while the rows it reads from did not change
+  either*. A stuck sensor reads exactly like a healthy metric, which is
+  why nobody notices one — but a value that holds while its source moves
+  is the program, not the sensor (a critical-path slack computed from
+  planned dates reads the same number until the plan changes; RC1-413).
+  The reason names the true run length, so a flatline that persists says
+  so. A KPI resting at its own ideal boundary (an error rate at 0, a pass
+  rate at 100 %) is exempt — that is a program behaving, not a sensor
+  stuck.
 - **implausible**: an `ok` value outside the bounds its unit implies (a
   percentage past 100, negative dollars). The number is present and
   precise and cannot be true, so the measure or the source shape is
@@ -43,6 +48,7 @@ not a reason to stay silent.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import sys
@@ -69,6 +75,14 @@ _FIELD_PREFIX = {"anthropic-costs": "billing", "heroku-invoices": "billing"}
 #: Flatline: an ok value unchanged for at least this many consecutive daily
 #: readings — or twice the KPI's own stale_after, whichever is longer.
 FLATLINE_FLOOR_DAYS = 7
+
+#: The snapshot section each instrumented field prefix reads from, for the
+#: flatline liveness check (RC1-413). `clock` advances every day and
+#: `constants` never do; neither says anything about a sensor, so neither
+#: is compared.
+_PREFIX_SECTION = {
+    "jira": "jira", "spend": "spend", "eval-store": "eval_runs", "billing": "billing",
+}
 
 _STALE_AFTER = re.compile(r"^\s*(\d+)\s*(?:sim-)?days?\b")
 
@@ -241,26 +255,69 @@ def _resting_at_ideal(kpi: Kpi, value: float) -> bool:
     return kpi.direction == "higher" and "%" in kpi.unit and value == 100
 
 
+def flat_run(series: list[Reading]) -> tuple[int, float | None]:
+    """The trailing run of identical `ok` readings: its length and the value.
+    The whole run, not a detection window, so a flatline that persists can
+    say how long (RC1-413)."""
+    if not series or series[-1].state != "ok":
+        return 0, None
+    value = series[-1].value
+    run = 0
+    for r in reversed(series):
+        if r.state != "ok" or r.value != value:
+            break
+        run += 1
+    return run, value
+
+
+def source_fingerprints(
+    inst: Instrumentation, kpi_id: str, snaps: list[ProgramSnapshot]
+) -> dict[str, set[str]]:
+    """Per snapshot section the KPI's verified fields read from, the distinct
+    contents seen across `snaps`. More than one fingerprint in a section
+    means the source moved over that span."""
+    fields = next((k.fields for k in inst.kpis if k.kpi_id == kpi_id), [])
+    prefixes = {f.split(".", 1)[0] for f in fields}
+    sections = sorted({_PREFIX_SECTION[p] for p in prefixes if p in _PREFIX_SECTION})
+    return {
+        section: {
+            json.dumps(snap.model_dump(mode="json", include={section}), sort_keys=True)
+            for snap in snaps
+        }
+        for section in sections
+    }
+
+
 def _flatline_escalations(
     program: Program,
     tree: KpiTree,
+    inst: Instrumentation,
+    series: list[ProgramSnapshot],
     history: dict[str, list[Reading]],
     sim_date: date,
     run_id: int,
 ) -> list[Escalation]:
     out: list[Escalation] = []
     for kpi in [*tree.outcomes, *tree.leading]:
-        series = history.get(kpi.id, [])
+        readings = history.get(kpi.id, [])
         window = max(FLATLINE_FLOOR_DAYS, 2 * (_stale_after_days(kpi) or 0))
-        if len(series) < window:
+        run, value = flat_run(readings)
+        if run < window or value is None or _resting_at_ideal(kpi, value):
             continue
-        tail = series[-window:]
-        values = {r.value for r in tail}
-        if len(values) != 1 or any(r.state != "ok" for r in tail):
+        # A stuck sensor is a value that holds *and* rows that hold. If the
+        # rows the KPI reads from changed anywhere in the run, the sensor is
+        # alive and the constant value is a fact about the program (RC1-413).
+        start = readings[-run].sim_date
+        span = [s for s in series if start <= s.sim_date <= sim_date]
+        prints = source_fingerprints(inst, kpi.id, span) if len(span) >= 2 else {}
+        if any(len(seen) > 1 for seen in prints.values()):
             continue
-        (value,) = values
-        if value is None or _resting_at_ideal(kpi, value):
-            continue
+        evidence = (
+            f"and the {', '.join(prints)} rows did not change across those "
+            f"{len(span)} snapshots either"
+            if prints
+            else "with no second snapshot in that span to compare the source against"
+        )
         out.append(
             Escalation(
                 program_id=program.id,
@@ -269,8 +326,9 @@ def _flatline_escalations(
                 subject=kpi.id,
                 kpi_ids=(kpi.id,),
                 reason=(
-                    f"value has read exactly {value:g} for {window} consecutive daily "
-                    f"readings, past twice its declared cadence ({kpi.stale_after})"
+                    f"value has read exactly {value:g} for {run} consecutive daily "
+                    f"readings, past twice its declared cadence ({kpi.stale_after}), "
+                    f"{evidence}"
                 ),
                 proposed_fix=(
                     "confirm the source is actually updating — a stuck sensor reads like a "
@@ -359,7 +417,9 @@ def detect(
     covered = {kpi_id for e in escalations for kpi_id in e.kpi_ids}
     escalations += _reading_escalations(program, readings, covered, snap.sim_date, run_id)
     if history is not None:
-        escalations += _flatline_escalations(program, tree, history, snap.sim_date, run_id)
+        escalations += _flatline_escalations(
+            program, tree, inst, series, history, snap.sim_date, run_id
+        )
     escalations += _implausible_escalations(program, tree, readings, run_id)
     return escalations
 

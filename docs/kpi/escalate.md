@@ -31,7 +31,7 @@ stands, **2** the stage could not run.
 | --- | --- | --- |
 | `source` | a source read `error`; read `missing` after having answered before; or answered with under half its last good row count (`SOURCE_BREAK_DROP`, the measures' own rule) | names the credential, the label/JQL, or the origin to inspect |
 | `reading` | a KPI read `broken` for a reason no source escalation explains — a raised measure is what a shape change looks like from here | re-run `python -m kpi.instrument`; a changed shape invalidates the verification, not just the number |
-| `flatline` | an `ok` value unchanged past twice its declared `stale_after` (floor: 7 daily readings) | confirm the source is actually updating — a stuck sensor reads like a healthy metric |
+| `flatline` | an `ok` value unchanged past twice its declared `stale_after` (floor: 7 daily readings) **while the snapshot rows its fields read from did not change either**; the reason states the true run length | confirm the source is actually updating — a stuck sensor reads like a healthy metric |
 | `implausible` | an `ok` value outside what its unit allows: a share of cases past 100 %, negative dollars per run | do not trust the reading; re-verify the measure against the snapshot |
 
 Three deliberate exemptions, all against false alarms — the failure mode of
@@ -44,6 +44,19 @@ an escalation channel is not silence but unsubscribing:
   apart.
 - A KPI **resting at its own ideal boundary** is not a flatline. An error
   rate at 0 for a month is a program behaving; so is a pass rate at 100.
+- A value that **holds while its source moves** is not a flatline either
+  (RC1-413). The rule exists to catch a stuck sensor, and a stuck sensor
+  is a value that holds *and* rows that hold. The simulated program's
+  `critical-path-slack-days` read exactly 3 for its first 29 days — the
+  ledger says so, on the same link — because slack is computed from
+  planned dates, and planned dates do not move until the plan does; the
+  Jira snapshot behind it moved every day. The check compares the
+  snapshot sections the KPI's verified fields read from (`jira`, `spend`,
+  `eval_runs`, `billing`; `clock` and `constants` are not evidence) across
+  the flat span. With no second snapshot in the span the rule cannot tell
+  and still escalates. Known limit: a live source feeding a measure that
+  always returns the same number is not caught here; that is what the
+  instrument stage's verification and each KPI's `failure_modes` are for.
 - Bounds trip on **impossible, never surprising**: 204 % of plan is a real
   overspend, not a broken measure, so a percentage *of a reference* and a
   signed difference are left unbounded. Surprising is `tripped`'s job.

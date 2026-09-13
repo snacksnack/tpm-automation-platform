@@ -274,7 +274,90 @@ def test_a_value_stuck_past_twice_its_cadence_is_a_flatline():
     (esc,) = escalations
     assert esc.kind == "flatline" and esc.subject == "gated-pass-rate"
     assert "50" in esc.reason
+    assert "for 20 consecutive daily readings" in esc.reason
+    assert "no second snapshot" in esc.reason
     assert "stuck sensor" in esc.proposed_fix
+
+
+def _eval_series(days: int, *, moving: bool) -> list[ProgramSnapshot]:
+    """One eval-run-store snapshot per day over the flat span. `moving`: a
+    new run lands every day; otherwise the same rows are re-read daily."""
+    return [
+        _eval_snapshot(
+            [_run("a", days_ago=(days - i) if moving else 1)],
+            today=TODAY - timedelta(days=days - 1 - i),
+        )
+        for i in range(days)
+    ]
+
+
+def test_the_flatline_reason_reports_the_whole_run_not_the_window():
+    """RC1-413: '7 consecutive readings' on day 7 and still '7' on day 20
+    cannot say a flatline is getting worse. The run is counted back from
+    today until the value or state changes."""
+    history = _flat_history("gated-pass-rate", 50.0, days=20)
+    older = [
+        r.model_copy(update={"value": 40.0, "sim_date": r.sim_date - timedelta(days=20)})
+        for r in history["gated-pass-rate"][:10]
+    ]
+    history["gated-pass-rate"] = [*older, *history["gated-pass-rate"]]
+
+    assert escalate.flat_run(history["gated-pass-rate"]) == (20, 50.0)
+
+    tree = load_adopted_tree(EVAL.id)
+    inst = track.load_instrumentation(EVAL.id)
+    series = [_eval_snapshot([_run("a")])]
+    readings = track.track(EVAL, series, [])
+    (esc,) = escalate.detect(EVAL, tree, inst, series, readings, run_id=1, history=history)
+    assert "for 20 consecutive daily readings" in esc.reason
+
+
+def test_a_value_that_holds_while_its_source_moves_is_not_a_flatline():
+    """RC1-413: a new run landed every day and the pass rate stayed at 50 %.
+    The sensor is alive; the constant is the program."""
+    tree = load_adopted_tree(EVAL.id)
+    inst = track.load_instrumentation(EVAL.id)
+    series = _eval_series(20, moving=True)
+    readings = track.track(EVAL, series, [])
+
+    assert escalate.detect(
+        EVAL, tree, inst, series, readings, run_id=1,
+        history=_flat_history("gated-pass-rate", 50.0, days=20),
+    ) == []
+
+
+def test_a_value_that_holds_while_its_source_holds_is_a_flatline():
+    """The same rows re-read for 20 days with the same value: that is the
+    stuck sensor the rule exists for, and the reason says the rows held."""
+    tree = load_adopted_tree(EVAL.id)
+    inst = track.load_instrumentation(EVAL.id)
+    series = _eval_series(20, moving=False)
+    readings = track.track(EVAL, series, [])
+
+    (esc,) = escalate.detect(
+        EVAL, tree, inst, series, readings, run_id=1,
+        history=_flat_history("gated-pass-rate", 50.0, days=20),
+    )
+    assert esc.kind == "flatline"
+    assert "eval_runs rows did not change across those 20 snapshots" in esc.reason
+
+
+def test_the_simulated_slack_flat_by_design_is_not_escalated():
+    """RC1-413, the case that kept the daily job red: critical-path-slack-days
+    reads exactly 3 for the scenario's first 29 days (the ledger says so, on
+    the same link) while the Jira snapshot behind it moves every day."""
+    tree, inst, series, readings = _sim_context(20)
+    history: dict[str, list[Reading]] = {}
+    for i in range(len(series)):
+        for r in track.track(SIM, series[: i + 1], inst.computes):
+            history.setdefault(r.kpi_id, []).append(r)
+
+    assert escalate.flat_run(history["critical-path-slack-days"]) == (21, 3.0)
+    prints = escalate.source_fingerprints(inst, "critical-path-slack-days", series)
+    assert len(prints["jira"]) > 1
+
+    escalations = escalate.detect(SIM, tree, inst, series, readings, run_id=20, history=history)
+    assert [e for e in escalations if e.kind == "flatline"] == []
 
 
 def test_a_kpi_resting_at_its_ideal_boundary_is_not_a_flatline():

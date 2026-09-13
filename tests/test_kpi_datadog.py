@@ -471,12 +471,26 @@ def test_every_slo_carries_the_generated_tag():
 
 
 def test_fleet_slo_reads_one_hundred_percent_before_the_first_error():
-    """`.errors` does not exist until an error happens — without default_zero
+    """`.error` does not exist until an error happens — without default_zero
     the fleet objective would show no-data exactly while the fleet is
     perfect."""
     q = datadog.fleet_slo_payload()["query"]
     assert "default_zero" in q["numerator"]
-    assert "trace.anthropic.request.hits" in q["denominator"]
+    assert "ml_obs.trace.error" in q["numerator"]
+
+
+def test_fleet_slo_counts_production_traces_of_every_ml_app():
+    """RC1-407: the population is LLM Obs traces, which every ml_app reports
+    (the APM metric missed the n8n concert workflow), one per run rather than
+    per span, with the measurement services excluded so corpus sweeps cannot
+    dilute the ratio (RC1-411)."""
+    q = datadog.fleet_slo_payload()["query"]
+    assert q["denominator"].startswith("sum:ml_obs.trace{")
+    assert "trace.anthropic" not in q["denominator"] + q["numerator"]
+    assert "ml_obs.span" not in q["denominator"] + q["numerator"]
+    for side in ("numerator", "denominator"):
+        assert "!service:evals" in q[side]
+        assert "!service:dry-run" in q[side]
 
 
 def test_dashboard_gains_the_budget_row_only_once_slos_exist(tree):

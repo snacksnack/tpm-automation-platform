@@ -1,0 +1,29 @@
+{
+  "draft_status": "published",
+  "id": 321408173,
+  "message": "The scheduled eval run on the dev machine did not publish the trend page — or did not run at all.\n\n`agent_evals.scheduled_run.publish_ok` is written once per run by `agent-evals/scripts/scheduled_eval.sh` (daily 09:00 ET, weekly Monday 09:30 ET): 1 when `gh-pages` was read back at the commit just built, 0 otherwise.\n\n- **Alert** = a run reported 0. Read `~/Library/Logs/agent-evals/daily.log` (or `weekly.log`): the PUBLISH FAILED line carries both hashes.\n- **No data** for 36 h = no run reported at all: the laptop slept past a missed interval, launchd could not start the job (the 2026-09-07 exit 127 was a missing venv), or `DD_API_KEY` was absent from `~/.zshrc`.\n\nThe page: https://snacksnack.github.io/agent-evals/ — its masthead `generated` stamp is the render time. Fix the cause, run `scripts/scheduled_eval.sh daily` by hand; the next 1 clears this.\n\nRC1-415 — before this monitor the 2026-09-08 PUBLISH FAILED line (a false alarm, as it turned out) was visible only in the log.\n\n@hire.reid.collins@gmail.com\n@webhook-incident-summarizer",
+  "multi": false,
+  "name": "Eval trend page publish — scheduled run heartbeat",
+  "options": {
+    "include_tags": true,
+    "new_host_delay": 300,
+    "no_data_timeframe": 2160,
+    "notify_audit": false,
+    "notify_no_data": true,
+    "renotify_interval": 0,
+    "require_full_window": false,
+    "thresholds": {
+      "critical": 1.0
+    }
+  },
+  "priority": 3,
+  "query": "min(last_5m):min:agent_evals.scheduled_run.publish_ok{*} < 1",
+  "restricted_roles": null,
+  "tags": [
+    "rc1:415",
+    "service:agent-evals",
+    "kind:heartbeat",
+    "generated:manual"
+  ],
+  "type": "metric alert"
+}

@@ -37,11 +37,19 @@ trouble, which is the same honesty rule the readings carry (`ok` / `stale` /
 `broken` never conflated with a value) restated in SLO form.
 
 **Fleet objective** (one, account-wide): *Agent fleet reliability* — the
-share of the fleet's model calls that completed without error, 97 % / 30d,
-from the APM trace metrics the RC1-322 LLM Observability spans generate.
-`default_zero` on the error series, because `trace.anthropic.request.errors`
-only materialises after the first error — a fleet that has never failed must
-read 100 %, not no-data.
+share of the fleet's production runs that completed without error, 97 % /
+30d. One LLM Observability trace is one run (a review, a digest, a
+narration), so the population is `ml_obs.trace`, which every ml_app reports
+— including the n8n concert workflow, whose hand-built spans never reach
+APM. Until RC1-407 the query read the APM metric `trace.anthropic.request`,
+which covered whichever *services* ran ddtrace: it missed the concert
+workflow and counted every eval-sweep call as fleet traffic. Now the
+measurement services (`service:evals`, `service:dry-run`, RC1-411) are
+excluded, and the numerator reads `ml_obs.trace.error` — the metric the
+intake derives from a root span's `status` — rather than the `error` tag,
+which only SDK-built spans carry. `default_zero` on the error series,
+because `.error` only materialises after the first error — a fleet that has
+never failed must read 100 %, not no-data.
 
 ## Provisional targets, on purpose
 

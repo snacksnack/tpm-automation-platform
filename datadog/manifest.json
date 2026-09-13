@@ -84,6 +84,10 @@
     {
       "id": 321205575,
       "why": "RC1-408 LLM Obs evaluation judge spend — daily ceiling on the judges' own calls, billed to the datadog-llm-obs-evals workspace since 2026-09-12"
+    },
+    {
+      "id": 321408173,
+      "why": "RC1-415 eval trend page publish heartbeat — agent_evals.scheduled_run.publish_ok from the launchd job; red on a 0 or on 36 h without a point"
     }
   ],
   "synthetics": [

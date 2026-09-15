@@ -19,6 +19,23 @@ workflow span per case, with the harness verdict (categorical) and cost
 (score) submitted as Datadog *evaluations* — they render in the same column
 as Datadog's built-in evals.
 
+## Across the fleet: one tracer (RC1-445)
+
+Every ml_app on the fleet pane traces with **ddtrace**, with one exception.
+Only how it is switched on and how spans leave the process differ:
+
+| app | switched on by | spans leave via |
+| --- | --- | --- |
+| the platform, pr-review-agent, launch-planner, hihelloreid-chat | `LLMObs.enable()` in code (the helpers above) | agentless, straight to the intake |
+| incident-summarizer (Lambda) | `DD_LLMOBS_ENABLED` / `DD_LLMOBS_ML_APP` in the template Globals; the Datadog-Python layer bundles ddtrace and reads them at import | the Datadog Lambda extension |
+| concert-intelligence (n8n Cloud) | not ddtrace — a Code node builds the span by hand (RC1-362) | HTTP to the intake |
+
+The Lambda row is the same setup in its Lambda-native form, not a second
+mechanism. Calling `LLMObs.enable(agentless_enabled=True)` inside the handler
+would look more uniform and behave worse: without the extension the handler
+has to flush spans before it returns, adding latency to every invocation, or
+risk losing them when the execution environment freezes. Keep the extension.
+
 ## Switching it on and off
 
 One switch: `DD_API_KEY`. Present, traces flow; absent, every enable call is

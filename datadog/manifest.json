@@ -91,7 +91,7 @@
     },
     {
       "id": 322028416,
-      "why": "RC1-443 LLM Obs prompt-injection verdict — alerts per ml_app when either injection judge (pr-review-agent, hihelloreid-chat) returns a non-pass categorical verdict in 15 min"
+      "why": "RC1-443/444 LLM Obs judge verdict — alerts per ml_app and evaluation when an injection judge (pr-review-agent, hihelloreid-chat) or the chat hallucination judge returns a non-pass categorical verdict in 15 min"
     }
   ],
   "synthetics": [

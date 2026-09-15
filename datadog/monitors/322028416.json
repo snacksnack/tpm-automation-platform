@@ -1,9 +1,9 @@
 {
   "draft_status": "published",
   "id": 322028416,
-  "message": "{{#is_alert}}The prompt-injection judge flagged {{value}} input(s) on **{{[@ml_app].name}}** in the last 15 minutes: text written by someone outside the estate tried to override the model's instructions.\n\n- **pr-review-agent**: the input is a pull request's title, body and diff (root `pr_review` span, RC1-438). Open the flagged trace from the evaluation's Results tab, find the PR from its `repo` / `pr` tags, and read the review the agent posted: did it follow the injected text?\n- **hihelloreid-chat**: the input is one chat message on hihelloreid.com. Read the chat's reply on the flagged trace.\n\nThe judge is Claude Haiku 4.5 on the `datadog-llm-obs-evals` workspace. A flag is a detection, not a block: the review or reply has already gone out. A false positive is most likely on a PR that edits prompt text.{{/is_alert}}\n{{#is_recovery}}No new prompt-injection verdicts on {{[@ml_app].name}} in the last 15 minutes.{{/is_recovery}}\n\nSource: LLM Observability `eval-metric` events from the evaluations `prompt-injection` (pr-review-agent, `service:webhook @parent_id:undefined`) and `prompt-injection-2` (hihelloreid-chat, `service:web`). A result counts when it is categorical and its assessment is not `pass`; spans the evaluation's filter skips carry status WARN and no assessment, and are excluded by `@eval_metric_type:categorical` (RC1-443).\n\n@hire.reid.collins@gmail.com\n@webhook-incident-summarizer",
+  "message": "{{#is_alert}}The **{{[@label].name}}** judge returned {{value}} non-pass verdict(s) on **{{[@ml_app].name}}** in the last 15 minutes.\n\n**prompt-injection** / **prompt-injection-2**: text written by someone outside the estate tried to override the model's instructions.\n- **pr-review-agent**: the input is a pull request's title, body and diff (root `pr_review` span, RC1-438). Open the flagged trace from the evaluation's Results tab, find the PR from its `repo` / `pr` tags, and read the review the agent posted: did it follow the injected text?\n- **hihelloreid-chat**: the input is one chat message on hihelloreid.com. Read the chat's reply on the flagged trace.\n\n**hallucination** (hihelloreid-chat): an answer on hihelloreid.com made a claim the retrieved resume text doesn't support (`Unsupported claim`) or contradicts (`Confirmed contradiction`). Open the flagged trace from the evaluation's Results tab and read the judge's reasoning next to the answer. If the claim is true, the resume is missing it; if not, the chat invented it. The context includes same-turn tool results; a tool-use round (output is a tool call, not an answer) is the likeliest false positive (RC1-444).\n\nEvery judge is Claude Haiku 4.5 on the `datadog-llm-obs-evals` workspace. A verdict is a detection, not a block: the review or reply has already gone out.{{/is_alert}}\n{{#is_recovery}}No new {{[@label].name}} verdicts on {{[@ml_app].name}} in the last 15 minutes.{{/is_recovery}}\n\nSource: LLM Observability `eval-metric` events from the evaluations `prompt-injection` (pr-review-agent, `service:webhook @parent_id:undefined`), `prompt-injection-2` (hihelloreid-chat, `service:web`) and `hallucination` (hihelloreid-chat, `rag:resume`). A result counts when it is categorical and its assessment is not `pass`; spans an evaluation's filter skips carry status WARN and no assessment, and are excluded by `@eval_metric_type:categorical` (RC1-443). Probe spans (`service:evals`) are judged and alert too.\n\n@hire.reid.collins@gmail.com\n@webhook-incident-summarizer",
   "multi": true,
-  "name": "LLM Obs prompt-injection verdict — {{[@ml_app].name}}",
+  "name": "LLM Obs judge verdict — {{[@ml_app].name}} / {{[@label].name}}",
   "options": {
     "groupby_simple_monitor": false,
     "include_tags": false,
@@ -17,10 +17,11 @@
     }
   },
   "priority": 2,
-  "query": "llm-observability(\"@event_type:eval-metric @label:prompt-injection* @eval_metric_type:categorical -@assessment:pass\").index(\"*\").rollup(\"count\").by(\"@ml_app\").last(\"15m\") > 0",
+  "query": "llm-observability(\"@event_type:eval-metric (@label:prompt-injection* OR @label:hallucination) @eval_metric_type:categorical -@assessment:pass\").index(\"*\").rollup(\"count\").by(\"@ml_app,@label\").last(\"15m\") > 0",
   "restricted_roles": null,
   "tags": [
     "rc1:443",
+    "rc1:444",
     "fleet:llm-obs",
     "generated:manual",
     "service:agent-fleet"

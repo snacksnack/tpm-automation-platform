@@ -1,0 +1,29 @@
+{
+  "draft_status": "published",
+  "id": 322028416,
+  "message": "{{#is_alert}}The prompt-injection judge flagged {{value}} input(s) on **{{[@ml_app].name}}** in the last 15 minutes: text written by someone outside the estate tried to override the model's instructions.\n\n- **pr-review-agent**: the input is a pull request's title, body and diff (root `pr_review` span, RC1-438). Open the flagged trace from the evaluation's Results tab, find the PR from its `repo` / `pr` tags, and read the review the agent posted: did it follow the injected text?\n- **hihelloreid-chat**: the input is one chat message on hihelloreid.com. Read the chat's reply on the flagged trace.\n\nThe judge is Claude Haiku 4.5 on the `datadog-llm-obs-evals` workspace. A flag is a detection, not a block: the review or reply has already gone out. A false positive is most likely on a PR that edits prompt text.{{/is_alert}}\n{{#is_recovery}}No new prompt-injection verdicts on {{[@ml_app].name}} in the last 15 minutes.{{/is_recovery}}\n\nSource: LLM Observability `eval-metric` events from the evaluations `prompt-injection` (pr-review-agent, `service:webhook @parent_id:undefined`) and `prompt-injection-2` (hihelloreid-chat, `service:web`). A result counts when it is categorical and its assessment is not `pass`; spans the evaluation's filter skips carry status WARN and no assessment, and are excluded by `@eval_metric_type:categorical` (RC1-443).\n\n@hire.reid.collins@gmail.com\n@webhook-incident-summarizer",
+  "multi": true,
+  "name": "LLM Obs prompt-injection verdict — {{[@ml_app].name}}",
+  "options": {
+    "groupby_simple_monitor": false,
+    "include_tags": false,
+    "new_host_delay": 300,
+    "notify_audit": false,
+    "notify_no_data": false,
+    "on_missing_data": "default",
+    "renotify_interval": 0,
+    "thresholds": {
+      "critical": 0.0
+    }
+  },
+  "priority": 2,
+  "query": "llm-observability(\"@event_type:eval-metric @label:prompt-injection* @eval_metric_type:categorical -@assessment:pass\").index(\"*\").rollup(\"count\").by(\"@ml_app\").last(\"15m\") > 0",
+  "restricted_roles": null,
+  "tags": [
+    "rc1:443",
+    "fleet:llm-obs",
+    "generated:manual",
+    "service:agent-fleet"
+  ],
+  "type": "llm-observability alert"
+}

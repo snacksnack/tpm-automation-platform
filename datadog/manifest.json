@@ -88,6 +88,10 @@
     {
       "id": 321408173,
       "why": "RC1-415 eval trend page publish heartbeat — agent_evals.scheduled_run.publish_ok from the launchd job; red on a 0 or on 36 h without a point"
+    },
+    {
+      "id": 322028416,
+      "why": "RC1-443 LLM Obs prompt-injection verdict — alerts per ml_app when either injection judge (pr-review-agent, hihelloreid-chat) returns a non-pass categorical verdict in 15 min"
     }
   ],
   "synthetics": [

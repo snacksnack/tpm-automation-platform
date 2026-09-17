@@ -17,7 +17,7 @@
   "tags": [
     "portfolio",
     "generated:rc1-325",
-    "service:hihelloreid.com",
+    "service:hihelloreid",
     "probe_dc:aws:us-east-1",
     "check_type:api",
     "check_status:live",

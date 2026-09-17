@@ -5,7 +5,7 @@
   "name": "PR review agent reliability",
   "query": {
     "denominator": "sum:ml_obs.trace{ml_app:pr-review-agent}.as_count()",
-    "numerator": "sum:ml_obs.trace{ml_app:pr-review-agent}.as_count() - default_zero(sum:ml_obs.trace.error{ml_app:pr-review-agent}.as_count())"
+    "numerator": "(sum:ml_obs.trace{ml_app:pr-review-agent}.as_count() - default_zero(sum:ml_obs.trace.error{ml_app:pr-review-agent}.as_count()))"
   },
   "sli_specification": {
     "count": {

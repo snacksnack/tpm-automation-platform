@@ -5,7 +5,7 @@ an object belongs to is the whole of this document.
 
 | | Generated | Exported |
 | --- | --- | --- |
-| What | 2 program dashboards, 6 KPI monitors, 7 program SLOs | 4 dashboards, 11 monitors, 5 synthetics tests, 2 SLOs |
+| What | 2 program dashboards, 6 KPI monitors, 7 program SLOs | 4 dashboards, 18 monitors, 5 synthetics tests, 6 SLOs |
 | Source | `kpi/datadog.py` builds them from the adopted trees | `datadog/*.json`, listed in `datadog/manifest.json` |
 | To change one | edit the generator, `python -m kpi.datadog dashboards --push` | edit the file, `python -m kpi.datadog_sync push` |
 | Identified by | tag `generated:kpi-datadog`, or the title `Program KPIs — <program>` | absence of the above |
@@ -212,21 +212,27 @@ keeps: rules decide in Python, nothing is left to a model.
 On a pull request the job runs `show`, not `push`. The account's scorecard
 should reflect `main`, not whatever a branch proposes.
 
-### The rules, and why one of them starts red
+### The rules, and why two of them stay red
 
-| Rule | Reads | At first push |
+| Rule | Reads | Today |
 | --- | --- | --- |
 | Has an owner | entity file | 8/8 |
 | Has a repository link | entity file | 8/8 |
 | Declares lifecycle and tier | entity file | 8/8 |
 | Has a dashboard link | entity file | 8/8 |
-| Has an SLO | SLO `service:` tags | **6/8** (2/8 at first push) |
+| Has an SLO | SLO `service:` tags | **6/8** (0/8 → 2/8 at first push) |
+| Has a monitor | monitor `service:` tags | **6/8** (3/8 before RC1-457) |
 
 A scorecard whose every rule passes on the day it ships is telling you the
 rules are too weak, and that is the first thing a reader will test. `Has an
 SLO` went 0/8 → 2/8 in the change that introduced it, by tagging the two site
-availability SLOs with the service they actually cover. The other six are real
-gaps with tickets behind them, and the number is meant to climb.
+availability SLOs with the service they actually cover; RC1-456 took it to 6/8.
+`Has a monitor` opens at the same 6/8 and stops at the same two services.
+
+Both remaining reds are correct rather than unfinished: `launch-planner-agent`
+is waiting on RC1-455 to say whether anyone actually uses it, and
+`stale-ticket-bot` is dormant and emits nothing to watch or measure. The number
+is meant to climb as those close — not because a rule was softened.
 
 ### Choosing an SLI the denominator can support (RC1-456)
 
@@ -268,12 +274,58 @@ carries `service:<entity name>`. An earlier estimate of this same rule came
 from matching SLO *titles* and put it at 3/8 — wrong in both directions, since
 six of the nine SLOs are `generated:kpi-datadog` program SLOs that belong to no
 service at all. What an SLO covers is a fact the SLO should state, not
-something a scorecard should infer from a string. The same convention will
-apply to `Has a monitor` when it lands.
+something a scorecard should infer from a string. `Has a monitor` (RC1-457)
+reads the same tag on `/api/v1/monitor`, with one shape difference worth
+knowing when writing the next rule: `/api/v1/slo` wraps its list in `data` and
+`/api/v1/monitor` returns a bare list. Reading the wrong one is silent — every
+service simply scores red.
 
 Rules are matched to Datadog by name within the scorecard, so renaming one
 creates a new rule and orphans the old — the same trap catalog entities have.
 Rename deliberately and delete the old rule by hand.
+
+### Monitors join the catalog the same way (RC1-457)
+
+The catalog's MONITORS column was empty for nearly every service, and the cause
+was not missing monitors. Of 29 monitors, 16 carried a `service:` tag and only
+**3** of those values named a catalog entity. Five Synthetics monitors had
+watched the site and the incidents dashboard for weeks under `service:
+hihelloreid.com` and `service:incidents.hihelloreid.com` — real coverage the
+catalog could not see, because a domain is not an entity name.
+
+Three different problems hid behind one empty column, and only the first is a
+tagging fix:
+
+- **Tagging.** The five Synthetics tests now carry `service:hihelloreid` and
+  `service:incident-summarizer`, following the precedent RC1-456 set on the two
+  availability SLOs. **Edit the test, not the monitor**: Datadog generates these
+  monitors from their tests, `manifest.json` marks all five `push: false`, and a
+  tag written into the monitor JSON is undone on the next sync. Verified first
+  that the string appears in no widget or monitor *query* — it was only ever a
+  tag, so changing it broke no dashboard.
+- **Real gaps.** The two busiest services in the estate had no monitor at all.
+  `pr-review-agent-snacksnack` now alerts on `ml_obs.trace.error{ml_app:
+  pr-review-agent}` — queried by `ml_app` for the same reason its SLO is — and
+  `incident-summarizer` on `aws.lambda.enhanced.errors`, multi-alert by
+  `functionname` so the alert names which of the eight stages failed rather than
+  saying the chain is unwell. Both had an SLO already, which measures the same
+  failures a day late.
+- **Neither, and deliberately left alone.** `service:agent-fleet` (5 monitors)
+  and `service:delivery-pipeline` (2) are cross-cutting by design: their queries
+  span every ml_app and every repo. Retagging one per service would break the
+  query it exists to run. They stay orphans of the catalog, and that is the
+  correct answer rather than a gap — do not "fix" them.
+
+Declaring `agent-fleet` and `delivery-pipeline` as `kind: system` entities is
+the obvious next thought and was left to RC1-453, which owns naming: the
+scorecard scores every entity in `datadog/entities/`, so two more entities is
+twelve more outcomes against rules that are service-shaped, and most would be
+red for no reason anyone would act on.
+
+One vendor-side change rode along in the same sync: Datadog rewrote the PR
+review agent SLO's numerator to wrap it in parentheses. Nothing here edited it
+— the same class of drift as the `nanodollar` unit metadata in RC1-405, where
+the account changed under a file that had not.
 
 ## What stays where it is
 

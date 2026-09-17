@@ -17,7 +17,7 @@
   "tags": [
     "site:hihelloreid",
     "rc1:340",
-    "service:hihelloreid.com",
+    "service:hihelloreid",
     "probe_dc:aws:us-east-1",
     "check_type:browser",
     "check_status:live",

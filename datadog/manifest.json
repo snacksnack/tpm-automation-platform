@@ -100,6 +100,14 @@
     {
       "id": 322765258,
       "why": "RC1-456 concert intelligence heartbeat — the n8n workflow reports its own LLM Obs spans on every run including cached ones, so a two-day silence means the scheduled trigger stopped or the published copy broke"
+    },
+    {
+      "id": 322827096,
+      "why": "RC1-457 PR review agent review errors — any failed review in 15 min, grouped under the agent's catalog entity so the Software Catalog can find it; queried by ml_app because RC1-447's rename stranded the service history"
+    },
+    {
+      "id": 322827099,
+      "why": "RC1-457 incident summarizer Lambda errors — multi-alert by functionname so the alert names the failing stage of the eight-function chain; service:incident-summarizer comes from the SAM Globals (RC1-411)"
     }
   ],
   "synthetics": [

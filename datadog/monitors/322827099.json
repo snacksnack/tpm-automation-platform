@@ -1,0 +1,28 @@
+{
+  "draft_status": "published",
+  "id": 322827099,
+  "message": "A stage of the incident summarizer chain is erroring: {{functionname.name}}.\n\nAll eight functions report under `service:incident-summarizer` (RC1-411 set DD_SERVICE in the SAM Globals), so this is grouped by `functionname` to name the stage rather than the chain. The chain is ingest -> normalizer -> dedup -> summarizer -> jiracreator / slacknotifier / datadogevents; a failure upstream starves everything after it.\n\nNote the circularity: this alert routes through the summarizer's own webhook, so if the receiver or ingest stage is the one failing, read the Lambda logs directly instead of waiting for a summary.\n\nRC1-457. @webhook-incident-summarizer",
+  "multi": true,
+  "name": "Incident summarizer — Lambda errors by stage",
+  "options": {
+    "include_tags": true,
+    "new_host_delay": 300,
+    "notify_audit": false,
+    "notify_no_data": false,
+    "renotify_interval": 0,
+    "require_full_window": false,
+    "thresholds": {
+      "critical": 0.0
+    }
+  },
+  "priority": 3,
+  "query": "sum(last_15m):sum:aws.lambda.enhanced.errors{service:incident-summarizer} by {functionname}.as_count() > 0",
+  "restricted_roles": null,
+  "tags": [
+    "rc1:457",
+    "service:incident-summarizer",
+    "kind:errors",
+    "generated:manual"
+  ],
+  "type": "metric alert"
+}

@@ -13,6 +13,9 @@ an object belongs to is the whole of this document.
 A third half that is nobody's: Datadog's host monitor pack (283790038–45,
 tag `monitor_pack:host`) comes with the Agent integration and is left alone.
 
+And one table that is neither, because it runs the other way round — see
+**The catalog** below.
+
 ## Why exported JSON and not Terraform
 
 For one person and ~20 objects, JSON in the repo buys the three things that
@@ -84,6 +87,74 @@ Recorded because each one cost a debugging round, and the stripping rules in
   monitors and SLOs do. That is why the guard checks dashboard titles.
 - **`options.silenced` is mute state, not configuration.** A downtime would
   otherwise show up as drift every morning it was active.
+
+## The catalog
+
+`datadog/entities/*.yaml` are Software Catalog entities (RC1-447), and they
+invert the model above. Nothing in Datadog made them; each one is authored
+here and pushed up, so the file is the source rather than an export of one.
+That is why they get their own module:
+
+```
+python -m kpi.catalog_sync push    # datadog/entities/*.yaml -> account
+python -m kpi.catalog_sync diff    # exit 1 if the account has drifted
+```
+
+`push` upserts on `metadata.name` and the API answers 202, applying
+asynchronously — a `diff` run immediately after a `push` can still read the
+old entity for a beat. The ordering rule is the same as everything else here:
+**push first, then let the PR go green.**
+
+### One service, three names
+
+A catalog entity is keyed on exactly one name. Every deployed service in this
+estate answers to as many as three, and they do not agree:
+
+| Service | DORA deploy | APM `service` | LLM Obs `ml_app` |
+| --- | --- | --- | --- |
+| drift detector | `tpm-drift-detector` | `drift-service` | `drift-digest` |
+| PR review agent | `pr-review-agent-snacksnack` | `webhook` | `pr-review-agent` |
+| launch planner | `launch-planner-agent` | *none* | `launch-planner` |
+| portfolio site | `hihelloreid` | `web` | `hihelloreid-chat` |
+
+Not one of the four DORA service names appears in APM. The entities are keyed
+on the DORA name because that is the deploy identity — the thing a change
+failure would attach to — and the other names ride along as `apm-service:` and
+`ml-app:` tags so the split is declared rather than rediscovered.
+
+Converging them is deliberately not done here. A Datadog service name is an
+identity, not a label: changing `DD_SERVICE` starts a *new* service and leaves
+the history behind under the old name, which would split the SLO that RC1-407
+built and reset baselines on monitors that have been quiet for weeks. Six
+committed objects reference the current APM names, plus the generated KPI
+objects and the SLOs.
+
+### Tags that are findings, not names
+
+Two entities carry a `gap:` tag, and both are real:
+
+- `concert-intelligence` has `gap:no-deploy-events`. The n8n workflow JSON is
+  re-imported by hand after each merge, so no pipeline and no deploy event
+  ever observes it shipping.
+- `ai-incident-summarizer` has `gap:dd-service-unset`. Seven of its eight
+  Lambdas report under raw CloudFormation names like
+  `ai-incident-summarizer-dedupfunction-awf44molus0l`. Those carry a stack
+  hash that changes when the stack is recreated, so they are unusable as an
+  entity key — which is why the entity is keyed on the one name that is set.
+
+`stale-ticket-bot` carries `activity:dormant` for the same reason: it is
+deployed, emits nothing, and has no monitor or SLO. Recording that is the
+point. An estate where the dormant thing is *declared* dormant is different
+from one where nobody checked.
+
+### No scorecard yet
+
+Scorecards were scoped into RC1-447 and taken back out. A dry run put the
+estate at roughly half red, and the reds were a mix of true gaps and artifacts
+of the naming split above — "is traced" fails for services that are traced,
+under another name. A scoreboard whose failures need a paragraph of
+explanation is worse than no scoreboard. The gaps it found are a worklist
+first; the scorecard follows once they are closed.
 
 ## What stays where it is
 

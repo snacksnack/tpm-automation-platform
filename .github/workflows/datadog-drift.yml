@@ -24,6 +24,7 @@ on:
     paths:
       - "datadog/**"
       - "kpi/datadog_sync.py"
+      - "kpi/catalog_sync.py"
 
 permissions:
   contents: read
@@ -56,3 +57,17 @@ jobs:
             exit 0
           fi
           python -m kpi.datadog_sync diff
+
+      # Catalog entities are authored here rather than exported, so this asks
+      # the opposite question: does the account still carry what the files
+      # say? Same ordering rule either way — `push` before the PR goes green.
+      - name: Diff the catalog against the repo
+        env:
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+          DD_APP_KEY: ${{ secrets.DD_APP_KEY }}
+        run: |
+          if [ -z "$DD_API_KEY" ] || [ -z "$DD_APP_KEY" ]; then
+            echo "DD_API_KEY / DD_APP_KEY secrets not set — skipping."
+            exit 0
+          fi
+          python -m kpi.catalog_sync diff

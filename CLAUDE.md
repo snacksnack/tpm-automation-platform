@@ -23,8 +23,8 @@ collectors/       Jira, program snapshots, billing (Anthropic admin, Heroku)
 store/            SQLite snapshot store + Finding/Snapshot models
 drift/            graph -> rules -> pipeline -> notify (Slack)
 narrative/        the drift digest (Claude) + its markdown templates
-kpi/              the KPI stages, Datadog generators, datadog_sync (pull/push/diff)
-datadog/          exported JSON for the hand-built Datadog objects + manifest.json
+kpi/              KPI stages, Datadog generators, datadog_sync + catalog_sync
+datadog/          exported JSON + manifest.json; entities/ = catalog (RC1-447)
 evals/            billed eval subjects on agent-evals — dev extra, NOT in the image
 simulate/         the scripted ten-week program in Jira, one day per tick
 seed/             the drift-demo Jira scenario, idempotent by label
@@ -48,8 +48,8 @@ three entrypoint modules; a new package goes in both or the image build fails.
 - **No auto-sync of infrastructure state.** Drift jobs detect and go red; a
   human commits the fix, in both directions. A scheduled job never writes to
   Jira, Datadog or Grafana; only a CLI asked with `--push`, `seed` or `tick` does.
-- **Datadog objects are code.** Exported ones: edit `datadog/*.json`, run
-  `python -m kpi.datadog_sync push`, then `diff` until clean. Generated ones:
+- **Datadog objects are code.** Exported: edit `datadog/*.json`, `datadog_sync
+  push`, `diff` until clean. Catalog entities are file-first: `catalog_sync push`. Generated ones:
   edit `kpi/datadog.py` and `--push`. Never hand-edit in the UI without pulling
   back, or the daily drift workflow goes red.
 - **Config via `config.settings`** (pydantic-settings, `.env`, never
@@ -103,6 +103,5 @@ Run everything through `uv run`; `.python-version` pins 3.12.
   main); `fly-deploy.yml` (push to main → `flyctl deploy` → gate on three
   consecutive healthy `/healthz` reads, because a stopped machine reports
   "warning", not "critical"); `drift-daily.yml` (12:17 UTC, POSTs `/drift/run`);
-  `datadog-drift.yml` (13:23 UTC and any PR touching `datadog/**`, runs
-  `datadog_sync diff`); `security-posture.yml` (11:41 UTC, posts scanner alert
-  counts). Every production path is Actions-driven; Heroku auto-deploy stays off.
+  `datadog-drift.yml` (13:23 UTC and any PR touching `datadog/**`, runs both
+  sync `diff`s); `security-posture.yml` (11:41 UTC, scanner alert counts). Every production path is Actions-driven; Heroku auto-deploy stays off.

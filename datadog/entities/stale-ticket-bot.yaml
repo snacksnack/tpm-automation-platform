@@ -1,0 +1,25 @@
+apiVersion: v3
+kind: service
+metadata:
+  name: stale-ticket-bot
+  displayName: Stale Ticket Bot
+  description: >-
+    Nudges Jira tickets that have gone quiet. Deployed to AWS via
+    CloudFormation and currently dormant — it emits no telemetry, has no
+    monitor and no SLO. Dormant by decision, not by neglect; recorded here so
+    the absence is declared rather than discovered.
+  owner: reid
+  tags:
+    - platform:aws-lambda
+    - deploy:github-actions
+    - repo:stale-ticket-bot
+    - activity:dormant
+    - gap:no-telemetry
+  links:
+    - name: Repository
+      type: repo
+      provider: GitHub
+      url: https://github.com/snacksnack/stale-ticket-bot
+spec:
+  lifecycle: experimental
+  tier: "3"

@@ -1,0 +1,27 @@
+apiVersion: v3
+kind: service
+metadata:
+  name: tpm-drift-detector
+  displayName: TPM Drift Detector
+  description: >-
+    Flags upstream schedule slips that downstream plans have not absorbed.
+    The platform's first service; deploys to Fly on every push to main.
+  owner: reid
+  tags:
+    - platform:fly
+    - deploy:github-actions
+    - repo:tpm-automation-platform
+    # The same service answers to three names across three products (RC1-447).
+    - apm-service:drift-service
+    - ml-app:drift-digest
+  links:
+    - name: Repository
+      type: repo
+      provider: GitHub
+      url: https://github.com/snacksnack/tpm-automation-platform
+    - name: Delivery — CI pipelines & deploys
+      type: dashboard
+      url: https://app.datadoghq.com/dashboard/izc-5s7-tz8
+spec:
+  lifecycle: production
+  tier: "2"

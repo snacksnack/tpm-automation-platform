@@ -1,0 +1,26 @@
+apiVersion: v3
+kind: service
+metadata:
+  name: pr-review-agent-snacksnack
+  displayName: PR Review Agent
+  description: >-
+    Autonomous code review across the GitHub estate. Receives webhooks, runs a
+    single reviewer loop against the diff, and posts findings to the PR.
+  owner: reid
+  tags:
+    - platform:fly
+    - deploy:github-actions
+    - repo:pr_agent
+    - apm-service:webhook
+    - ml-app:pr-review-agent
+  links:
+    - name: Repository
+      type: repo
+      provider: GitHub
+      url: https://github.com/snacksnack/pr_agent
+    - name: Agent Fleet — LLM Observability
+      type: dashboard
+      url: https://app.datadoghq.com/dashboard/bwm-uny-qqs
+spec:
+  lifecycle: production
+  tier: "2"

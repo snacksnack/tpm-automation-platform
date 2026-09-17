@@ -108,6 +108,14 @@
     {
       "id": 322827099,
       "why": "RC1-457 incident summarizer Lambda errors — multi-alert by functionname so the alert names the failing stage of the eight-function chain; service:incident-summarizer comes from the SAM Globals (RC1-411)"
+    },
+    {
+      "id": 322832421,
+      "why": "RC1-451 cardinality guardrail — billable custom timeseries above 250 (warn 150) against a measured baseline of 27 avg / 81 max over 30d. The lab that set it pushed one metric to 501 series with a single unbounded tag. Cannot name the metric: estimated_usage.metrics.custom.by_metric reports N/A on this account"
+    },
+    {
+      "id": 322832422,
+      "why": "RC1-451 log ingest guardrail — more than 10,000 ingested events in a day (warn 5,000) against a baseline of ~265/day, 1,231 max. Fires at half the index's 20,000/day cap, because the cap drops logs silently once reached"
     }
   ],
   "synthetics": [
@@ -156,6 +164,12 @@
     {
       "id": "cfe2b45d7309524fa07c64e7ad15cbc4",
       "why": "RC1-456 concert intelligence run freshness — 97% over 30d on monitor 322765258; a heartbeat, because 26 traces in 30d cannot support a ratio"
+    }
+  ],
+  "log_indexes": [
+    {
+      "id": "main",
+      "why": "RC1-451 the only log index. It shipped uncapped (daily_limit null, zero exclusion filters) against a baseline of ~265 indexed logs a day — the account's one unbounded spend. Capped at 20,000/day, ~40-75x headroom, with a warning at 80%."
     }
   ]
 }

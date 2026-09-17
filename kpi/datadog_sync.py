@@ -86,6 +86,10 @@ STRIP: dict[str, list[str | tuple[str, ...]]] = {
         ("steps", "*", "public_id"),
     ],
     "slos": ["created_at", "modified_at", "creator"],
+    # RC1-451. `is_rate_limited` says whether the index is *currently* dropping
+    # logs against its daily limit — state, and the one field here that moves
+    # on its own.
+    "log_indexes": ["is_rate_limited"],
 }
 
 #: kind -> (GET path, PUT path). `{id}` is the object's id; both synthetics
@@ -96,6 +100,13 @@ PATHS = {
     "monitors": ("/api/v1/monitor/{id}", "/api/v1/monitor/{id}"),
     "synthetics": (None, "/api/v1/synthetics/tests/{type}/{id}"),
     "slos": ("/api/v1/slo/{id}", "/api/v1/slo/{id}"),
+    # RC1-451. The id is the index name; this account has exactly one, `main`.
+    # An uncapped index is the account's largest unbounded liability, so it
+    # belongs in the repo next to everything else that can spend money.
+    "log_indexes": (
+        "/api/v1/logs/config/indexes/{id}",
+        "/api/v1/logs/config/indexes/{id}",
+    ),
 }
 
 KINDS = tuple(PATHS)
@@ -216,7 +227,12 @@ def fetch(http: httpx.Client, kind: str, obj_id: str) -> dict:
 #: rejects `public_id` outright ("Additional properties are not allowed") —
 #: the id is already in the path — while the API-test PUT tolerates it; the
 #: files keep it either way so each one names the object it came from.
-WRITE_STRIP = {"synthetics": ["public_id"]}
+WRITE_STRIP = {
+    "synthetics": ["public_id"],
+    # The index name is the path. The update schema has no `name` field, and
+    # `is_rate_limited` is already stripped on the way in.
+    "log_indexes": ["name"],
+}
 
 
 def put(http: httpx.Client, kind: str, obj_id: str, doc: dict) -> httpx.Response:

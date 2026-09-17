@@ -1,0 +1,15 @@
+{
+  "daily_limit": 20000,
+  "daily_limit_reset": {
+    "reset_time": "00:00",
+    "reset_utc_offset": "+00:00"
+  },
+  "daily_limit_warning_threshold_percentage": 80.0,
+  "exclusion_filters": [],
+  "filter": {
+    "query": ""
+  },
+  "name": "main",
+  "num_flex_logs_retention_days": 0,
+  "num_retention_days": 15
+}

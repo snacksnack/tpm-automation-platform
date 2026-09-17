@@ -1,0 +1,28 @@
+{
+  "draft_status": "published",
+  "id": 322832421,
+  "message": "Billable custom timeseries have climbed above the estate's normal range. Almost always this is one metric that gained an unbounded tag — a request id, a timestamp, a user id.\n\nBaseline when this was set (RC1-451): 27 average and **81 max** over 30 days. The lab that produced these thresholds pushed one metric to 501 series with a single `probe_id` tag, which at this account's effective rate of $0.0181 per timeseries-month is $9.08/month — about a third of the entire Datadog bill.\n\n**This monitor cannot name the metric.** `datadog.estimated_usage.metrics.custom.by_metric` reports `N/A` on this account, so grouping by metric buys nothing. To find the culprit, sort Metrics Summary by cardinality, then fix it with a tag configuration (`POST /api/v2/metrics/<metric>/tags`) rather than by deleting the metric — Metrics without Limits keeps the totals exact and drops only the breakdown you could not afford.\n\nRC1-451. @webhook-incident-summarizer",
+  "multi": false,
+  "name": "Custom metric count — cardinality guardrail",
+  "options": {
+    "include_tags": true,
+    "new_host_delay": 300,
+    "notify_audit": false,
+    "notify_no_data": false,
+    "renotify_interval": 0,
+    "require_full_window": false,
+    "thresholds": {
+      "critical": 250.0,
+      "warning": 150.0
+    }
+  },
+  "priority": 3,
+  "query": "avg(last_4h):avg:datadog.estimated_usage.metrics.custom{*} > 250",
+  "restricted_roles": null,
+  "tags": [
+    "rc1:451",
+    "kind:cost-guardrail",
+    "generated:manual"
+  ],
+  "type": "metric alert"
+}

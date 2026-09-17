@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 
+import httpx
 import pytest
 
 from kpi import datadog_sync
@@ -168,3 +169,51 @@ def test_exported_files_are_already_normalized():
             assert path.read_text() == datadog_sync.dumps(datadog_sync.normalize(kind, doc)), (
                 f"{path} is not in canonical form — re-run pull, or push your edit"
             )
+
+
+def test_normalize_drops_the_index_rate_limit_state_but_keeps_the_limit():
+    """RC1-451. `is_rate_limited` says whether the index is dropping logs right
+    now — state, and the only field here that moves on its own. The limit that
+    causes it is configuration and must survive."""
+    doc = {
+        "name": "main",
+        "daily_limit": 20000,
+        "daily_limit_warning_threshold_percentage": 80.0,
+        "num_retention_days": 15,
+        "exclusion_filters": [],
+        "filter": {"query": ""},
+        "is_rate_limited": True,
+    }
+    out = datadog_sync.normalize("log_indexes", doc)
+    assert "is_rate_limited" not in out
+    assert out["daily_limit"] == 20000
+    assert out["daily_limit_warning_threshold_percentage"] == 80.0
+
+
+def test_put_sends_an_index_without_its_name():
+    """The name is the path, and the update schema has no field for it."""
+    sent: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent["url"] = str(request.url)
+        sent["body"] = json.loads(request.content)
+        return httpx.Response(200, json={})
+
+    http = httpx.Client(
+        transport=httpx.MockTransport(handler), base_url="https://api.datadoghq.com"
+    )
+    datadog_sync.put(http, "log_indexes", "main", {"name": "main", "daily_limit": 20000})
+
+    assert sent["url"].endswith("/api/v1/logs/config/indexes/main")
+    assert sent["body"] == {"daily_limit": 20000}
+
+
+def test_the_log_index_is_capped():
+    """RC1-451, and the reason this file has an assertion about a value rather
+    than a shape: the `main` index shipped with `daily_limit: null` and no
+    exclusion filters, which made it the one place in the account where a
+    runaway could bill without limit. Uncapping it again should fail here
+    before it fails on an invoice."""
+    index = json.loads(datadog_sync.path_for("log_indexes", "main").read_text())
+    assert index["daily_limit"], "the main log index must not be uncapped"
+    assert index["daily_limit"] <= 50000, "the cap is a guardrail, not a target"

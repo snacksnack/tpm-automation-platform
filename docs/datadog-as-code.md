@@ -5,7 +5,7 @@ an object belongs to is the whole of this document.
 
 | | Generated | Exported |
 | --- | --- | --- |
-| What | 2 program dashboards, 6 KPI monitors, 7 program SLOs | 4 dashboards, 18 monitors, 5 synthetics tests, 6 SLOs |
+| What | 2 program dashboards, 6 KPI monitors, 7 program SLOs | 4 dashboards, 20 monitors, 5 synthetics tests, 6 SLOs, 1 log index |
 | Source | `kpi/datadog.py` builds them from the adopted trees | `datadog/*.json`, listed in `datadog/manifest.json` |
 | To change one | edit the generator, `python -m kpi.datadog dashboards --push` | edit the file, `python -m kpi.datadog_sync push` |
 | Identified by | tag `generated:kpi-datadog`, or the title `Program KPIs — <program>` | absence of the above |
@@ -326,6 +326,127 @@ One vendor-side change rode along in the same sync: Datadog rewrote the PR
 review agent SLO's numerator to wrap it in parentheses. Nothing here edited it
 — the same class of drift as the `nanodollar` unit metadata in RC1-405, where
 the account changed under a file that had not.
+
+## What telemetry costs (RC1-451)
+
+Cardinality and log volume are the two levers that dominate a Datadog bill, and
+neither had ever been exercised here on purpose. This is the experiment and the
+numbers it produced.
+
+### Prices come from the account, not from a price list
+
+`GET /api/v2/usage/estimated_cost` returns real dollars per product for this
+org, and `GET /api/v1/usage/billable-summary` returns the billable quantity
+behind each one. Dividing the two gives an effective unit price that is true
+here, rather than a list price that may not be:
+
+| | Billable quantity | Cost | Effective rate |
+| --- | --- | --- | --- |
+| Custom metrics | 7 timeseries | $0.0676 | **$0.0181 per timeseries-month** |
+| Logs indexed, 15-day | 7,669 logs | $0.0171 | **$2.24 per million logs** |
+
+Whole account, September, projected to a full month: **$26.96**. The two largest
+lines are `ci_pipeline` ($5.98) and `serverless_infra` ($4.45), neither of which
+is telemetry anyone chose to send.
+
+**Read the billing dimension's name.** `timeseries_average` is an average over
+the month; `ci_pipeline_maximum` is a high-water mark; `logs_indexed_15day_sum`
+is a sum. The same burst costs wildly different amounts under each, and the
+name is the only thing that tells you which one you are buying.
+
+### The cardinality half
+
+One disposable metric, `rc1451.cardinality_probe`, with one deliberately
+unbounded tag — `probe_id`, a value per request — and a tag budget of 500 fixed
+before anything was sent:
+
+| | Distinct billable series |
+| --- | --- |
+| Whole estate, 30-day average | 27 |
+| Whole estate, 30-day max | 81 |
+| **One metric with one unbounded tag** | **501** |
+
+At $0.0181 per timeseries-month that one tag is **$9.08/month**, or **+34% on
+the entire Datadog bill**, from a single metric nobody would notice.
+
+Then Metrics without Limits, a tag configuration keeping only the bounded tags:
+
+```
+POST /api/v2/metrics/rc1451.cardinality_probe/tags
+{"data": {"type": "manage_tags", "id": "...",
+          "attributes": {"tags": ["lab", "env"], "metric_type": "count"}}}
+```
+
+**501 series became 1, and not one data point was lost.** The ungrouped total
+still reads 1,001 across both bursts; only the per-`probe_id` breakdown is gone.
+Querying the dropped tag now fails loudly rather than silently returning less:
+
+```
+configuration error :: type: disabled_tags :: location: group_by
+```
+
+That error is the feature. A tag configuration does not quietly change your
+dashboards' numbers — it refuses the query that no longer has an answer.
+
+Two API details cost a round trip each: `include_percentiles` is rejected
+outright for count, gauge and rate metrics ("Cannot configure percentiles"), and
+the tag configuration is **not readable back immediately** — the POST returns it
+while `GET /tags` still 404s for a few minutes.
+
+### The log half
+
+300 logs from a `rc1451lab` source, then an exclusion filter, then 300 more of
+exactly the same shape:
+
+| Phase | Sent | Indexed |
+| --- | --- | --- |
+| Before the exclusion filter | 300 | **300** |
+| After the exclusion filter | 300 | **0** |
+
+**Where the data went, and where the money went, are different questions.** An
+exclusion filter drops a log at the index, so the indexing cost goes to zero —
+but the log was still ingested and ingestion is billed separately. To stop
+paying for it entirely, stop sending it. The filter is a way to keep a stream
+searchable in aggregate without paying to retain every line of it, not a way to
+un-send anything.
+
+### The guardrails that came out of it
+
+The index shipped with `daily_limit: null` and zero exclusion filters — the one
+place in this account where a runaway could bill without limit. It is now
+**capped at 20,000 indexed logs a day** (~40–75x the ~265/day baseline, ceiling
+about $1.34/month) with a warning at 80%, and the index is a file like
+everything else: `datadog/log_indexes/main.json`, kind `log_indexes` in
+`datadog_sync`. A test asserts it is never uncapped again.
+
+Two monitors, both deliberately **without** a `service:` tag — they watch the
+account, not any one service, the same reasoning as the fleet-level monitors:
+
+| Monitor | Fires at | Baseline it was set against |
+| --- | --- | --- |
+| Custom metric count — cardinality guardrail | 250 series (warn 150) | 27 avg, 81 max over 30d |
+| Indexed log volume — daily ingest guardrail | 10,000 events/day (warn 5,000) | ~265/day, 1,231 max |
+
+**The cardinality guardrail cannot name the metric that tripped it.**
+`datadog.estimated_usage.metrics.custom.by_metric` reports `N/A` on this
+account, so grouping by metric buys nothing and the monitor says so in its own
+message: sort Metrics Summary by cardinality, then fix it with a tag
+configuration rather than by deleting the metric.
+
+The log monitor fires at **half** the index cap on purpose. The cap bounds the
+bill either way, but once reached it drops logs silently, and losing the logs
+you wanted is the worse outcome.
+
+### What the experiment cost
+
+**$0.013.** 501 series alive for about an hour of a 720-hour month, billed as an
+average. The bound was decided before anything was sent — one metric, 500 tag
+values, one burst, a stop condition — which is the only reason a demonstration
+of a $9/month mistake was safe to run on a $27/month account.
+
+Cleaned up afterwards and verified rather than assumed: the tag configuration
+deleted, the exclusion filter removed, the index left capped with
+`exclusion_filters: []`, and `datadog_sync diff` clean at 36 objects.
 
 ## What stays where it is
 

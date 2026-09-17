@@ -29,3 +29,33 @@ jobs:
           curl -fsS -X POST "$DRIFT_URL/drift/run" \
             -H "X-Drift-Token: $DRIFT_RUN_TOKEN" \
             -w '\nHTTP %{http_code}\n'
+
+      # Heartbeat for the drift detector's SLO (RC1-456). The service emits no
+      # metric of its own, and a CI-pipelines monitor cannot back an SLO —
+      # Datadog rejects it with "not supported SLO" — so the scheduled run says
+      # so itself, the same shape agent-evals already uses for its publish.
+      #
+      # Only runs when the POST above succeeded: curl -f exits non-zero on an
+      # error status, which fails the step and leaves the heartbeat stale. That
+      # is the point — a silent skip would keep the SLO green through an outage.
+      - name: Report the run to Datadog
+        env:
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$DD_API_KEY" ]; then
+            echo "::warning title=Drift heartbeat skipped::DD_API_KEY not set — the SLO will read this run as a miss."
+            exit 0
+          fi
+          # `type` is an INTEGER enum on /api/v2/series: 0 unspecified, 1 count,
+          # 2 rate, 3 gauge. The string "gauge" is rejected with
+          # `unknown value ... for enum datadoghq.api.series.v2.MetricType`.
+          payload=$(printf '{"series":[{"metric":"drift.scheduled_run.ok","type":3,"points":[{"timestamp":%s,"value":1}],"tags":["service:tpm-drift-detector","env:prod"]}]}' "$(date +%s)")
+          code=$(curl -s -o resp.json -w '%{http_code}' -m 30 -X POST \
+            -H "DD-API-KEY: $DD_API_KEY" -H "Content-Type: application/json" \
+            -d "$payload" "https://api.datadoghq.com/api/v2/series")
+          cat resp.json; echo
+          case "$code" in
+            2*) echo "drift heartbeat recorded (HTTP $code)";;
+            *) echo "::error::heartbeat POST failed with HTTP $code — the run happened but the SLO will not see it"; exit 1;;
+          esac

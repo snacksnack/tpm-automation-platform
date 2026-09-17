@@ -1,0 +1,28 @@
+{
+  "draft_status": "published",
+  "id": 322753565,
+  "message": "The daily drift run has not reported success. It is scheduled 12:17 UTC; no heartbeat for two days means the job stopped running or stopped succeeding. RC1-456. @webhook-incident-summarizer",
+  "multi": false,
+  "name": "Daily drift run — scheduled run heartbeat",
+  "options": {
+    "include_tags": true,
+    "new_host_delay": 300,
+    "no_data_timeframe": 2880,
+    "notify_audit": false,
+    "notify_no_data": true,
+    "renotify_interval": 0,
+    "thresholds": {
+      "critical": 1.0
+    }
+  },
+  "priority": null,
+  "query": "min(last_5m):min:drift.scheduled_run.ok{*} < 1",
+  "restricted_roles": null,
+  "tags": [
+    "rc1:456",
+    "service:tpm-drift-detector",
+    "kind:heartbeat",
+    "generated:manual"
+  ],
+  "type": "metric alert"
+}

@@ -1,0 +1,25 @@
+{
+  "description": "Share of 30d with a recent successful scheduled publish. A heartbeat, not a ratio: 2 traces in 30 days cannot support one. Budget tolerates one missed run a month, not two.",
+  "id": "e1759aa4ee7f5c0a80ffbe199a1129fe",
+  "monitor_ids": [
+    321408173
+  ],
+  "monitor_tags": [],
+  "name": "Eval trend page freshness",
+  "tags": [
+    "kind:heartbeat",
+    "rc1:456",
+    "service:agent-evals"
+  ],
+  "target_threshold": 97.0,
+  "thresholds": [
+    {
+      "target": 97.0,
+      "target_display": "97.",
+      "timeframe": "30d"
+    }
+  ],
+  "timeframe": "30d",
+  "type": "monitor",
+  "type_id": 0
+}

@@ -1,0 +1,25 @@
+{
+  "description": "Share of 30d with a successful daily drift run. The service emits no metric of its own, so the scheduled run reports its own success; a CI-pipelines monitor cannot back an SLO. 97% of 30d is 21.6h of budget.",
+  "id": "12be373350ec5f67a5076325cec468ce",
+  "monitor_ids": [
+    322753565
+  ],
+  "monitor_tags": [],
+  "name": "Daily drift run freshness",
+  "tags": [
+    "kind:heartbeat",
+    "rc1:456",
+    "service:tpm-drift-detector"
+  ],
+  "target_threshold": 97.0,
+  "thresholds": [
+    {
+      "target": 97.0,
+      "target_display": "97.",
+      "timeframe": "30d"
+    }
+  ],
+  "timeframe": "30d",
+  "type": "monitor",
+  "type_id": 0
+}

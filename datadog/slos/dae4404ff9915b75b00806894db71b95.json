@@ -1,0 +1,48 @@
+{
+  "description": "Share of pr-review-agent traces that did not error, 30d. Queried by ml_app because RC1-447 renamed the service from `webhook` and a Datadog rename strands history; tagged by service so the RC1-454 scorecard can find it.",
+  "id": "dae4404ff9915b75b00806894db71b95",
+  "monitor_tags": [],
+  "name": "PR review agent reliability",
+  "query": {
+    "denominator": "sum:ml_obs.trace{ml_app:pr-review-agent}.as_count()",
+    "numerator": "sum:ml_obs.trace{ml_app:pr-review-agent}.as_count() - default_zero(sum:ml_obs.trace.error{ml_app:pr-review-agent}.as_count())"
+  },
+  "sli_specification": {
+    "count": {
+      "good_events_formula": {
+        "formula": "(query1 - default_zero(query2))"
+      },
+      "queries": [
+        {
+          "data_source": "metrics",
+          "name": "query1",
+          "query": "sum:ml_obs.trace{ml_app:pr-review-agent}.as_count()"
+        },
+        {
+          "data_source": "metrics",
+          "name": "query2",
+          "query": "sum:ml_obs.trace.error{ml_app:pr-review-agent}.as_count()"
+        }
+      ],
+      "total_events_formula": {
+        "formula": "query1"
+      }
+    }
+  },
+  "tags": [
+    "kind:reliability",
+    "rc1:456",
+    "service:pr-review-agent-snacksnack"
+  ],
+  "target_threshold": 97.0,
+  "thresholds": [
+    {
+      "target": 97.0,
+      "target_display": "97.",
+      "timeframe": "30d"
+    }
+  ],
+  "timeframe": "30d",
+  "type": "metric",
+  "type_id": 1
+}

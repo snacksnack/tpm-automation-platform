@@ -11,7 +11,6 @@ metadata:
     - platform:fly
     - deploy:github-actions
     - repo:pr_agent
-    - apm-service:webhook
     - ml-app:pr-review-agent
   links:
     - name: Repository

@@ -1,7 +1,7 @@
 apiVersion: v3
 kind: service
 metadata:
-  name: ai-incident-summarizer
+  name: incident-summarizer
   displayName: AI Incident Summarizer
   description: >-
     Ingests CloudWatch, Datadog and GitHub alerts, normalizes and dedupes them,
@@ -12,12 +12,7 @@ metadata:
     - platform:aws-lambda
     - deploy:github-actions
     - repo:ai-incident-summarizer
-    - apm-service:incident-summarizer
     - ml-app:incident-summarizer
-    # The other seven Lambdas report under raw CloudFormation names because
-    # DD_SERVICE is unset; those names carry a stack hash and change on
-    # recreation, so they are deliberately not used as the entity key (RC1-447).
-    - gap:dd-service-unset
   links:
     - name: Repository
       type: repo

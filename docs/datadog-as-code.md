@@ -174,11 +174,19 @@ Two entities carry a `gap:` tag, and both are real:
 - `concert-intelligence` has `gap:no-deploy-events`. The n8n workflow JSON is
   re-imported by hand after each merge, so no pipeline and no deploy event
   ever observes it shipping.
-- `ai-incident-summarizer` has `gap:dd-service-unset`. Seven of its eight
-  Lambdas report under raw CloudFormation names like
-  `ai-incident-summarizer-dedupfunction-awf44molus0l`. Those carry a stack
-  hash that changes when the stack is recreated, so they are unusable as an
-  entity key — which is why the entity is keyed on the one name that is set.
+That entity used to carry a second `gap:` tag claiming the summarizer's seven
+other Lambdas reported under raw CloudFormation names. **That was wrong**, and
+it is worth saying why: the claim came from a 30-day APM query, and RC1-411 set
+`DD_SERVICE` in the SAM template's `Globals` on 2026-09-10. The raw names were
+history inside the window, not live services — a 2-day query returns
+`incident-summarizer` alone. Read a window shorter than the age of the fix, or
+a closed gap looks open.
+
+The same correction renamed that entity from `ai-incident-summarizer` to
+`incident-summarizer`: the shorter name is what APM already emits and what the
+site's one `service:incident-summarizer` filter already matches, so the entity
+joined its telemetry without touching the service at all. Not every mismatch
+needs the service to move; sometimes the entity is the cheaper thing to rename.
 
 `stale-ticket-bot` carries `activity:dormant` for the same reason: it is
 deployed, emits nothing, and has no monitor or SLO. Recording that is the

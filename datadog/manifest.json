@@ -96,6 +96,10 @@
     {
       "id": 322753565,
       "why": "RC1-456 daily drift run heartbeat — the drift detector emits no metric of its own, so drift-daily.yml reports its own success; backs the freshness SLO, because a CI-pipelines monitor cannot"
+    },
+    {
+      "id": 322765258,
+      "why": "RC1-456 concert intelligence heartbeat — the n8n workflow reports its own LLM Obs spans on every run including cached ones, so a two-day silence means the scheduled trigger stopped or the published copy broke"
     }
   ],
   "synthetics": [
@@ -140,6 +144,10 @@
     {
       "id": "12be373350ec5f67a5076325cec468ce",
       "why": "RC1-456 daily drift run freshness — 97% over 30d on monitor 322753565"
+    },
+    {
+      "id": "cfe2b45d7309524fa07c64e7ad15cbc4",
+      "why": "RC1-456 concert intelligence run freshness — 97% over 30d on monitor 322765258; a heartbeat, because 26 traces in 30d cannot support a ratio"
     }
   ]
 }

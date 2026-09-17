@@ -32,7 +32,12 @@ from store.snapshot_store import SnapshotStore
 
 # RC1-322: the digest's Anthropic calls become LLM Obs traces. No-op without
 # DD_API_KEY, so local dev and tests are unchanged.
-enable_llm_obs("drift-digest", service="drift-service")
+# RC1-453: the service is the Software Catalog entity and the name the Fly
+# Deploy workflow reports to DORA. It was "drift-service", which matched
+# nothing. DD_SERVICE in fly.toml does NOT override this — an explicit
+# service= argument to LLMObs.enable() wins, which is why setting the env
+# var alone left the catalog row empty.
+enable_llm_obs("drift-digest", service="tpm-drift-detector")
 
 # Emit the per-run structured JSON summary to stdout (captured by Fly logs),
 # independent of uvicorn's own logging config.

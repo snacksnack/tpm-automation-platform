@@ -1,0 +1,25 @@
+{
+  "description": "Share of 30d with a scheduled run inside the last two days. A heartbeat, not a ratio: 26 traces in 30d against a 97% target is an error budget of 0.78 events. The workflow emits a span on every run including fully cached ones (RC1-442 routes Previews Needed? into Build LLM Spans), so absence of a span means absence of a run.",
+  "id": "cfe2b45d7309524fa07c64e7ad15cbc4",
+  "monitor_ids": [
+    322765258
+  ],
+  "monitor_tags": [],
+  "name": "Concert intelligence run freshness",
+  "tags": [
+    "kind:heartbeat",
+    "rc1:456",
+    "service:concert-intelligence"
+  ],
+  "target_threshold": 97.0,
+  "thresholds": [
+    {
+      "target": 97.0,
+      "target_display": "97.",
+      "timeframe": "30d"
+    }
+  ],
+  "timeframe": "30d",
+  "type": "monitor",
+  "type_id": 0
+}

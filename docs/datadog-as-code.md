@@ -220,7 +220,7 @@ should reflect `main`, not whatever a branch proposes.
 | Has a repository link | entity file | 8/8 |
 | Declares lifecycle and tier | entity file | 8/8 |
 | Has a dashboard link | entity file | 8/8 |
-| Has an SLO | SLO `service:` tags | **5/8** (2/8 at first push) |
+| Has an SLO | SLO `service:` tags | **6/8** (2/8 at first push) |
 
 A scorecard whose every rule passes on the day it ships is telling you the
 rules are too weak, and that is the first thing a reader will test. `Has an
@@ -244,6 +244,17 @@ service because the volume does:
   `invalid monitor ids: …, monitors not found or not supported SLO`. That is why
   the drift heartbeat is a metric the workflow posts rather than a monitor over
   the pipeline event that already exists.
+
+**Check what the signal already covers before adding one.** `concert-intelligence` looked
+like the hard case: an n8n workflow whose scheduled trigger runs a copy re-imported by hand
+(RC1-407), where a fully cached run skips the model entirely (RC1-442) — so LLM spans looked
+like they would report "ran" only sometimes. Measuring said otherwise: **17 of 17 days** since
+RC1-362 instrumented it carry a trace, because the RC1-442 fix routes `Previews Needed?`
+into `Build LLM Spans` on both branches. A cached run still reports. No workflow change, no
+re-import, no publish step.
+
+The window is `last_2d`, not `last_1d`: the workflow runs once at 08:00, so a 24-hour window
+empties in the minutes before each run and the monitor would flap daily.
 
 **Query on `ml_app`, tag on `service`.** The PR review agent SLO reads
 `ml_app:pr-review-agent`, not `service:pr-review-agent-snacksnack`. An SLO's query

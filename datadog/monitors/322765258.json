@@ -1,0 +1,28 @@
+{
+  "draft_status": "published",
+  "id": 322765258,
+  "message": "The concert intelligence workflow has not reported a trace in two days. It runs daily at 08:00 from n8n Cloud and reports its own LLM Obs spans, so silence means the scheduled trigger stopped firing or the published copy broke (RC1-407). RC1-456. @webhook-incident-summarizer",
+  "multi": false,
+  "name": "Concert intelligence — scheduled run heartbeat",
+  "options": {
+    "include_tags": true,
+    "new_host_delay": 300,
+    "no_data_timeframe": 2880,
+    "notify_audit": false,
+    "notify_no_data": true,
+    "renotify_interval": 0,
+    "thresholds": {
+      "critical": 1.0
+    }
+  },
+  "priority": null,
+  "query": "sum(last_2d):sum:ml_obs.trace{ml_app:concert-intelligence}.as_count() < 1",
+  "restricted_roles": null,
+  "tags": [
+    "rc1:456",
+    "service:concert-intelligence",
+    "kind:heartbeat",
+    "generated:manual"
+  ],
+  "type": "query alert"
+}

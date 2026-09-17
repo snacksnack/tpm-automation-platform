@@ -106,6 +106,27 @@ def push() -> list[str]:
     return sorted(docs)
 
 
+def orphans(http: httpx.Client, authored: set[str]) -> list[str]:
+    """API-managed entities the account holds that no file declares.
+
+    Renaming an entity means a new file and a new key, so the old one survives
+    in the account with nothing pointing at it — a `push` cannot notice, because
+    push only walks the files. Only `ingestionSource: api` entities count:
+    anything Datadog discovered on its own (an APM service it saw traffic for)
+    is not ours to report on.
+    """
+    resp = http.get("/api/v2/catalog/entity", params={"page[limit]": 100, "include": "schema"})
+    resp.raise_for_status()
+    body = resp.json()
+    managed: dict[str, str] = {}
+    for item in body.get("included", []):
+        schema = item.get("attributes", {}).get("schema") or {}
+        meta = schema.get("metadata", {})
+        if meta.get("managed", {}).get("ingestionSource") == "api":
+            managed[meta["name"]] = item.get("id", "")
+    return sorted(name for name in managed if name not in authored)
+
+
 def diff() -> tuple[list[str], bool]:
     """Report entities the account disagrees with. Returns (lines, drifted)."""
     docs = load()
@@ -121,6 +142,11 @@ def diff() -> tuple[list[str], bool]:
                 lines.append(f"{name}: differs from datadog/entities/{name}.yaml")
                 lines.append(f"  file:    {json.dumps(want, sort_keys=True)}")
                 lines.append(f"  account: {json.dumps(got, sort_keys=True)}")
+        for name in orphans(http, set(docs)):
+            lines.append(
+                f"{name}: in the account, declared by no file — delete it in Datadog, "
+                "or add the file back"
+            )
     return lines, bool(lines)
 
 

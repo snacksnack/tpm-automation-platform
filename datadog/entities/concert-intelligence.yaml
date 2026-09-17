@@ -27,3 +27,14 @@ metadata:
 spec:
   lifecycle: production
   tier: "3"
+  languages:
+    - javascript
+  type: custom
+datadog:
+  pipelines:
+    fingerprints:
+      - "t1cwQoZW5Tcv"   # CI
+  codeLocations:
+    - repositoryURL: https://github.com/snacksnack/n8n-concert-intelligence-agent
+      paths:
+        - "**"

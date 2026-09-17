@@ -23,3 +23,14 @@ metadata:
 spec:
   lifecycle: experimental
   tier: "3"
+  languages:
+    - python
+  type: custom
+datadog:
+  pipelines:
+    fingerprints:
+      - "L9x_3mnyc1bK"   # Deploy
+  codeLocations:
+    - repositoryURL: https://github.com/snacksnack/stale-ticket-bot
+      paths:
+        - "**"

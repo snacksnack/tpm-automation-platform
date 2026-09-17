@@ -27,3 +27,17 @@ metadata:
 spec:
   lifecycle: production
   tier: "1"
+  languages:
+    - typescript
+  type: web
+datadog:
+  pipelines:
+    fingerprints:
+      - "P9m-OJLHjHHd"   # CI
+      - "CPHsiCYMLRwU"   # CodeQL
+      - "CTmLndDlGUiv"   # Dependency Graph
+      - "S-gyYCljv6ct"   # Heroku Release
+  codeLocations:
+    - repositoryURL: https://github.com/snacksnack/reid_basic
+      paths:
+        - "**"

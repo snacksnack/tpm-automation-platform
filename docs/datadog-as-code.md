@@ -129,6 +129,44 @@ built and reset baselines on monitors that have been quiet for weeks. Six
 committed objects reference the current APM names, plus the generated KPI
 objects and the SLOs.
 
+### What makes the catalog page fill in
+
+An entity with only metadata renders as a row with empty Health, Last Deploy,
+Requests, Error Rate, P95 and SLO columns, because every one of those reads
+**APM**, keyed on the service name. DORA deployment events do not feed the
+catalog's Last Deploy — verified 2026-09-16, when the four DORA-named entities
+showed blank and the one APM service in the account showed a deploy.
+
+Two things fill it, at very different prices:
+
+- **`datadog.pipelines.fingerprints` and `codeLocations`**, authored here. Free:
+  no service is touched, nothing redeploys. Fingerprints come from the CI
+  pipeline event (`ci.pipeline.fingerprint`) and are opaque strings that may
+  start with `-` or `_`, so they are quoted in the YAML with the pipeline's
+  name in a trailing comment.
+- **Making `DD_SERVICE` equal the entity name**, which needs a deploy and
+  strands the old service's history.
+
+Only the second fills the performance columns. RC1-447 did it for
+`tpm-drift-detector` alone — `DD_SERVICE` in `fly.toml`, stranding 397 spans
+nothing queries — as a worked example rather than an estate-wide rename.
+
+### The names that are actually load-bearing
+
+An earlier reading of this put the blast radius at six objects. That was wrong,
+and the error is worth recording: a grep for `webhook` and `incident-summarizer`
+matched monitor **messages**, where `@webhook-incident-summarizer` is the
+notification handle wiring alerts to that service. Those are not service
+matches.
+
+Reading the queries instead, the whole account references exactly four service
+names: `evals` and `dry-run` (both as *exclusions* in the two fleet-spend
+monitors, plus six and five times across the dashboards and SLOs, and three
+each in `kpi/datadog.py`), `incident-summarizer` once, and `hihelloreid` once.
+
+So `drift-service` and `webhook` were free to rename and `evals` is expensive.
+Check the query, not the document, before pricing a rename.
+
 ### Tags that are findings, not names
 
 Two entities carry a `gap:` tag, and both are real:

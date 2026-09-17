@@ -24,3 +24,18 @@ metadata:
 spec:
   lifecycle: production
   tier: "2"
+  languages:
+    - python
+  type: web
+datadog:
+  pipelines:
+    fingerprints:
+      - "_3TCDzRog_2G"   # CI
+      - "xzJM3d3tyyFi"   # CodeQL
+      - "Ay4q6IssxCz5"   # Dependency Graph
+      - "-DLFdx7AaeTP"   # Fly Deploy
+      - "7dpfIYmUIlxU"   # Wake
+  codeLocations:
+    - repositoryURL: https://github.com/snacksnack/pr_agent
+      paths:
+        - "**"

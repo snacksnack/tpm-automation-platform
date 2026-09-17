@@ -11,8 +11,8 @@ metadata:
     - platform:fly
     - deploy:github-actions
     - repo:tpm-automation-platform
-    # The same service answers to three names across three products (RC1-447).
-    - apm-service:drift-service
+    # APM was 'drift-service' until RC1-447 set DD_SERVICE in fly.toml; it now
+    # matches this entity and the DORA deploy events. LLM Obs still differs.
     - ml-app:drift-digest
   links:
     - name: Repository
@@ -25,3 +25,20 @@ metadata:
 spec:
   lifecycle: production
   tier: "2"
+  languages:
+    - python
+  type: web
+datadog:
+  pipelines:
+    fingerprints:
+      - "XW5RFBnsxieQ"   # CI
+      - "6Y55PGP48Xc_"   # CodeQL
+      - "qTaPDMSrIgbU"   # Daily drift run
+      - "pYmv1i8Q8Eg2"   # Datadog drift
+      - "UpqzFZVpyGrj"   # Dependency Graph
+      - "kZEYK2HEABLK"   # Fly Deploy
+      - "bYMoD7EFCsWu"   # Security posture
+  codeLocations:
+    - repositoryURL: https://github.com/snacksnack/tpm-automation-platform
+      paths:
+        - "**"

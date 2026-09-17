@@ -29,3 +29,15 @@ metadata:
 spec:
   lifecycle: production
   tier: "2"
+  languages:
+    - python
+  type: web
+datadog:
+  pipelines:
+    fingerprints:
+      - "UZqQAM9Gn9Ka"   # CI
+      - "vuzqPvU-pzkx"   # Deploy
+  codeLocations:
+    - repositoryURL: https://github.com/snacksnack/ai-incident-summarizer
+      paths:
+        - "**"

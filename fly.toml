@@ -12,6 +12,13 @@ primary_region = 'iad'
   DB_PATH = '/data/drift.db'
   DRY_RUN = 'false'
   PROJECT_KEY = 'RC1'
+  # RC1-447: name the APM service after the catalog entity and the DORA deploy
+  # events, which both call it tpm-drift-detector. ddtrace defaulted it to
+  # 'drift-service', so the catalog entry had no telemetry to join to. Nothing
+  # queries the old name — the only service: filters in the account exclude
+  # 'evals' and 'dry-run' — so this strands 397 spans nobody reads.
+  DD_SERVICE = 'tpm-drift-detector'
+  DD_ENV = 'prod'
 
 [[mounts]]
   source = 'drift_data'

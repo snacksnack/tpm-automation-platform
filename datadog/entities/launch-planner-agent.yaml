@@ -23,3 +23,17 @@ metadata:
 spec:
   lifecycle: production
   tier: "3"
+  languages:
+    - python
+  type: web
+datadog:
+  pipelines:
+    fingerprints:
+      - "Su_MvbMSWCuW"   # CI
+      - "4AaBLZz6FzkS"   # CodeQL
+      - "IajROXBaBydF"   # Dependency Graph
+      - "VZ7c-BNBhbrY"   # Fly Deploy
+  codeLocations:
+    - repositoryURL: https://github.com/snacksnack/launch-planner-agent
+      paths:
+        - "**"

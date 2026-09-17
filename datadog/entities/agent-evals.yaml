@@ -24,3 +24,17 @@ metadata:
 spec:
   lifecycle: production
   tier: "3"
+  languages:
+    - python
+  type: library
+datadog:
+  pipelines:
+    fingerprints:
+      - "J13NIJnbf7ae"   # CI
+      - "vtJj86hwbFYG"   # CodeQL
+      - "A0A5j2zex95b"   # Dependency Graph
+      - "VR-hUt47nbXB"   # pages-build-deployment
+  codeLocations:
+    - repositoryURL: https://github.com/snacksnack/agent-evals
+      paths:
+        - "**"

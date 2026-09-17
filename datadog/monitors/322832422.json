@@ -1,0 +1,28 @@
+{
+  "draft_status": "published",
+  "id": 322832422,
+  "message": "Log ingestion for the last day is far above normal. Baseline when this was set (RC1-451): about 265 events a day, 1,231 at the busiest in 30 days.\n\nThe `main` index is capped at 20,000 indexed logs a day, so the bill is bounded either way — but the cap **drops logs silently** once it is hit, and losing the logs you wanted is a worse outcome than paying for them. This fires at half the cap so there is room to react.\n\nIngestion is billed even when a log is never indexed. Cutting volume at the index with an exclusion filter saves the indexing cost, not the ingestion cost; to save both, stop sending it. RC1-451. @webhook-incident-summarizer",
+  "multi": false,
+  "name": "Indexed log volume — daily ingest guardrail",
+  "options": {
+    "include_tags": true,
+    "new_host_delay": 300,
+    "notify_audit": false,
+    "notify_no_data": false,
+    "renotify_interval": 0,
+    "require_full_window": false,
+    "thresholds": {
+      "critical": 10000.0,
+      "warning": 5000.0
+    }
+  },
+  "priority": 3,
+  "query": "sum(last_1d):sum:datadog.estimated_usage.logs.ingested_events{*}.as_count() > 10000",
+  "restricted_roles": null,
+  "tags": [
+    "rc1:451",
+    "kind:cost-guardrail",
+    "generated:manual"
+  ],
+  "type": "query alert"
+}

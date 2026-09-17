@@ -24,6 +24,10 @@ on:
     paths:
       - "datadog/entities/**"
       - "kpi/scorecard.py"
+      # SLO tags decide the `Has an SLO` rule, so a change here moves the score
+      # even though no entity and no rule changed. RC1-456 edited slos/ and the
+      # job did not run, which is how this line got written.
+      - "datadog/slos/**"
 
 permissions:
   contents: read

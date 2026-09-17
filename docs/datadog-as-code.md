@@ -220,13 +220,37 @@ should reflect `main`, not whatever a branch proposes.
 | Has a repository link | entity file | 8/8 |
 | Declares lifecycle and tier | entity file | 8/8 |
 | Has a dashboard link | entity file | 8/8 |
-| Has an SLO | SLO `service:` tags | **2/8** |
+| Has an SLO | SLO `service:` tags | **5/8** (2/8 at first push) |
 
 A scorecard whose every rule passes on the day it ships is telling you the
 rules are too weak, and that is the first thing a reader will test. `Has an
 SLO` went 0/8 → 2/8 in the change that introduced it, by tagging the two site
 availability SLOs with the service they actually cover. The other six are real
 gaps with tickets behind them, and the number is meant to climb.
+
+### Choosing an SLI the denominator can support (RC1-456)
+
+Three SLOs were added for the services that had none, and the shape differs per
+service because the volume does:
+
+- **A ratio needs events.** Only `pr-review-agent-snacksnack` has them — 1,444
+  traces in 30 days. The others have 2 to 26, where a 97% target leaves an error
+  budget under one event and the SLO measures luck rather than reliability.
+- **Scheduled work gets a heartbeat instead**: did it run and succeed, not what
+  fraction did. `agent-evals` already had a publish heartbeat monitor;
+  `tpm-drift-detector` had no metric at all, so `drift-daily.yml` now reports its
+  own success.
+- **A CI-pipelines monitor cannot back an SLO.** Datadog rejects it with
+  `invalid monitor ids: …, monitors not found or not supported SLO`. That is why
+  the drift heartbeat is a metric the workflow posts rather than a monitor over
+  the pipeline event that already exists.
+
+**Query on `ml_app`, tag on `service`.** The PR review agent SLO reads
+`ml_app:pr-review-agent`, not `service:pr-review-agent-snacksnack`. An SLO's query
+and its tags are independent, and RC1-447's rename stranded the history: the new
+service name holds **4** traces where the ml_app holds **1,444**. Keyed on the
+service it would have been the flappiest SLO in the account. Anything else renamed
+needs the same treatment.
 
 **Rules match on tags, never on names.** An SLO counts for a service when it
 carries `service:<entity name>`. An earlier estimate of this same rule came

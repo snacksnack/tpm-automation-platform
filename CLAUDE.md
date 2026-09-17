@@ -49,7 +49,8 @@ three entrypoint modules; a new package goes in both or the image build fails.
   human commits the fix, in both directions. A scheduled job never writes to
   Jira, Datadog or Grafana; only a CLI asked with `--push`, `seed` or `tick` does.
 - **Datadog objects are code.** Exported: edit `datadog/*.json`, `datadog_sync
-  push`, `diff` until clean. Catalog entities are file-first: `catalog_sync push`. Generated ones:
+  push`, `diff` until clean. Entities and the scorecard are file-first:
+  `catalog_sync push`, `scorecard push`. Generated ones:
   edit `kpi/datadog.py` and `--push`. Never hand-edit in the UI without pulling
   back, or the daily drift workflow goes red.
 - **Config via `config.settings`** (pydantic-settings, `.env`, never
@@ -99,9 +100,9 @@ Run everything through `uv run`; `.python-version` pins 3.12.
   `RC1-NNN: what changed`, a short body, no Co-Authored-By trailer. Claude opens
   the PR; Reid merges.
 - Every story leaves a record in `docs/` with its numbers.
-- The five Actions workflows: `ci.yml` (ruff + pytest on every PR and push to
-  main); `fly-deploy.yml` (push to main → `flyctl deploy` → gate on three
-  consecutive healthy `/healthz` reads, because a stopped machine reports
-  "warning", not "critical"); `drift-daily.yml` (12:17 UTC, POSTs `/drift/run`);
-  `datadog-drift.yml` (13:23 UTC and any PR touching `datadog/**`, runs both
-  sync `diff`s); `security-posture.yml` (11:41 UTC, scanner alert counts). Every production path is Actions-driven; Heroku auto-deploy stays off.
+- Six Actions workflows: `ci.yml` (ruff + pytest, every PR and push to main);
+  `fly-deploy.yml` (push to main → deploy → gate on three consecutive healthy
+  `/healthz` reads; a stopped machine reports "warning", not "critical");
+  `drift-daily.yml` 12:17 UTC; `security-posture.yml` 11:41; `datadog-drift.yml`
+  13:23 + any PR touching `datadog/**`; `scorecard-daily.yml` 13:47. Every
+  production path is Actions-driven; Heroku auto-deploy stays off.

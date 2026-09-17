@@ -9,6 +9,7 @@
   "name": "Portfolio availability — hihelloreid.com",
   "tags": [
     "rc1:342",
+    "service:hihelloreid",
     "site:hihelloreid"
   ],
   "target_threshold": 99.9,

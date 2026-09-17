@@ -193,14 +193,52 @@ deployed, emits nothing, and has no monitor or SLO. Recording that is the
 point. An estate where the dormant thing is *declared* dormant is different
 from one where nobody checked.
 
-### No scorecard yet
+### The scorecard
 
-Scorecards were scoped into RC1-447 and taken back out. A dry run put the
-estate at roughly half red, and the reds were a mix of true gaps and artifacts
-of the naming split above — "is traced" fails for services that are traced,
-under another name. A scoreboard whose failures need a paragraph of
-explanation is worse than no scoreboard. The gaps it found are a worklist
-first; the scorecard follows once they are closed.
+`kpi/scorecard.py` scores the entities and publishes to Datadog Scorecards,
+daily at 13:47 UTC and on any PR touching the rules or the entities:
+
+```
+python -m kpi.scorecard show    # evaluate and print, touching nothing
+python -m kpi.scorecard push    # create missing rules, then push outcomes
+```
+
+**Datadog stores scores; it does not compute them.** The account ships no rules
+of its own and a custom rule never evaluates itself — you create the rule, then
+POST one outcome per service per rule. The product is the scoreboard; this
+module is the scoring. That division is the same one the rest of the repo
+keeps: rules decide in Python, nothing is left to a model.
+
+On a pull request the job runs `show`, not `push`. The account's scorecard
+should reflect `main`, not whatever a branch proposes.
+
+### The rules, and why one of them starts red
+
+| Rule | Reads | At first push |
+| --- | --- | --- |
+| Has an owner | entity file | 8/8 |
+| Has a repository link | entity file | 8/8 |
+| Declares lifecycle and tier | entity file | 8/8 |
+| Has a dashboard link | entity file | 8/8 |
+| Has an SLO | SLO `service:` tags | **2/8** |
+
+A scorecard whose every rule passes on the day it ships is telling you the
+rules are too weak, and that is the first thing a reader will test. `Has an
+SLO` went 0/8 → 2/8 in the change that introduced it, by tagging the two site
+availability SLOs with the service they actually cover. The other six are real
+gaps with tickets behind them, and the number is meant to climb.
+
+**Rules match on tags, never on names.** An SLO counts for a service when it
+carries `service:<entity name>`. An earlier estimate of this same rule came
+from matching SLO *titles* and put it at 3/8 — wrong in both directions, since
+six of the nine SLOs are `generated:kpi-datadog` program SLOs that belong to no
+service at all. What an SLO covers is a fact the SLO should state, not
+something a scorecard should infer from a string. The same convention will
+apply to `Has a monitor` when it lands.
+
+Rules are matched to Datadog by name within the scorecard, so renaming one
+creates a new rule and orphans the old — the same trap catalog entities have.
+Rename deliberately and delete the old rule by hand.
 
 ## What stays where it is
 

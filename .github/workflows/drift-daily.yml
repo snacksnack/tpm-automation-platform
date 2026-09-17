@@ -26,6 +26,34 @@ jobs:
             echo "DRIFT_URL secret not set — skipping (set DRIFT_URL to enable the daily run)."
             exit 0
           fi
+          # Wake the machine before asking it to work. Fly scales this app to
+          # zero, and a cold start is not ready when it first says it is: on
+          # 2026-09-17 the app logged "Application startup complete" and served
+          # /healthz 200 at 13:26:12, and the POST two seconds later still came
+          # back 502 — "connection reset by peer" from the proxy, never reaching
+          # uvicorn. One healthy read is not enough, which is the same finding
+          # RC1-355 made for deploys, so use the same rule: three in a row.
+          #
+          # GET /healthz and not the POST, because /drift/run writes findings and
+          # retrying it could run the job twice.
+          deadline=$((SECONDS + 120))
+          ok=0
+          while [ "$ok" -lt 3 ]; do
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "::error::$DRIFT_URL/healthz never stayed healthy for 3 consecutive checks within 120s"
+              exit 1
+            fi
+            code=$(curl -s -o /dev/null -w '%{http_code}' -m 30 "$DRIFT_URL/healthz")
+            if [ "$code" = "200" ]; then
+              ok=$((ok + 1))
+              echo "warm ($ok/3)"
+            else
+              ok=0
+              echo "not warm yet (HTTP $code)"
+            fi
+            [ "$ok" -ge 3 ] || sleep 5
+          done
+
           curl -fsS -X POST "$DRIFT_URL/drift/run" \
             -H "X-Drift-Token: $DRIFT_RUN_TOKEN" \
             -w '\nHTTP %{http_code}\n'

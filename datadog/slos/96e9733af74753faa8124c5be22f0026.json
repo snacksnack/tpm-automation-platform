@@ -8,6 +8,7 @@
   "name": "Incidents dashboard availability — incidents.hihelloreid.com",
   "tags": [
     "rc1:342",
+    "service:incident-summarizer",
     "site:hihelloreid"
   ],
   "target_threshold": 99.9,

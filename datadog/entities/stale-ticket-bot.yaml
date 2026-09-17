@@ -20,6 +20,9 @@ metadata:
       type: repo
       provider: GitHub
       url: https://github.com/snacksnack/stale-ticket-bot
+    - name: Delivery — CI pipelines & deploys
+      type: dashboard
+      url: https://app.datadoghq.com/dashboard/izc-5s7-tz8
 spec:
   lifecycle: experimental
   tier: "3"

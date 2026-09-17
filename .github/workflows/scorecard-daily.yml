@@ -1,0 +1,66 @@
+# Score the catalog entities and publish to Datadog Scorecards (RC1-454).
+#
+# Datadog stores scores but does not compute them: a custom rule never
+# evaluates itself. So this job is the evaluator — it reads the entity files
+# and the account, decides pass/fail in Python, and pushes one outcome per
+# service per rule. Without it the scorecard would sit at n/a forever.
+#
+# Runs after `datadog-drift.yml` (13:23) on purpose: that job is the one that
+# says whether the account and the repo still agree, and scoring a drifted
+# account would publish numbers about a state nobody signed off on.
+#
+# Daily rather than per-push. Four of the five rules read files that only
+# change in a PR, and the fifth reads SLO tags that change about as often.
+name: Scorecard
+
+on:
+  schedule:
+    # Off the top of the hour, same reason as drift-daily.yml (RC1-335).
+    - cron: "47 13 * * *" # 13:47 UTC daily
+  workflow_dispatch: {}
+  # A PR that changes the rules or the entities they read gets scored too, so
+  # a rule that would fail on merge is visible in the PR instead of tomorrow.
+  pull_request:
+    paths:
+      - "datadog/entities/**"
+      - "kpi/scorecard.py"
+
+permissions:
+  contents: read
+
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      # On a PR, evaluate and print without writing. The account's scorecard
+      # should reflect main, not whatever a branch proposes.
+      - name: Score the estate
+        env:
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+          DD_APP_KEY: ${{ secrets.DD_APP_KEY }}
+          # `show` on a pull request, `push` on main and on a manual run.
+          CMD: ${{ github.event_name == 'pull_request' && 'show' || 'push' }}
+        run: |
+          set -o pipefail
+          # A skipped job looks exactly like a passing one in the run list
+          # (RC1-378), so say so where it can be seen rather than exiting 0
+          # quietly.
+          if [ -z "$DD_API_KEY" ] || [ -z "$DD_APP_KEY" ]; then
+            echo "::warning title=Scorecard skipped::DD_API_KEY / DD_APP_KEY not set — nothing scored today."
+            echo "Set both repo secrets to enable the daily scorecard." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          python -m kpi.scorecard "$CMD" | tee -a "$GITHUB_STEP_SUMMARY"

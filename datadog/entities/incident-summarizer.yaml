@@ -18,6 +18,9 @@ metadata:
       type: repo
       provider: GitHub
       url: https://github.com/snacksnack/ai-incident-summarizer
+    - name: Delivery — CI pipelines & deploys
+      type: dashboard
+      url: https://app.datadoghq.com/dashboard/izc-5s7-tz8
     - name: Production endpoint
       type: other
       url: https://incidents.hihelloreid.com

@@ -1,0 +1,25 @@
+apiVersion: v3
+kind: service
+metadata:
+  name: launch-planner-agent
+  displayName: Launch Planner Agent
+  description: >-
+    Turns a PRD into a schedule — Gantt, critical path and RAID — with status
+    agents on top. Slowest cold start on Fly, around 20 seconds.
+  owner: reid
+  tags:
+    - platform:fly
+    - deploy:github-actions
+    - repo:launch-planner-agent
+    - ml-app:launch-planner
+  links:
+    - name: Repository
+      type: repo
+      provider: GitHub
+      url: https://github.com/snacksnack/launch-planner-agent
+    - name: Agent Fleet — LLM Observability
+      type: dashboard
+      url: https://app.datadoghq.com/dashboard/bwm-uny-qqs
+spec:
+  lifecycle: production
+  tier: "3"

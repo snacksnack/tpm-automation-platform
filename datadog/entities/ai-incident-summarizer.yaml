@@ -1,0 +1,31 @@
+apiVersion: v3
+kind: service
+metadata:
+  name: ai-incident-summarizer
+  displayName: AI Incident Summarizer
+  description: >-
+    Ingests CloudWatch, Datadog and GitHub alerts, normalizes and dedupes them,
+    then summarizes and delivers to Slack, Jira and Datadog events. Seven
+    Lambdas behind an API Gateway, deployed by CloudFormation.
+  owner: reid
+  tags:
+    - platform:aws-lambda
+    - deploy:github-actions
+    - repo:ai-incident-summarizer
+    - apm-service:incident-summarizer
+    - ml-app:incident-summarizer
+    # The other seven Lambdas report under raw CloudFormation names because
+    # DD_SERVICE is unset; those names carry a stack hash and change on
+    # recreation, so they are deliberately not used as the entity key (RC1-447).
+    - gap:dd-service-unset
+  links:
+    - name: Repository
+      type: repo
+      provider: GitHub
+      url: https://github.com/snacksnack/ai-incident-summarizer
+    - name: Production endpoint
+      type: other
+      url: https://incidents.hihelloreid.com
+spec:
+  lifecycle: production
+  tier: "2"

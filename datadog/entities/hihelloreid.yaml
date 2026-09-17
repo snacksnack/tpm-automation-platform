@@ -1,0 +1,29 @@
+apiVersion: v3
+kind: service
+metadata:
+  name: hihelloreid
+  displayName: hihelloreid.com
+  description: >-
+    The public portfolio site and its chat assistant. Highest-tier service in
+    the estate: it is the one a stranger sees. Heroku, released by workflow
+    after CI passes on main; Heroku auto-deploy stays off.
+  owner: reid
+  tags:
+    - platform:heroku
+    - deploy:github-actions
+    - repo:reid_basic
+    - ml-app:hihelloreid-chat
+  links:
+    - name: Repository
+      type: repo
+      provider: GitHub
+      url: https://github.com/snacksnack/reid_basic
+    - name: Site Observability — hihelloreid
+      type: dashboard
+      url: https://app.datadoghq.com/dashboard/aa2-k8g-ya8
+    - name: Production site
+      type: other
+      url: https://www.hihelloreid.com
+spec:
+  lifecycle: production
+  tier: "1"

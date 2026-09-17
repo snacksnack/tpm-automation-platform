@@ -1,0 +1,26 @@
+apiVersion: v3
+kind: service
+metadata:
+  name: agent-evals
+  displayName: Agent Eval Harness
+  description: >-
+    Regression-tests the quality of the estate's LLM systems and publishes the
+    trend page to GitHub Pages. Run results live in Heroku Postgres.
+  owner: reid
+  tags:
+    - platform:github-pages
+    - deploy:github-actions
+    - repo:agent-evals
+    - apm-service:evals
+    - ml-app:agent-evals-harness
+  links:
+    - name: Repository
+      type: repo
+      provider: GitHub
+      url: https://github.com/snacksnack/agent-evals
+    - name: Agent Fleet — LLM Observability
+      type: dashboard
+      url: https://app.datadoghq.com/dashboard/bwm-uny-qqs
+spec:
+  lifecycle: production
+  tier: "3"

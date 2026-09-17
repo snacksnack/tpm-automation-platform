@@ -1,0 +1,29 @@
+apiVersion: v3
+kind: service
+metadata:
+  name: concert-intelligence
+  displayName: Concert Intelligence Agent
+  description: >-
+    Live-music discovery running as an n8n Cloud workflow. The only service in
+    the estate that is not ddtrace: it builds and POSTs its own LLM
+    Observability spans, with amortized latency and exact token counts.
+  owner: reid
+  tags:
+    - platform:n8n-cloud
+    - deploy:manual-import
+    - repo:n8n-concert-intelligence-agent
+    - ml-app:concert-intelligence
+    # No CI pipeline and no deploy event: the workflow JSON is re-imported by
+    # hand after each merge, so nothing observes the deploy (RC1-447).
+    - gap:no-deploy-events
+  links:
+    - name: Repository
+      type: repo
+      provider: GitHub
+      url: https://github.com/snacksnack/n8n-concert-intelligence-agent
+    - name: Agent Fleet — LLM Observability
+      type: dashboard
+      url: https://app.datadoghq.com/dashboard/bwm-uny-qqs
+spec:
+  lifecycle: production
+  tier: "3"

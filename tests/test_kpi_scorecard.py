@@ -1,4 +1,4 @@
-"""The scorecard's rules and its push loop (RC1-454).
+"""The scorecard's rules and its push loop (RC1-454, RC1-457).
 
 Offline: the four entity rules are pure functions over a dict, and the two that
 reach Datadog go through `httpx.MockTransport`.
@@ -85,30 +85,75 @@ def test_slo_rule_reads_the_tag_and_ignores_the_name():
     assert not ok and why == "no SLO tagged service:svc"
 
 
+def test_monitor_rule_reads_the_tag_and_ignores_the_name():
+    """RC1-457: the same contract as the SLO rule, one object type over.
+
+    The estate's monitors were the case that proved it — five Synthetics
+    monitors watched `hihelloreid` for weeks under the tag
+    `service:hihelloreid.com`, and the catalog could not see one of them.
+    """
+    facts = scorecard.Facts(monitors_by_service={"svc": ["svc — errors"]})
+    ok, why = scorecard.has_a_monitor(entity(), facts)
+    assert ok and "svc — errors" in why
+
+    # Tagged for the fleet, not for this service: fleet-wide monitors are
+    # nobody's on purpose, and must not be borrowed to make a red go green.
+    fleet = scorecard.Facts(monitors_by_service={"agent-fleet": ["Fleet LLM spend"]})
+    ok, why = scorecard.has_a_monitor(entity(), fleet)
+    assert not ok and why == "no monitor tagged service:svc"
+
+
+def test_slo_and_monitor_rules_do_not_read_each_other():
+    """Facts carries two maps; a service with one object must not pass both."""
+    only_slo = scorecard.Facts(slos_by_service={"svc": ["Availability — svc"]})
+    assert scorecard.has_an_slo(entity(), only_slo)[0]
+    assert not scorecard.has_a_monitor(entity(), only_slo)[0]
+
+
 def _client(handler) -> httpx.Client:
     return httpx.Client(
         transport=httpx.MockTransport(handler), base_url="https://api.datadoghq.com"
     )
 
 
-def test_gather_groups_slos_by_their_service_tag():
+def test_gather_groups_slos_and_monitors_by_their_service_tag():
+    """Both lists come back shaped the same way, from differently shaped JSON.
+
+    `/api/v1/slo` wraps its list in `data`; `/api/v1/monitor` returns a bare
+    list. Getting that wrong is silent — every service simply scores red.
+    """
+
     def handler(request: httpx.Request) -> httpx.Response:
-        assert request.url.path == "/api/v1/slo"
+        if request.url.path == "/api/v1/slo":
+            return httpx.Response(
+                200,
+                json={
+                    "data": [
+                        {"name": "site", "tags": ["service:hihelloreid", "rc1:342"]},
+                        {"name": "incidents", "tags": ["service:hihelloreid"]},
+                        {"name": "program", "tags": ["generated:kpi-datadog"]},
+                        {"name": "untagged", "tags": []},
+                        {"name": "null tags", "tags": None},
+                    ]
+                },
+            )
+        assert request.url.path == "/api/v1/monitor"
         return httpx.Response(
             200,
-            json={
-                "data": [
-                    {"name": "site", "tags": ["service:hihelloreid", "rc1:342"]},
-                    {"name": "incidents", "tags": ["service:hihelloreid"]},
-                    {"name": "program", "tags": ["generated:kpi-datadog"]},
-                    {"name": "untagged", "tags": []},
-                    {"name": "null tags", "tags": None},
-                ]
-            },
+            json=[
+                {"name": "SSL cert", "tags": ["service:hihelloreid", "rc1:341"]},
+                {"name": "Fleet LLM spend", "tags": ["service:agent-fleet"]},
+                {"name": "host pack", "tags": ["monitor_pack:host"]},
+                {"name": "null tags", "tags": None},
+            ],
         )
 
     facts = scorecard.gather(_client(handler))
     assert facts.slos_by_service == {"hihelloreid": ["site", "incidents"]}
+    assert facts.monitors_by_service == {
+        "hihelloreid": ["SSL cert"],
+        "agent-fleet": ["Fleet LLM spend"],
+    }
 
 
 def test_sync_rules_creates_only_the_missing_ones():

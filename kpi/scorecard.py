@@ -10,21 +10,23 @@ decide in Python, nothing is left to a model.
     python -m kpi.scorecard push    # create missing rules, then push outcomes
 
 Every rule is a plain function over an entity and a `Facts` bundle. Four read
-the entity files alone, so they are exact by construction; `has_an_slo` reads
-the account. Adding a rule means adding a function and one `Rule(...)` row.
+the entity files alone, so they are exact by construction; `has_an_slo` and
+`has_a_monitor` read the account. Adding a rule means adding a function and one
+`Rule(...)` row.
 
-**Why one rule starts red, on purpose.** `has_an_slo` scores 0/8 today. Not one
-SLO in the account carries a `service:` tag — six are `generated:kpi-datadog`
-program SLOs that belong to no service, one is fleet-wide, and the two site
-availability SLOs are tagged `site:hihelloreid`. A scorecard whose every rule
-passes on the day it ships is telling you the rules are too weak, so this one
-ships with a gap it can actually measure, and the number climbs as SLOs get
-tagged. The earlier estimate of 3/8 came from matching SLO *names* and was
-wrong; matching a tag is mechanical, and a rule nobody can argue with is the
-whole point.
+**Why two rules stay red, on purpose.** `has_an_slo` shipped at 0/8 and now
+scores 6/8; `has_a_monitor` (RC1-457) opens at the same 6/8. Both stop at the
+same two services, and both reds are correct rather than unfinished:
+`launch-planner-agent` is waiting on RC1-455 to say whether anyone uses it, and
+`stale-ticket-bot` is dormant and emits nothing to watch. A scorecard whose
+every rule passes on the day it ships is telling you the rules are too weak, so
+these ship with the gaps they can actually measure and the numbers climb as the
+tickets close. The first estimate of `has_an_slo` came from matching SLO
+*names* and was wrong in both directions; matching a tag is mechanical, and a
+rule nobody can argue with is the whole point.
 
-Matching by tag rather than by name is the convention for anything that grows
-here: when `has_a_monitor` lands it will read `service:` tags too.
+Matching by tag rather than by name is the convention for everything that grows
+here.
 """
 
 from __future__ import annotations
@@ -51,12 +53,15 @@ class Facts:
     """Everything the rules read from the account, fetched once per run.
 
     One bundle rather than a call per rule per service: eight entities times
-    five rules is forty evaluations, and the SLO list does not change between
-    them.
+    six rules is forty-eight evaluations, and neither the SLO list nor the
+    monitor list changes between them.
     """
 
     #: entity name -> the SLO names tagged `service:<entity name>`
     slos_by_service: dict[str, list[str]] = field(default_factory=dict)
+
+    #: entity name -> the monitor names tagged `service:<entity name>`
+    monitors_by_service: dict[str, list[str]] = field(default_factory=dict)
 
 
 def _links(entity: dict) -> list[dict]:
@@ -105,6 +110,30 @@ def has_an_slo(entity: dict, facts: Facts) -> tuple[bool, str]:
     return False, f"no SLO tagged {SERVICE_TAG}{name}"
 
 
+def has_a_monitor(entity: dict, facts: Facts) -> tuple[bool, str]:
+    """A monitor counts when it is tagged `service:<entity name>` (RC1-457).
+
+    Same shape as `has_an_slo`, and for the same reason: the catalog joins a
+    monitor to a service by that tag, so a monitor that watches a service but
+    does not say which one is invisible to everything downstream.
+
+    Two things to know before chasing a red here. A Synthetics monitor counts
+    like any other — three of them are why `hihelloreid` passes — but its tags
+    come from the *test*, so it is fixed in `datadog/synthetics/*.json` and
+    Datadog regenerates the monitor; editing the monitor JSON is undone on the
+    next sync. And the fleet-level monitors (`service:agent-fleet`,
+    `service:delivery-pipeline`) will never satisfy this rule for anyone: they
+    span every ml_app and every repo on purpose, so retagging one per service
+    would break the query it exists to run. They stay orphans of the catalog,
+    and that is the correct answer rather than a gap.
+    """
+    name = entity.get("metadata", {}).get("name", "")
+    found = facts.monitors_by_service.get(name, [])
+    if found:
+        return True, f"{len(found)} monitor(s): {', '.join(found)}"
+    return False, f"no monitor tagged {SERVICE_TAG}{name}"
+
+
 @dataclass(frozen=True)
 class Rule:
     name: str
@@ -140,19 +169,41 @@ RULES: tuple[Rule, ...] = (
         "SLO covers should be stated by the SLO, not inferred from its title.",
         has_an_slo,
     ),
+    Rule(
+        "Has a monitor",
+        f"A monitor tagged {SERVICE_TAG}<service> exists, so a failure is noticed "
+        "while it is happening rather than measured afterwards by the SLO.",
+        has_a_monitor,
+    ),
 )
+
+
+def _by_service_tag(objects: list[dict]) -> dict[str, list[str]]:
+    """Group Datadog objects under the service each one names in its tags.
+
+    An object with no `service:` tag belongs to no service here, which is the
+    point: the six `generated:kpi-datadog` program SLOs and the fleet-wide
+    monitors are not any one service's, and inventing an owner for them would
+    make the scorecard say something untrue.
+    """
+    grouped: dict[str, list[str]] = {}
+    for obj in objects:
+        for tag in obj.get("tags") or []:
+            if tag.startswith(SERVICE_TAG):
+                grouped.setdefault(tag[len(SERVICE_TAG) :], []).append(obj.get("name", ""))
+    return grouped
 
 
 def gather(http: httpx.Client) -> Facts:
     """Read the account once for everything the rules need."""
-    resp = http.get("/api/v1/slo", params={"limit": 1000})
-    resp.raise_for_status()
-    by_service: dict[str, list[str]] = {}
-    for slo in resp.json().get("data", []):
-        for tag in slo.get("tags", []) or []:
-            if tag.startswith(SERVICE_TAG):
-                by_service.setdefault(tag[len(SERVICE_TAG) :], []).append(slo.get("name", ""))
-    return Facts(slos_by_service=by_service)
+    slos = http.get("/api/v1/slo", params={"limit": 1000})
+    slos.raise_for_status()
+    monitors = http.get("/api/v1/monitor", params={"page_size": 1000})
+    monitors.raise_for_status()
+    return Facts(
+        slos_by_service=_by_service_tag(slos.json().get("data", [])),
+        monitors_by_service=_by_service_tag(monitors.json()),
+    )
 
 
 def evaluate(facts: Facts) -> list[tuple[str, Rule, bool, str]]:

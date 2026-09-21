@@ -4,9 +4,9 @@ metadata:
   name: incident-summarizer
   displayName: AI Incident Summarizer
   description: >-
-    Ingests CloudWatch, Datadog and GitHub alerts, normalizes and dedupes them,
-    then summarizes and delivers to Slack, Jira and Datadog events. Seven
-    Lambdas behind an API Gateway, deployed by CloudFormation.
+    Ingests CloudWatch and Datadog alerts, normalizes and dedupes them, then
+    summarizes and delivers to Slack, Jira and Datadog events. Two Lambdas
+    (ingest, summarizer) behind an API Gateway, deployed by CloudFormation.
   owner: reid
   tags:
     - platform:aws-lambda

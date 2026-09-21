@@ -116,9 +116,14 @@ estate answers to as many as three, and they do not agree:
 | PR review agent | `pr-review-agent-snacksnack` | `webhook` | `pr-review-agent` |
 | launch planner | `launch-planner-agent` | *none* | `launch-planner` |
 | portfolio site | `hihelloreid` | `web` | `hihelloreid-chat` |
+| incident summarizer | `incident-summarizer` | `incident-summarizer` | `incident-summarizer` |
+| incident dashboard | `incidents-hihelloreid` | *none* (RUM `incidents-hihelloreid`) | *none* |
+| stale-ticket bot | `stale-ticket-bot` | *none* | *none* |
 
-Not one of the four DORA service names appears in APM. The entities are keyed
-on the DORA name because that is the deploy identity — the thing a change
+None of the first four DORA service names appears in APM. The incident
+summarizer, which began reporting to DORA in RC1-459, is the one service whose
+three names agree; its dashboard reports separately because it ships to Vercel.
+The entities are keyed on the DORA name because that is the deploy identity — the thing a change
 failure would attach to — and the other names ride along as `apm-service:` and
 `ml-app:` tags so the split is declared rather than rediscovered.
 
@@ -439,8 +444,10 @@ you wanted is the worse outcome.
 
 ### What the experiment cost
 
-**$0.013.** 501 series alive for about an hour of a 720-hour month, billed as an
-average. The bound was decided before anything was sent — one metric, 500 tag
+**$0.026.** About 1,021 billable series (two bursts of 500 plus the estate's
+own) alive for about an hour of a 720-hour month, billed as an average. The
+first figure written here, 501 series and $0.013, counted one burst and was read
+before the hourly rollup had absorbed the second. The bound was decided before anything was sent — one metric, 500 tag
 values, one burst, a stop condition — which is the only reason a demonstration
 of a $9/month mistake was safe to run on a $27/month account.
 

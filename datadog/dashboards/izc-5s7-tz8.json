@@ -670,7 +670,7 @@
           {
             "definition": {
               "background_color": "yellow",
-              "content": "**A different data source from the deploy tiles above.** These read DORA deployment events, pushed from each `Fly Deploy` workflow *after* the boot-health gate passes (RC1-336) — a deployment here means the app actually booted. Sources today: the three Fly apps. **www.hihelloreid.com joins via RC1-354** (Heroku → DORA API).\n\n**Change lead time** (seconds; p25/p50/p75, weekly rollups) computes from the git range between consecutive deployment SHAs — verified live 2026-09-01. Percentiles are honest but thin until deploy volume grows.\n\n**Change failure rate and time to restore are deliberately absent** — no failure/incident source is wired yet; a CFR tile would read 0% and lie (RC1-336 descope).\n\nCount widgets pinned to **Past 1 Week**; frequency panel shows weekly rollups over a month.",
+              "content": "**A different data source from the deploy tiles above.** These read DORA deployment events, pushed by each deploy workflow *after* its health gate passes, so a deployment here means the service actually answered. Sources: the three Fly apps (RC1-336), www.hihelloreid.com via Heroku (RC1-354), and since RC1-459 the incident summarizer (`incident-summarizer` + `incidents-hihelloreid`) and `stale-ticket-bot`.\n\n**Change lead time** (p25/p50/p75, weekly rollups) computes from the git range between consecutive deployment SHAs, so a service's first deploy never has one. **The stage panels split it:** first commit → PR opened, **time in PR** (opened → merged; there is no approval stage because PRs merge without a formal review), and merged → deployed. Direct pushes to `main` have no PR stages. Percentiles are thin at this deploy volume.\n\n**Change failure rate and time to restore are absent** until failure events are wired (RC1-448); a CFR tile would read 0% and lie.\n\nCount widgets pinned to **Past 1 Week**; the frequency and lead-time panels show weekly rollups over a month.",
               "font_size": "14",
               "has_padding": true,
               "show_tick": false,
@@ -994,12 +994,343 @@
               "x": 6,
               "y": 5
             }
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "alias": "first commit → PR opened",
+                      "formula": "time_to_pr_ready_pc50",
+                      "number_format": {
+                        "unit": {
+                          "type": "canonical_unit",
+                          "unit_name": "second"
+                        }
+                      }
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "pc50",
+                        "metric": "time_to_pr_ready",
+                        "rollup": {
+                          "alignment": "monday",
+                          "timezone": "America/New_York",
+                          "type": "week"
+                        }
+                      },
+                      "data_source": "dora",
+                      "indexes": [
+                        "commit"
+                      ],
+                      "name": "time_to_pr_ready_pc50"
+                    }
+                  ],
+                  "response_format": "timeseries",
+                  "style": {
+                    "line_type": "solid",
+                    "line_width": "normal",
+                    "palette": "cool"
+                  }
+                },
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "alias": "time in PR (opened → merged)",
+                      "formula": "merge_time_pc50",
+                      "number_format": {
+                        "unit": {
+                          "type": "canonical_unit",
+                          "unit_name": "second"
+                        }
+                      }
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "pc50",
+                        "metric": "merge_time",
+                        "rollup": {
+                          "alignment": "monday",
+                          "timezone": "America/New_York",
+                          "type": "week"
+                        }
+                      },
+                      "data_source": "dora",
+                      "indexes": [
+                        "commit"
+                      ],
+                      "name": "merge_time_pc50"
+                    }
+                  ],
+                  "response_format": "timeseries",
+                  "style": {
+                    "line_type": "solid",
+                    "line_width": "normal",
+                    "palette": "warm"
+                  }
+                },
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "alias": "merged → deployed",
+                      "formula": "time_to_deploy_pc50",
+                      "number_format": {
+                        "unit": {
+                          "type": "canonical_unit",
+                          "unit_name": "second"
+                        }
+                      }
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "pc50",
+                        "metric": "time_to_deploy",
+                        "rollup": {
+                          "alignment": "monday",
+                          "timezone": "America/New_York",
+                          "type": "week"
+                        }
+                      },
+                      "data_source": "dora",
+                      "indexes": [
+                        "commit"
+                      ],
+                      "name": "time_to_deploy_pc50"
+                    }
+                  ],
+                  "response_format": "timeseries",
+                  "style": {
+                    "line_type": "solid",
+                    "line_width": "normal",
+                    "palette": "green"
+                  }
+                }
+              ],
+              "show_legend": true,
+              "time": {
+                "type": "live",
+                "unit": "month",
+                "value": 1
+              },
+              "title": "Lead time by stage — p50, weekly (past 1mo)",
+              "title_align": "left",
+              "title_size": "16",
+              "type": "timeseries"
+            },
+            "id": 4962546940583942,
+            "layout": {
+              "height": 4,
+              "width": 6,
+              "x": 0,
+              "y": 8
+            }
+          },
+          {
+            "definition": {
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "alias": "commit → PR p50",
+                      "formula": "q0",
+                      "number_format": {
+                        "unit": {
+                          "type": "canonical_unit",
+                          "unit_name": "second"
+                        }
+                      }
+                    },
+                    {
+                      "alias": "in PR p50",
+                      "cell_display_mode": "bar",
+                      "formula": "q1",
+                      "number_format": {
+                        "unit": {
+                          "type": "canonical_unit",
+                          "unit_name": "second"
+                        }
+                      }
+                    },
+                    {
+                      "alias": "in PR p75",
+                      "formula": "q2",
+                      "number_format": {
+                        "unit": {
+                          "type": "canonical_unit",
+                          "unit_name": "second"
+                        }
+                      }
+                    },
+                    {
+                      "alias": "merge → deploy p50",
+                      "formula": "q3",
+                      "number_format": {
+                        "unit": {
+                          "type": "canonical_unit",
+                          "unit_name": "second"
+                        }
+                      }
+                    },
+                    {
+                      "alias": "total lead time p50",
+                      "formula": "q4",
+                      "number_format": {
+                        "unit": {
+                          "type": "canonical_unit",
+                          "unit_name": "second"
+                        }
+                      }
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "pc50",
+                        "metric": "time_to_pr_ready"
+                      },
+                      "data_source": "dora",
+                      "group_by": [
+                        {
+                          "facet": "service",
+                          "limit": 20,
+                          "sort": {
+                            "aggregation": "pc50",
+                            "metric": "merge_time",
+                            "order": "desc"
+                          }
+                        }
+                      ],
+                      "indexes": [
+                        "commit"
+                      ],
+                      "name": "q0"
+                    },
+                    {
+                      "compute": {
+                        "aggregation": "pc50",
+                        "metric": "merge_time"
+                      },
+                      "data_source": "dora",
+                      "group_by": [
+                        {
+                          "facet": "service",
+                          "limit": 20,
+                          "sort": {
+                            "aggregation": "pc50",
+                            "metric": "merge_time",
+                            "order": "desc"
+                          }
+                        }
+                      ],
+                      "indexes": [
+                        "commit"
+                      ],
+                      "name": "q1"
+                    },
+                    {
+                      "compute": {
+                        "aggregation": "pc75",
+                        "metric": "merge_time"
+                      },
+                      "data_source": "dora",
+                      "group_by": [
+                        {
+                          "facet": "service",
+                          "limit": 20,
+                          "sort": {
+                            "aggregation": "pc50",
+                            "metric": "merge_time",
+                            "order": "desc"
+                          }
+                        }
+                      ],
+                      "indexes": [
+                        "commit"
+                      ],
+                      "name": "q2"
+                    },
+                    {
+                      "compute": {
+                        "aggregation": "pc50",
+                        "metric": "time_to_deploy"
+                      },
+                      "data_source": "dora",
+                      "group_by": [
+                        {
+                          "facet": "service",
+                          "limit": 20,
+                          "sort": {
+                            "aggregation": "pc50",
+                            "metric": "merge_time",
+                            "order": "desc"
+                          }
+                        }
+                      ],
+                      "indexes": [
+                        "commit"
+                      ],
+                      "name": "q3"
+                    },
+                    {
+                      "compute": {
+                        "aggregation": "pc50",
+                        "metric": "change_lead_time"
+                      },
+                      "data_source": "dora",
+                      "group_by": [
+                        {
+                          "facet": "service",
+                          "limit": 20,
+                          "sort": {
+                            "aggregation": "pc50",
+                            "metric": "merge_time",
+                            "order": "desc"
+                          }
+                        }
+                      ],
+                      "indexes": [
+                        "commit"
+                      ],
+                      "name": "q4"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "time": {
+                "type": "live",
+                "unit": "month",
+                "value": 1
+              },
+              "title": "Lead time stages by service (past 1mo)",
+              "title_align": "left",
+              "title_size": "16",
+              "type": "query_table"
+            },
+            "id": 6552006374230268,
+            "layout": {
+              "height": 4,
+              "width": 6,
+              "x": 6,
+              "y": 8
+            }
           }
         ]
       },
       "id": 6279957676312298,
       "layout": {
-        "height": 8,
+        "height": 12,
         "width": 12,
         "x": 0,
         "y": 19

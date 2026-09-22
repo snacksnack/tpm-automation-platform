@@ -22,13 +22,22 @@ The three new services each recorded their first deployment on 2026-09-21
 about 90 seconds after the POST returned 200. Don't call an event missing
 before that.
 
-Not reporting, and why:
+**agent-evals** reports each release tag as a deployment (agent-evals#35,
+merged 2026-09-22), since consumers pin it by tag. Before reporting,
+`release.yml` checks that the tag matches both version strings, then installs
+the tag into an empty venv the way a consumer would and imports it. The
+trend-page publish is data, not code, and is not counted. The first live event
+arrives with the next `v*` tag.
 
-- **agent-evals**: will report (Reid, 2026-09-21). Each release tag is the
-  deployment, since consumers pin it by tag. The trend-page publish is data,
-  not code, and is excluded.
-- **n8n workflows** (concert, stakeholder email, jira-notion-sync): shipped
-  by importing and publishing in the n8n UI by hand. Undecided.
+Excluded, by decision (Reid, 2026-09-22):
+
+- **n8n workflows** (concert intelligence, stakeholder status email,
+  jira-notion-sync). They ship by importing **and publishing** in the n8n UI
+  by hand, so reporting would mean a command run after every publish. A
+  forgotten run leaves no record, and missing deploys would make frequency
+  look worse and the next deploy's lead time look longer. Leaving them out
+  keeps the numbers accurate for the paths that report. Revisit if n8n
+  publishing is ever automated.
 - **job-search-agent**: a local Claude plugin with nothing deployed.
 
 ## Lead time, by stage

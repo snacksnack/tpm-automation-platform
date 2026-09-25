@@ -1,0 +1,33 @@
+# RC1-450: OpenTelemetry Collector config for the OTLP-vs-ddtrace lab.
+#
+# Local, ephemeral, traces-only. The Datadog exporter sends straight to the
+# intake — no Datadog Agent anywhere. `host_metadata` is disabled on purpose:
+# the exporter's host metadata would register this laptop as the account's
+# first billed infra host (the RC1-449 cost this lab exists to avoid).
+#
+# Run (DD_API_KEY from ~/.zshrc, where all DD_* live):
+#   otelcol-contrib --config scripts/otel_lab_collector.yaml
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 127.0.0.1:4318
+
+processors:
+  batch: {}
+
+exporters:
+  datadog:
+    api:
+      key: ${env:DD_API_KEY}
+      site: ${env:DD_SITE}
+    hostname: otlp-lab
+    host_metadata:
+      enabled: false
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [datadog]

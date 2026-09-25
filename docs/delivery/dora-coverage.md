@@ -1,4 +1,4 @@
-# DORA coverage and lead-time stages (RC1-459)
+# DORA coverage, lead-time stages and change failures (RC1-459, RC1-448)
 
 Before RC1-459 four services sent DORA deployment events: the three Fly apps
 (RC1-336) and www.hihelloreid.com via Heroku (RC1-354). That was 105 deployments
@@ -39,6 +39,47 @@ Excluded, by decision (Reid, 2026-09-22):
   keeps the numbers accurate for the paths that report. Revisit if n8n
   publishing is ever automated.
 - **job-search-agent**: a local Claude plugin with nothing deployed.
+
+## Change failures (RC1-448)
+
+Change failure rate and time to restore compute from **DORA failure events**
+(`POST /api/v2/dora/failure`, `DD_API_KEY` alone — the API is plain event
+ingestion, unaffected by the Incident Management seat wall). The three Fly
+deploy workflows emit them:
+
+- A deploy whose **boot-health gate fails** opens a failure event with the
+  client-chosen id `<service>.<sha>`, `started_at` now, no `finished_at`.
+  Only the gate counts: a flyctl or build failure ships nothing, which is a
+  failed deployment, not a change failure.
+- The next deploy that **passes** the gate closes every failure since the
+  previous success by re-POSTing each id with `finished_at` set. The API
+  **upserts by id and replaces the record wholesale** (verified 2026-09-25),
+  so the close re-sends the failed run's own gate timestamp as `started_at`,
+  read from the GitHub jobs API — including earlier attempts of a run that
+  was re-run to green, which `gh run list` hides. Each candidate run is
+  checked for a failed gate step first, because POSTing an id that was never
+  opened would fabricate a completed failure.
+- A wrong event is recoverable: `DELETE /api/v2/dora/failure/{id}` works with
+  the API + application keys (also verified; both probe events were removed).
+
+Not emitting: `hihelloreid` (Heroku has no serve-gate; a failed release keeps
+the old code live), the summarizer/stale-ticket-bot/agent-evals paths (their
+gates exist but failure emission was not ported — a candidate follow-up), and
+the n8n workflows (excluded from DORA entirely).
+
+Two facts that bound the data. The API incident source was enabled
+**2026-09-25** and events whose `started_at` predates the flip are rejected,
+so no failure can ever be backfilled — the four monitor-318355170 failures
+from early September are unrecordable, and the first CFR data point arrives with
+the first real gate failure. And the RC1-448 parking comment's ~4.7% CFR
+estimate overstated: at least pr_agent's 09-12 failure was flyctl dying with
+the gate **skipped** (run 34694038761 attempt 1), a failed deployment that
+under the gate definition never counted.
+
+The DORA group on `izc-5s7-tz8` gained a change-failure row (CFR %, time to
+restore avg, failures by service), each query replayed through
+`/api/v2/query/scalar` against a probe event before the widget was written
+(`indexes: ["failure"]`, TTR metric `time_to_restore`, seconds).
 
 ## Lead time, by stage
 

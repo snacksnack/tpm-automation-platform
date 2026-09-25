@@ -664,13 +664,13 @@
     {
       "definition": {
         "layout_type": "ordered",
-        "title": "DORA — deployment frequency & lead time (RC1-336)",
+        "title": "DORA — all four keys (RC1-336, RC1-448)",
         "type": "group",
         "widgets": [
           {
             "definition": {
               "background_color": "yellow",
-              "content": "**A different data source from the deploy tiles above.** These read DORA deployment events, pushed by each deploy workflow *after* its health gate passes, so a deployment here means the service actually answered. Sources: the three Fly apps (RC1-336), www.hihelloreid.com via Heroku (RC1-354), and since RC1-459 the incident summarizer (`incident-summarizer` + `incidents-hihelloreid`) and `stale-ticket-bot`.\n\n**Change lead time** (p25/p50/p75, weekly rollups) computes from the git range between consecutive deployment SHAs, so a service's first deploy never has one. **The stage panels split it:** first commit → PR opened, **time in PR** (opened → merged; there is no approval stage because PRs merge without a formal review), and merged → deployed. Direct pushes to `main` have no PR stages. Percentiles are thin at this deploy volume.\n\n**Change failure rate and time to restore are absent** until failure events are wired (RC1-448); a CFR tile would read 0% and lie.\n\nCount widgets pinned to **Past 1 Week**; the frequency and lead-time panels show weekly rollups over a month.",
+              "content": "**A different data source from the deploy tiles above.** These read DORA deployment events, pushed by each deploy workflow *after* its health gate passes, so a deployment here means the service actually answered. Sources: the three Fly apps (RC1-336), www.hihelloreid.com via Heroku (RC1-354), and since RC1-459 the incident summarizer (`incident-summarizer` + `incidents-hihelloreid`) and `stale-ticket-bot`.\n\n**Change lead time** (p25/p50/p75, weekly rollups) computes from the git range between consecutive deployment SHAs, so a service's first deploy never has one. **The stage panels split it:** first commit → PR opened, **time in PR** (opened → merged; there is no approval stage because PRs merge without a formal review), and merged → deployed. Direct pushes to `main` have no PR stages. Percentiles are thin at this deploy volume.\n\n**Change failure rate and time to restore** (RC1-448) compute from DORA failure events: a Fly deploy whose boot-health gate fails opens one (id `<service>.<sha>`), and the next deploy that passes the gate closes it by re-POSTing the id with `finished_at`. Only gate failures count — a flyctl or build failure ships nothing and stays out, and Heroku (`hihelloreid`) has no serve-gate, so it emits none. No failure can predate 2026-09-25 (the API incident source was enabled that day, and events before the flip are rejected) — an empty CFR tile before the first real failure is honest, not broken.\n\nCount widgets pinned to **Past 1 Week**; the frequency and lead-time panels show weekly rollups over a month.",
               "font_size": "14",
               "has_padding": true,
               "show_tick": false,
@@ -1325,12 +1325,156 @@
               "x": 6,
               "y": 8
             }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "custom_unit": "%",
+              "precision": 1,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "failures / deploys * 100"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "dora",
+                      "indexes": [
+                        "failure"
+                      ],
+                      "name": "failures"
+                    },
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "dora",
+                      "indexes": [
+                        "deployment"
+                      ],
+                      "name": "deploys"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "time": {
+                "live_span": "1mo"
+              },
+              "title": "Change failure rate (1mo)",
+              "type": "query_value"
+            },
+            "id": 5632687202418777,
+            "layout": {
+              "height": 3,
+              "width": 2,
+              "x": 0,
+              "y": 12
+            }
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "custom_unit": "s",
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "ttr_avg"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "avg",
+                        "metric": "time_to_restore"
+                      },
+                      "data_source": "dora",
+                      "indexes": [
+                        "failure"
+                      ],
+                      "name": "ttr_avg"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "time": {
+                "live_span": "1mo"
+              },
+              "title": "Time to restore — avg (1mo)",
+              "type": "query_value"
+            },
+            "id": 1169158107224846,
+            "layout": {
+              "height": 3,
+              "width": 2,
+              "x": 2,
+              "y": 12
+            }
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "formula": "failures"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "dora",
+                      "group_by": [
+                        {
+                          "facet": "service",
+                          "limit": 10,
+                          "sort": {
+                            "aggregation": "count",
+                            "order": "desc"
+                          }
+                        }
+                      ],
+                      "indexes": [
+                        "failure"
+                      ],
+                      "name": "failures"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "time": {
+                "live_span": "1mo"
+              },
+              "title": "Change failures by service (1mo)",
+              "type": "timeseries"
+            },
+            "id": 5689519647557696,
+            "layout": {
+              "height": 3,
+              "width": 8,
+              "x": 4,
+              "y": 12
+            }
           }
         ]
       },
       "id": 6279957676312298,
       "layout": {
-        "height": 12,
+        "height": 15,
         "width": 12,
         "x": 0,
         "y": 19

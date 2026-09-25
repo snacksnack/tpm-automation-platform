@@ -44,8 +44,9 @@ Excluded, by decision (Reid, 2026-09-22):
 
 Change failure rate and time to restore compute from **DORA failure events**
 (`POST /api/v2/dora/failure`, `DD_API_KEY` alone — the API is plain event
-ingestion, unaffected by the Incident Management seat wall). The three Fly
-deploy workflows emit them:
+ingestion, unaffected by the Incident Management seat wall). RC1-448 built the
+pattern on the three Fly workflows; RC1-464/465 extended it to every deploy
+path that reports a deployment:
 
 - A deploy whose **boot-health gate fails** opens a failure event with the
   client-chosen id `<service>.<sha>`, `started_at` now, no `finished_at`.
@@ -62,10 +63,22 @@ deploy workflows emit them:
 - A wrong event is recoverable: `DELETE /api/v2/dora/failure/{id}` works with
   the API + application keys (also verified; both probe events were removed).
 
-Not emitting: `hihelloreid` (Heroku has no serve-gate; a failed release keeps
-the old code live), the summarizer/stale-ticket-bot/agent-evals paths (their
-gates exist but failure emission was not ported — a candidate follow-up), and
-the n8n workflows (excluded from DORA entirely).
+Per-service gates (RC1-464/465): the three Fly boot gates; the summarizer's
+two — ingest-401 for `incident-summarizer`, `/api/incidents`-200 for
+`incidents-hihelloreid`, one workflow whose close walk verifies each job's
+gate so the services close independently; stale-ticket-bot's dry-run invoke;
+agent-evals' release gates (a broken tag standing as latest — that one
+measures **broken-release exposure, not downtime**, since consumers pin by
+tag; read its TTR accordingly); and `hihelloreid`'s serve-gate, added by
+RC1-465, which also made its deployment event serve-gated like Fly's. The
+mechanics live in `scripts/report_dora_failure.sh` and
+`scripts/close_dora_failures.sh`, byte-identical across the four non-Fly
+repos — RC1-448's inline steps generalized with the workflow filename
+parameterized, multiple gate-step names, and no branch filter (a release
+workflow's runs live on tag refs).
+
+The only paths not emitting are the n8n workflows, which are excluded from
+DORA entirely.
 
 Two facts that bound the data. The API incident source was enabled
 **2026-09-25** and events whose `started_at` predates the flip are rejected,

@@ -1,7 +1,7 @@
 {
   "draft_status": "published",
   "id": 322827096,
-  "message": "A PR review failed. The agent errored on at least one review in the last 15 minutes; the review that failed produced no comment on the PR, so the author saw nothing.\n\nQueried by `ml_app`, not `service`: RC1-447 renamed the APM service and stranded the history, so `ml_app:pr-review-agent` is the continuous series. Backs the 97%/30d reliability SLO, which measures the same failures after the fact.\n\nRC1-457. @webhook-incident-summarizer",
+  "message": "A PR review failed. The agent errored on at least one review in the last 15 minutes; the review that failed produced no comment on the PR, so the author saw nothing.\n\nQueried by `ml_app`, not `service`: RC1-447 renamed the APM service and stranded the history, so `ml_app` is the continuous series. RC1-453 dual-read window: the query matches both `pr-review-agent` (history) and `pr-review-agent-snacksnack` (the DORA name) until the old name ages out of every window after the emitter flips; then collapse to the new name only. Backs the 97%/30d reliability SLO, which measures the same failures after the fact.\n\nRC1-457. @webhook-incident-summarizer",
   "multi": false,
   "name": "PR review agent — review errors",
   "options": {
@@ -16,7 +16,7 @@
     }
   },
   "priority": 3,
-  "query": "sum(last_15m):sum:ml_obs.trace.error{ml_app:pr-review-agent}.as_count() > 0",
+  "query": "sum(last_15m):sum:ml_obs.trace.error{ml_app IN (pr-review-agent,pr-review-agent-snacksnack)}.as_count() > 0",
   "restricted_roles": null,
   "tags": [
     "rc1:457",

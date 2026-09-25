@@ -1,11 +1,11 @@
 {
-  "description": "Share of pr-review-agent traces that did not error, 30d. Queried by ml_app because RC1-447 renamed the service from `webhook` and a Datadog rename strands history; tagged by service so the RC1-454 scorecard can find it.",
+  "description": "Share of pr-review-agent traces that did not error, 30d. Queried by ml_app because RC1-447 renamed the service from `webhook` and a Datadog rename strands history; tagged by service so the RC1-454 scorecard can find it. RC1-453 dual-read window: queries match both `pr-review-agent` (history) and `pr-review-agent-snacksnack` (the DORA name) so the SLO stays continuous through the ml_app rename; collapse to the new name once the old one ages out of the 30d window.",
   "id": "dae4404ff9915b75b00806894db71b95",
   "monitor_tags": [],
   "name": "PR review agent reliability",
   "query": {
-    "denominator": "sum:ml_obs.trace{ml_app:pr-review-agent}.as_count()",
-    "numerator": "(sum:ml_obs.trace{ml_app:pr-review-agent}.as_count() - default_zero(sum:ml_obs.trace.error{ml_app:pr-review-agent}.as_count()))"
+    "denominator": "sum:ml_obs.trace{ml_app IN (pr-review-agent,pr-review-agent-snacksnack)}.as_count()",
+    "numerator": "(sum:ml_obs.trace{ml_app IN (pr-review-agent,pr-review-agent-snacksnack)}.as_count() - default_zero(sum:ml_obs.trace.error{ml_app IN (pr-review-agent,pr-review-agent-snacksnack)}.as_count()))"
   },
   "sli_specification": {
     "count": {
@@ -16,12 +16,12 @@
         {
           "data_source": "metrics",
           "name": "query1",
-          "query": "sum:ml_obs.trace{ml_app:pr-review-agent}.as_count()"
+          "query": "sum:ml_obs.trace{ml_app IN (pr-review-agent,pr-review-agent-snacksnack)}.as_count()"
         },
         {
           "data_source": "metrics",
           "name": "query2",
-          "query": "sum:ml_obs.trace.error{ml_app:pr-review-agent}.as_count()"
+          "query": "sum:ml_obs.trace.error{ml_app IN (pr-review-agent,pr-review-agent-snacksnack)}.as_count()"
         }
       ],
       "total_events_formula": {

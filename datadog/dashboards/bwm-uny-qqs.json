@@ -998,7 +998,7 @@
                   "query": {
                     "data_source": "llm_observability_stream",
                     "indexes": [],
-                    "query_string": "@ml_app:pr-review-agent @name:pr_review -service:evals -repo:snacksnack/eval-fixture"
+                    "query_string": "@ml_app:(pr-review-agent OR pr-review-agent-snacksnack) @name:pr_review -service:evals -repo:snacksnack/eval-fixture"
                   },
                   "response_format": "event_list"
                 }

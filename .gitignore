@@ -34,3 +34,8 @@ data/
 
 # Eval run records — local measurements, not artifacts of the repo.
 eval-runs/
+
+# Coverage data files (RC1-468)
+.coverage
+.coverage.*
+htmlcov/

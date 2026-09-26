@@ -23,6 +23,9 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3",
+    # RC1-468: coverage reporting to Test Optimization; ddtrace picks up
+    # coverage.py automatically when the plugin is active.
+    "pytest-cov>=6.0",
     "ruff>=0.7",
     # RC1-261: the eval harness. Pinned by tag — if the ruler can move under a
     # run, a changed score no longer says whether the digest drifted or the
@@ -57,3 +60,17 @@ select = ["E", "F", "I", "UP", "B", "W"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+
+# RC1-468: coverage measures what ships — the same package list the
+# Dockerfile copies. evals/, simulate/ and seed/ are tooling, not product.
+[tool.coverage.run]
+source = [
+    "collectors",
+    "store",
+    "narrative",
+    "drift",
+    "kpi",
+    "main",
+    "config",
+    "observability",
+]

@@ -32,6 +32,9 @@ jobs:
       # RC1-452: --ddtrace reports test-level results to Test Optimization,
       # agentless (no agent in CI). Verified: a failing test still exits 1
       # under the plugin, and a missing key disables reporting, not the suite.
+      # RC1-468: --cov adds line coverage; ddtrace reports it as
+      # test.code_coverage.lines_pct. Coverage is a signal, not a gate — no
+      # threshold fails this step.
       - name: Test (pytest)
         env:
           DD_API_KEY: ${{ secrets.DD_API_KEY }}
@@ -39,7 +42,7 @@ jobs:
           DD_SITE: datadoghq.com
           DD_SERVICE: tpm-automation-platform
           DD_ENV: ci
-        run: pytest --ddtrace
+        run: pytest --ddtrace --cov
 
       # RC1-261. The free half of the drift-digest goldens: the empty-findings
       # path never reaches a model, so it needs no key and costs nothing. The

@@ -29,8 +29,17 @@ jobs:
       - name: Lint (ruff)
         run: ruff check .
 
+      # RC1-452: --ddtrace reports test-level results to Test Optimization,
+      # agentless (no agent in CI). Verified: a failing test still exits 1
+      # under the plugin, and a missing key disables reporting, not the suite.
       - name: Test (pytest)
-        run: pytest
+        env:
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+          DD_CIVISIBILITY_AGENTLESS_ENABLED: "true"
+          DD_SITE: datadoghq.com
+          DD_SERVICE: tpm-automation-platform
+          DD_ENV: ci
+        run: pytest --ddtrace
 
       # RC1-261. The free half of the drift-digest goldens: the empty-findings
       # path never reaches a model, so it needs no key and costs nothing. The

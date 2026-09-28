@@ -139,6 +139,44 @@ def test_security_rule_passes_only_on_read_telemetry_showing_zero():
     assert "0 open alerts" in why
 
 
+def test_test_results_rule_passes_on_recent_events():
+    facts = scorecard.Facts(test_events_by_repo={"svc-repo": 123})
+    ok, why = scorecard.reports_test_results(entity(), facts)
+    assert ok and "123" in why
+
+
+def test_test_results_rule_fail_remark_names_both_possible_causes():
+    """Quiet CI and broken reporting look identical in the events store; the
+    remark must say so instead of asserting one of them."""
+    ok, why = scorecard.reports_test_results(entity(), NO_FACTS)
+    assert not ok
+    assert "no test events" in why and "Actions history" in why
+
+
+def test_coverage_rule_puts_the_measured_number_in_the_remark():
+    facts = scorecard.Facts(
+        test_events_by_repo={"svc-repo": 10}, coverage_by_repo={"svc-repo": 83.6}
+    )
+    ok, why = scorecard.reports_code_coverage(entity(), facts)
+    assert ok and "83.6%" in why
+
+
+def test_coverage_rule_distinguishes_a_missing_flag_from_missing_tests():
+    reporting_without_coverage = scorecard.Facts(test_events_by_repo={"svc-repo": 10})
+    ok, why = scorecard.reports_code_coverage(entity(), reporting_without_coverage)
+    assert not ok and "RC1-468" in why
+
+    ok, why = scorecard.reports_code_coverage(entity(), NO_FACTS)
+    assert not ok and "fix test reporting first" in why
+
+
+def test_test_rules_fail_an_entity_with_no_repo_tag():
+    meta = dict(entity()["metadata"], tags=[])
+    for rule in (scorecard.reports_test_results, scorecard.reports_code_coverage):
+        ok, why = rule(entity(metadata=meta), NO_FACTS)
+        assert not ok and "repo:" in why
+
+
 def test_security_rule_spells_out_open_alerts():
     facts = scorecard.Facts(open_alerts_by_repo={"svc-repo": {"code": 2, "leaks": 1}})
     ok, why = scorecard.security_posture_clean(entity(), facts)
@@ -220,6 +258,22 @@ def test_gather_groups_slos_and_monitors_by_their_service_tag():
                     }
                 },
             )
+        if request.url.path == "/api/v2/ci/tests/analytics/aggregate":
+            # Answers both RC1-467 aggregates: the count query and the
+            # coverage average tell themselves apart by the compute block.
+            body = json.loads(request.content)
+            metric = body["compute"][0].get("metric")
+            value = 71.7 if metric else 549
+            return httpx.Response(
+                200,
+                json={
+                    "data": {
+                        "buckets": [
+                            {"by": {"@test.service": "reid_basic"}, "computes": {"c0": value}}
+                        ]
+                    }
+                },
+            )
         assert request.url.path == "/api/v1/query"
         # The three RC1-359 gauges answer the same shape; two points per
         # series because the window spans two daily runs — the LATEST point
@@ -249,6 +303,8 @@ def test_gather_groups_slos_and_monitors_by_their_service_tag():
         "pr_agent": {"code": 1, "leaks": 1, "errors": 1},
         "reid_basic": {"code": 0, "leaks": 0, "errors": 0},
     }
+    assert facts.test_events_by_repo == {"reid_basic": 549}
+    assert facts.coverage_by_repo == {"reid_basic": 71.7}
 
 
 def test_sync_rules_creates_only_the_missing_ones():

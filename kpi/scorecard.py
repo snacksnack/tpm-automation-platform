@@ -13,7 +13,9 @@ Every rule is a plain function over an entity and a `Facts` bundle. Four read
 the entity files alone, so they are exact by construction; the rest read the
 account (`has_an_slo`, `has_a_monitor`, and the RC1-469 pair —
 `reports_deploys_to_dora` over DORA deployment events and
-`security_posture_clean` over the RC1-359 scanner gauges). Adding a rule means
+`security_posture_clean` over the RC1-359 scanner gauges, and the RC1-467
+pair — `reports_test_results` and `reports_code_coverage` over Test
+Optimization events). Adding a rule means
 adding a function and one `Rule(...)` row.
 
 **Why two rules stay red, on purpose.** `has_an_slo` shipped at 0/8 and now
@@ -59,6 +61,12 @@ REPO_TAG = "repo:"
 #: invisible (RC1-469).
 DORA_WINDOW_DAYS = 90
 
+#: How far back a test event still counts as "this repo reports to Test
+#: Optimization". Any branch, because the summarizer's CI runs only on pull
+#: requests; two weeks, because a repo nobody touched for a fortnight is
+#: quiet, not broken (RC1-467).
+TEST_WINDOW_DAYS = 14
+
 #: The RC1-359 security-posture gauges, one series per repo per day. The
 #: "leaks" key follows kpi/security_posture.py's naming rule: identifiers say
 #: what they hold (an integer count), so CodeQL's sensitive-name heuristics
@@ -93,6 +101,15 @@ class Facts:
     #: ({"code": n, "leaks": n, "errors": n}). A repo absent here has no
     #: scanner telemetry at all, which is a finding, not a zero.
     open_alerts_by_repo: dict[str, dict[str, int]] = field(default_factory=dict)
+
+    #: repo name -> test events reported to Test Optimization in the last
+    #: TEST_WINDOW_DAYS (any branch). The test service is the repo name
+    #: (RC1-452), so this is keyed like `open_alerts_by_repo`.
+    test_events_by_repo: dict[str, int] = field(default_factory=dict)
+
+    #: repo name -> average `test.code_coverage.lines_pct` over the same
+    #: window, present only for repos whose events carry coverage (RC1-468).
+    coverage_by_repo: dict[str, float] = field(default_factory=dict)
 
 
 def _links(entity: dict) -> list[dict]:
@@ -218,6 +235,49 @@ def security_posture_clean(entity: dict, facts: Facts) -> tuple[bool, str]:
     return True, f"scanners read, 0 open alerts on repo:{repo}"
 
 
+def reports_test_results(entity: dict, facts: Facts) -> tuple[bool, str]:
+    """The entity's repo shipped test-level results to Test Optimization
+    recently. Joined by the `repo:` tag because repos and entities are not
+    1:1 — the platform repo backs two entities, and both rightly inherit its
+    test reporting (RC1-467)."""
+    repo = _repo_tag(entity)
+    if not repo:
+        return False, f"entity declares no {REPO_TAG} tag, so it maps to no repository"
+    count = facts.test_events_by_repo.get(repo, 0)
+    if count:
+        return True, f"{count} test events from repo:{repo} in {TEST_WINDOW_DAYS} days"
+    return False, (
+        f"no test events from repo:{repo} in {TEST_WINDOW_DAYS} days — either "
+        "CI never ran or the RC1-452 reporting wiring regressed; the two are "
+        "different problems, check the repo's Actions history first"
+    )
+
+
+def reports_code_coverage(entity: dict, facts: Facts) -> tuple[bool, str]:
+    """The repo's test events carry `test.code_coverage.lines_pct` (RC1-468).
+
+    Presence only, no threshold: coverage here is a signal, not a gate, and a
+    banded rule needs per-service baselines measured over more days than the
+    rollout has had. The remark carries the number so the band can be set
+    from remarks history when the time comes.
+    """
+    repo = _repo_tag(entity)
+    if not repo:
+        return False, f"entity declares no {REPO_TAG} tag, so it maps to no repository"
+    coverage = facts.coverage_by_repo.get(repo)
+    if coverage is not None:
+        return True, f"lines_pct averages {coverage:.1f}% over {TEST_WINDOW_DAYS} days"
+    if facts.test_events_by_repo.get(repo, 0):
+        return False, (
+            f"repo:{repo} reports tests but no event carries "
+            "code_coverage.lines_pct — the RC1-468 coverage flag regressed"
+        )
+    return False, (
+        f"no test events from repo:{repo} in {TEST_WINDOW_DAYS} days, so no "
+        "coverage either — fix test reporting first"
+    )
+
+
 @dataclass(frozen=True)
 class Rule:
     name: str
@@ -271,6 +331,21 @@ RULES: tuple[Rule, ...] = (
         "count of open alerts is zero. Missing or unreadable telemetry fails "
         "too: a gap is never a zero (RC1-469).",
         security_posture_clean,
+    ),
+    Rule(
+        "Reports test results",
+        f"The entity's repo (its {REPO_TAG} tag) shipped test-level results to "
+        f"Test Optimization within {TEST_WINDOW_DAYS} days. The test service is "
+        "the repo name, and repos back entities many-to-one — both platform "
+        "entities inherit tpm-automation-platform's reporting (RC1-467).",
+        reports_test_results,
+    ),
+    Rule(
+        "Reports code coverage",
+        "The repo's test events carry code_coverage.lines_pct (RC1-468). "
+        "Presence, not a threshold: coverage is a signal here, and the band "
+        "waits for per-service baselines (RC1-467).",
+        reports_code_coverage,
     ),
 )
 
@@ -372,17 +447,51 @@ def _open_alert_counts(http: httpx.Client) -> dict[str, dict[str, int]]:
     return out
 
 
+def _test_aggregate(http: httpx.Client, *, compute: dict, query: str) -> dict[str, float]:
+    """One Test Optimization aggregate over the rule window, keyed by the
+    `@test.service` facet (the repo name, RC1-452). The endpoint wants a FLAT
+    body — the spans-style `data`-wrapped one 400s."""
+    resp = http.post(
+        "/api/v2/ci/tests/analytics/aggregate",
+        json={
+            "compute": [compute],
+            "filter": {
+                "query": query,
+                "from": f"now-{TEST_WINDOW_DAYS}d",
+                "to": "now",
+            },
+            "group_by": [{"facet": "@test.service", "limit": 50}],
+        },
+    )
+    resp.raise_for_status()
+    out: dict[str, float] = {}
+    for bucket in resp.json().get("data", {}).get("buckets", []):
+        service = bucket.get("by", {}).get("@test.service")
+        value = bucket.get("computes", {}).get("c0")
+        if service and value is not None:
+            out[service] = float(value)
+    return out
+
+
 def gather(http: httpx.Client) -> Facts:
     """Read the account once for everything the rules need."""
     slos = http.get("/api/v1/slo", params={"limit": 1000})
     slos.raise_for_status()
     monitors = http.get("/api/v1/monitor", params={"page_size": 1000})
     monitors.raise_for_status()
+    events = _test_aggregate(http, compute={"aggregation": "count"}, query="*")
+    coverage = _test_aggregate(
+        http,
+        compute={"aggregation": "avg", "metric": "@test.code_coverage.lines_pct"},
+        query="@test.code_coverage.lines_pct:*",
+    )
     return Facts(
         slos_by_service=_by_service_tag(slos.json().get("data", [])),
         monitors_by_service=_by_service_tag(monitors.json()),
         dora_deploys_by_service=_dora_deploy_counts(http),
         open_alerts_by_repo=_open_alert_counts(http),
+        test_events_by_repo={k: int(v) for k, v in events.items()},
+        coverage_by_repo=coverage,
     )
 
 

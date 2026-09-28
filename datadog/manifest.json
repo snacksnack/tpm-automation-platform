@@ -164,6 +164,10 @@
     {
       "id": "cfe2b45d7309524fa07c64e7ad15cbc4",
       "why": "RC1-456 concert intelligence run freshness — 97% over 30d on monitor 322765258; a heartbeat, because 26 traces in 30d cannot support a ratio"
+    },
+    {
+      "id": "0411019e350952e09bc9c78b2eb92646",
+      "why": "RC1-467 fleet test health — 99% over 30d, passed/attempted ratio on the daily delivery.tests.* counts; deliberately no service: tag, so it answers no entity's Has-an-SLO rule"
     }
   ],
   "log_indexes": [

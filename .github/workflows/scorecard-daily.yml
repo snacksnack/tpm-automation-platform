@@ -9,8 +9,8 @@
 # says whether the account and the repo still agree, and scoring a drifted
 # account would publish numbers about a state nobody signed off on.
 #
-# Daily rather than per-push. Four of the five rules read files that only
-# change in a PR, and the fifth reads SLO tags that change about as often.
+# Daily rather than per-push. Half the rules read files that only change in
+# a PR, and the rest read account state that moves about as often.
 name: Scorecard
 
 on:
@@ -48,6 +48,22 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .
+
+      # The fleet test-health counts ride this job (RC1-467): same secrets,
+      # same daily cadence, and the "Fleet test health" SLO sums what this
+      # posts. On a PR nothing is posted — the account reflects main.
+      - name: Post fleet test-health counts
+        if: github.event_name != 'pull_request'
+        env:
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+          DD_APP_KEY: ${{ secrets.DD_APP_KEY }}
+        run: |
+          set -o pipefail
+          if [ -z "$DD_API_KEY" ] || [ -z "$DD_APP_KEY" ]; then
+            echo "::warning title=Test health skipped::DD_API_KEY / DD_APP_KEY not set — no counts posted today."
+            exit 0
+          fi
+          python -m kpi.test_health | tee -a "$GITHUB_STEP_SUMMARY"
 
       # On a PR, evaluate and print without writing. The account's scorecard
       # should reflect main, not whatever a branch proposes.

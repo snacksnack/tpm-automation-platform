@@ -1,0 +1,48 @@
+{
+  "description": "Share of default-branch test runs that pass, fleet-wide, over the daily delivery.tests.* counts posted by kpi/test_health.py (RC1-467). Baseline at creation: 100% pass over 7,412 events in 3 days; 99%/30d is a conservative floor, to be ratcheted from a full window of data. Skips sit in neither number: a skip is a decision, not an outcome. Deliberately not tagged service:* — repo-level test health belongs to the fleet, not to any one runtime service, so it does not answer the Has-an-SLO rule for anyone.",
+  "id": "0411019e350952e09bc9c78b2eb92646",
+  "monitor_tags": [],
+  "name": "Fleet test health",
+  "query": {
+    "denominator": "sum:delivery.tests.attempted{*}.as_count()",
+    "numerator": "sum:delivery.tests.passed{*}.as_count()"
+  },
+  "sli_specification": {
+    "count": {
+      "good_events_formula": {
+        "formula": "query1"
+      },
+      "queries": [
+        {
+          "data_source": "metrics",
+          "name": "query1",
+          "query": "sum:delivery.tests.passed{*}.as_count()"
+        },
+        {
+          "data_source": "metrics",
+          "name": "query2",
+          "query": "sum:delivery.tests.attempted{*}.as_count()"
+        }
+      ],
+      "total_events_formula": {
+        "formula": "query2"
+      }
+    }
+  },
+  "tags": [
+    "fleet:agents",
+    "kind:ratio",
+    "rc1:467"
+  ],
+  "target_threshold": 99.0,
+  "thresholds": [
+    {
+      "target": 99.0,
+      "target_display": "99.",
+      "timeframe": "30d"
+    }
+  ],
+  "timeframe": "30d",
+  "type": "metric",
+  "type_id": 1
+}

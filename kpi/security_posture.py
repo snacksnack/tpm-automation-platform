@@ -11,8 +11,8 @@ them and posts the counts itself.
 
 Cost, because that was the question: Datadog bills custom metrics on the
 average number of unique series present per hour over the month. This runs
-once a day, so its ~30 series occupy one hour in twenty-four and add about
-one custom metric to the monthly average — cents. Do not make it hourly to
+once a day, so its ~48 series occupy one hour in twenty-four and add about
+two custom metrics to the monthly average — cents. Do not make it hourly to
 "get fresher data": alert counts change a few times a week and the bill
 would go up 24×.
 
@@ -21,9 +21,9 @@ Security tab, it never writes anywhere on GitHub.
 
 Run: `python -m kpi.security_posture [--dry-run]`
 Env: `SECURITY_ALERTS_TOKEN` — a fine-grained PAT with *read* on Code
-scanning alerts and Secret scanning alerts for the five repos (the default
-Actions token is scoped to the running repo and cannot read the other four);
-`DD_API_KEY` to ship, `DD_SITE` optional.
+scanning alerts and Secret scanning alerts for every repo in `REPOS` (the
+default Actions token is scoped to the running repo and cannot read the
+others); `DD_API_KEY` to ship, `DD_SITE` optional.
 """
 
 from __future__ import annotations
@@ -40,13 +40,17 @@ from kpi.datadog import GAUGE, ship
 
 OWNER = "snacksnack"
 
-#: The five repos the scanners were enabled on (RC1-359 step 2).
+#: The eight repos the scanners are enabled on (RC1-359 step 2 for the first
+#: five, RC1-470 for the last three).
 REPOS = (
     "tpm-automation-platform",
     "pr_agent",
     "launch-planner-agent",
     "agent-evals",
     "reid_basic",
+    "ai-incident-summarizer",
+    "n8n-concert-intelligence-agent",
+    "stale-ticket-bot",
 )
 
 CODE_METRIC = "delivery.security.code_scan_alerts_open"
@@ -85,21 +89,37 @@ def github_client(token: str) -> httpx.Client:
     )
 
 
+#: 404 bodies that genuinely mean "zero alerts". Anything else — above all a
+#: bare "Not Found", which is what a fine-grained token returns for a repo
+#: outside its repository list — must surface as an error, or a repo the
+#: token cannot read would ship as a clean zero (RC1-470).
+BENIGN_404_HINTS = ("no analysis", "disabled", "not enabled")
+
+
+def _benign_404(resp: httpx.Response) -> bool:
+    try:
+        message = str(resp.json().get("message", ""))
+    except ValueError:
+        return False
+    return any(hint in message.lower() for hint in BENIGN_404_HINTS)
+
+
 def fetch_open_alerts(http: httpx.Client, repo: str, kind: str) -> list[dict]:
     """Every open alert of `kind` ("code-scanning" | "secret-scanning") for
     one repo, following pagination.
 
-    A 404 is "nothing to count", not an error: code-scanning returns 404 with
-    "no analysis found" on a repo CodeQL has never finished on, and
-    secret-scanning returns 404 when the feature is off. Both are zero alerts
-    from the dashboard's point of view; the enablement state itself is
-    checked elsewhere (`security_and_analysis`).
+    A 404 is "nothing to count" only when GitHub says why: code-scanning
+    returns 404 with "no analysis found" on a repo CodeQL has never finished
+    on, and secret-scanning returns 404 saying the feature is disabled when
+    it is off. Both are zero alerts from the dashboard's point of view; the
+    enablement state itself is checked elsewhere (`security_and_analysis`).
+    Any other 404 raises like a 403 would — a gap, never a zero.
     """
     alerts: list[dict] = []
     url: str | None = f"/repos/{OWNER}/{repo}/{kind}/alerts?state=open&per_page=100"
     while url:
         resp = http.get(url)
-        if resp.status_code == 404:
+        if resp.status_code == 404 and _benign_404(resp):
             return []
         resp.raise_for_status()
         alerts.extend(resp.json())
@@ -217,7 +237,7 @@ def errors(posture: dict[str, dict]) -> dict[str, str]:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         prog="python -m kpi.security_posture",
-        description="Read open GitHub scanner alerts for the five repos and post them "
+        description="Read open GitHub scanner alerts for the enrolled repos and post them "
         "to Datadog as daily gauges (RC1-359).",
     )
     ap.add_argument(
@@ -231,7 +251,7 @@ def main(argv: list[str] | None = None) -> int:
     if not token:
         print(
             f"{TOKEN_ENV} is not set — a fine-grained PAT with read on code-scanning and "
-            "secret-scanning alerts for the five repos.",
+            "secret-scanning alerts for every repo in REPOS.",
             file=sys.stderr,
         )
         return 2

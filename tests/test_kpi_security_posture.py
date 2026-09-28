@@ -1,7 +1,7 @@
 """Scanner alert counts → Datadog gauges (RC1-359) — offline, no network.
 
 The GitHub side is exercised through an httpx MockTransport so pagination and
-the 404-means-zero rule are real code paths, not assumptions. The payload
+the benign-vs-bare 404 rule are real code paths, not assumptions. The payload
 builder is pure and read directly, the way `test_kpi_datadog` reads
 `series_for`. Shipping is `kpi.datadog.ship`, already covered there.
 """
@@ -149,12 +149,40 @@ def test_pagination_follows_the_link_header():
     assert "state=open" in seen[0] and "per_page=100" in seen[0]
 
 
-def test_a_404_is_zero_alerts_not_an_error():
+def test_a_404_that_says_why_is_zero_alerts_not_an_error():
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(404, json={"message": "no analysis found"})
 
     with _client(handler) as http:
         assert sp.fetch_open_alerts(http, "x", "code-scanning") == []
+
+
+def test_a_404_for_a_disabled_feature_is_zero_alerts():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(404, json={"message": "Secret scanning is disabled."})
+
+    with _client(handler) as http:
+        assert sp.fetch_open_alerts(http, "x", "secret-scanning") == []
+
+
+def test_a_bare_not_found_404_raises_instead_of_shipping_a_false_zero():
+    # A fine-grained token answers a plain "Not Found" for a repo outside its
+    # repository list. Reading that as zero alerts would turn an unreadable
+    # repo into a clean scorecard pass (RC1-470).
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(404, json={"message": "Not Found"})
+
+    with _client(handler) as http, pytest.raises(httpx.HTTPStatusError) as exc_info:
+        sp.fetch_open_alerts(http, "x", "code-scanning")
+    assert exc_info.value.response.status_code == 404
+
+
+def test_a_404_without_a_json_body_raises_too():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(404, text="<html>gone</html>")
+
+    with _client(handler) as http, pytest.raises(httpx.HTTPStatusError):
+        sp.fetch_open_alerts(http, "x", "code-scanning")
 
 
 def test_other_errors_still_raise():

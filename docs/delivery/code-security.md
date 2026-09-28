@@ -334,3 +334,34 @@ each.
 3. **Optional, RC1-106:** feed open Dependabot/code-scanning alerts to the
    pr-review-agent as context, the way the n8n cost check already is, so
    scanner facts arrive in the one review voice.
+
+## RC1-470 — the last three repos (2026-09-28)
+
+The RC1-469 `Security posture clean` scorecard rule surfaced what RC1-359
+deliberately left out: `ai-incident-summarizer`, `n8n-concert-intelligence-agent`
+and `stale-ticket-bot` had no scanners at all, so their catalog entities failed
+on "no telemetry". Enabled the RC1-359 step-2 set on all three by `gh api`
+(Dependabot alerts, CodeQL default setup, secret scanning + push protection;
+validity checks still unavailable on a personal account) and extended
+`kpi/security_posture.REPOS` from five to eight (~48 daily series, still about
+two custom metrics on the monthly average).
+
+First scans, same day:
+
+| Repo | CodeQL | Dependabot | Secret scanning |
+|---|---|---|---|
+| ai-incident-summarizer | 2 `actions/missing-workflow-permissions` — fixed, PR #59 | **22 open**, all `frontend/package-lock.json` (2 critical, 11 high, 8 moderate, 1 low: `next` ×11, `postcss` ×4, `sharp` ×2, `brace-expansion` ×2, others ×3) | 0 |
+| n8n-concert-intelligence-agent | 1 `actions/missing-workflow-permissions` — fixed, PR #19 | 0 | 0 |
+| stale-ticket-bot | 0 | 0 | 1 — the pre-RC1-436 Slack incoming webhook in README history, revoked by Slack 2026-07; resolve as `revoked` |
+
+The 22 Dependabot alerts are bump-and-test work in the Next.js history UI, the
+same shape as RC1-360 — not folded into this story. They keep the entity's
+scorecard row red honestly, which is the rule working.
+
+Hardening that came out of it: `fetch_open_alerts` used to read **every** 404
+as zero alerts, but a fine-grained PAT answers a bare `Not Found` for a repo
+outside its repository list — so until `SECURITY_ALERTS_TOKEN` covers the new
+repos, the collector would have shipped false zeros and the scorecard would
+have passed a repo nobody can read. Now only a 404 that says why ("no
+analysis", "disabled", "not enabled") counts as zero; a bare one is a
+collector error. A gap is never a zero, including this one.

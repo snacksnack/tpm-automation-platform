@@ -3,12 +3,12 @@
 # Datadog's own GitHub telemetry never produced a point for this account: the
 # collector is organization-scoped and snacksnack is a personal account (the
 # `/orgs/...` alert endpoints it needs return 404). So the platform reads the
-# repo-level endpoints for the five repos and posts the counts itself. The
+# repo-level endpoints for the enrolled repos and posts the counts itself. The
 # security-posture group on delivery dashboard izc-5s7-tz8 reads these.
 #
 # Daily on purpose. Custom metrics bill on the average number of series alive
-# per hour across the month; ~30 series present one hour in twenty-four is
-# about one billable custom metric. Hourly would be 24× that for counts that
+# per hour across the month; ~48 series present one hour in twenty-four is
+# about two billable custom metrics. Hourly would be 24× that for counts that
 # change a few times a week.
 name: Security posture
 

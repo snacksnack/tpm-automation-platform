@@ -194,7 +194,7 @@ def security_posture_clean(entity: dict, facts: Facts) -> tuple[bool, str]:
     if counts is None:
         return False, (
             f"no scanner telemetry for repo:{repo} — the RC1-359 collector "
-            "enrolls five repos; extending kpi/security_posture.REPOS is the fix"
+            "does not enroll it; extending kpi/security_posture.REPOS is the fix"
         )
     if counts.get("errors"):
         return False, (

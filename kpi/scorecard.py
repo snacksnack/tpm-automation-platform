@@ -10,9 +10,11 @@ decide in Python, nothing is left to a model.
     python -m kpi.scorecard push    # create missing rules, then push outcomes
 
 Every rule is a plain function over an entity and a `Facts` bundle. Four read
-the entity files alone, so they are exact by construction; `has_an_slo` and
-`has_a_monitor` read the account. Adding a rule means adding a function and one
-`Rule(...)` row.
+the entity files alone, so they are exact by construction; the rest read the
+account (`has_an_slo`, `has_a_monitor`, and the RC1-469 pair —
+`reports_deploys_to_dora` over DORA deployment events and
+`security_posture_clean` over the RC1-359 scanner gauges). Adding a rule means
+adding a function and one `Rule(...)` row.
 
 **Why two rules stay red, on purpose.** `has_an_slo` shipped at 0/8 and now
 scores 6/8; `has_a_monitor` (RC1-457) opens at the same 6/8. Both stop at the
@@ -33,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -47,14 +50,33 @@ SCORECARD_NAME = "RC1 estate readiness"
 #: Tag that ties a Datadog object to a catalog entity. `service:<entity name>`.
 SERVICE_TAG = "service:"
 
+#: Tag on the entity itself naming its GitHub repository. `repo:<repo name>`.
+REPO_TAG = "repo:"
+
+#: How far back a deployment still counts as "this service reports to DORA".
+#: Wide on purpose: agent-evals deploys only on release tags, and a service
+#: that deploys rarely is not the same finding as one whose deploys are
+#: invisible (RC1-469).
+DORA_WINDOW_DAYS = 90
+
+#: The RC1-359 security-posture gauges, one series per repo per day. The
+#: "leaks" key follows kpi/security_posture.py's naming rule: identifiers say
+#: what they hold (an integer count), so CodeQL's sensitive-name heuristics
+#: stay quiet.
+ALERT_METRICS = {
+    "code": "delivery.security.code_scan_alerts_open",
+    "leaks": "delivery.security.secret_scan_alerts_open",
+    "errors": "delivery.security.collector_errors",
+}
+
 
 @dataclass(frozen=True)
 class Facts:
     """Everything the rules read from the account, fetched once per run.
 
     One bundle rather than a call per rule per service: eight entities times
-    six rules is forty-eight evaluations, and neither the SLO list nor the
-    monitor list changes between them.
+    eight rules is sixty-four evaluations, and none of these lists change
+    between them.
     """
 
     #: entity name -> the SLO names tagged `service:<entity name>`
@@ -62,6 +84,15 @@ class Facts:
 
     #: entity name -> the monitor names tagged `service:<entity name>`
     monitors_by_service: dict[str, list[str]] = field(default_factory=dict)
+
+    #: DORA `service` facet value -> deployment count in the last
+    #: DORA_WINDOW_DAYS. A service absent here reported no deployments.
+    dora_deploys_by_service: dict[str, int] = field(default_factory=dict)
+
+    #: repo name -> latest daily counts from the RC1-359 gauges
+    #: ({"code": n, "leaks": n, "errors": n}). A repo absent here has no
+    #: scanner telemetry at all, which is a finding, not a zero.
+    open_alerts_by_repo: dict[str, dict[str, int]] = field(default_factory=dict)
 
 
 def _links(entity: dict) -> list[dict]:
@@ -134,6 +165,59 @@ def has_a_monitor(entity: dict, facts: Facts) -> tuple[bool, str]:
     return False, f"no monitor tagged {SERVICE_TAG}{name}"
 
 
+def reports_deploys_to_dora(entity: dict, facts: Facts) -> tuple[bool, str]:
+    """A DORA deployment event names this service (the facet matches catalog
+    entity names exactly — probed before this rule was written, not assumed)."""
+    name = entity.get("metadata", {}).get("name", "")
+    count = facts.dora_deploys_by_service.get(name, 0)
+    if count:
+        return True, f"{count} deployment(s) in the last {DORA_WINDOW_DAYS} days"
+    return False, (
+        f"no DORA deployment event in {DORA_WINDOW_DAYS} days — the service "
+        "deploys, but its deploy path emits nothing (RC1-459 wired the "
+        "workflow-driven paths; a manual path needs its own event)"
+    )
+
+
+def _repo_tag(entity: dict) -> str:
+    tags = entity.get("metadata", {}).get("tags") or []
+    return next((t[len(REPO_TAG) :] for t in tags if t.startswith(REPO_TAG)), "")
+
+
+def security_posture_clean(entity: dict, facts: Facts) -> tuple[bool, str]:
+    """Scanner telemetry exists for the entity's repo and shows zero open
+    alerts. Missing or unreadable telemetry fails: a gap is never a zero."""
+    repo = _repo_tag(entity)
+    if not repo:
+        return False, f"entity declares no {REPO_TAG} tag, so it maps to no repository"
+    counts = facts.open_alerts_by_repo.get(repo)
+    if counts is None:
+        return False, (
+            f"no scanner telemetry for repo:{repo} — the RC1-359 collector "
+            "enrolls five repos; extending kpi/security_posture.REPOS is the fix"
+        )
+    if counts.get("errors"):
+        return False, (
+            f"the collector could not read repo:{repo} on its last run — "
+            "a gap, never a zero"
+        )
+    open_code, open_leaks = counts.get("code", 0), counts.get("leaks", 0)
+    if open_code or open_leaks:
+        found = ", ".join(
+            part
+            for part in (
+                f"{open_code} code-scanning" if open_code else "",
+                f"{open_leaks} secret-scanning" if open_leaks else "",
+            )
+            if part
+        )
+        return False, (
+            f"{found} alert(s) open on repo:{repo} — fix or disposition them; "
+            "the scanner itself stays on"
+        )
+    return True, f"scanners read, 0 open alerts on repo:{repo}"
+
+
 @dataclass(frozen=True)
 class Rule:
     name: str
@@ -175,6 +259,19 @@ RULES: tuple[Rule, ...] = (
         "while it is happening rather than measured afterwards by the SLO.",
         has_a_monitor,
     ),
+    Rule(
+        "Deploys report to DORA",
+        f"A deployment event reached DORA within {DORA_WINDOW_DAYS} days, so the "
+        "service's change rate is measured rather than remembered (RC1-469).",
+        reports_deploys_to_dora,
+    ),
+    Rule(
+        "Security posture clean",
+        "The RC1-359 collector reads the repo's scanners and the latest daily "
+        "count of open alerts is zero. Missing or unreadable telemetry fails "
+        "too: a gap is never a zero (RC1-469).",
+        security_posture_clean,
+    ),
 )
 
 
@@ -194,6 +291,87 @@ def _by_service_tag(objects: list[dict]) -> dict[str, list[str]]:
     return grouped
 
 
+def _dora_deploy_counts(http: httpx.Client) -> dict[str, int]:
+    """Deployment counts per DORA service over the rule's window.
+
+    The same query the DORA dashboard's per-service widget runs (data_source
+    `dora`, index `deployment`, grouped by the `service` facet), replayed
+    through /api/v2/query/timeseries with one bucket spanning the window.
+    """
+    now_ms = int(time.time() * 1000)
+    window_ms = DORA_WINDOW_DAYS * 86_400_000
+    resp = http.post(
+        "/api/v2/query/timeseries",
+        json={
+            "data": {
+                "type": "timeseries_request",
+                "attributes": {
+                    "formulas": [{"formula": "deploys"}],
+                    "queries": [
+                        {
+                            "data_source": "dora",
+                            "name": "deploys",
+                            "compute": {"aggregation": "count"},
+                            "indexes": ["deployment"],
+                            "group_by": [
+                                {
+                                    "facet": "service",
+                                    "limit": 50,
+                                    "sort": {"aggregation": "count", "order": "desc"},
+                                }
+                            ],
+                        }
+                    ],
+                    "from": now_ms - window_ms,
+                    "to": now_ms,
+                    "interval": window_ms,
+                },
+            }
+        },
+    )
+    resp.raise_for_status()
+    attrs = resp.json().get("data", {}).get("attributes", {})
+    values = attrs.get("values", [])
+    counts: dict[str, int] = {}
+    for i, series in enumerate(attrs.get("series", [])):
+        tags = series.get("group_tags") or []
+        service = next((t[len(SERVICE_TAG) :] for t in tags if t.startswith(SERVICE_TAG)), "")
+        total = int(sum(v for v in (values[i] if i < len(values) else []) if v))
+        if service and total:
+            counts[service] = total
+    return counts
+
+
+def _open_alert_counts(http: httpx.Client) -> dict[str, dict[str, int]]:
+    """Latest daily point of each RC1-359 gauge, per repo.
+
+    A 2-day window because the collector runs once a day — a shorter window
+    reads "no data" in the hours before the next run, which is cadence, not
+    an outage. The latest point is the answer; summing points would count
+    yesterday's alerts twice.
+    """
+    now = int(time.time())
+    out: dict[str, dict[str, int]] = {}
+    for key, metric in ALERT_METRICS.items():
+        resp = http.get(
+            "/api/v1/query",
+            params={
+                "from": now - 2 * 86_400,
+                "to": now,
+                "query": f"sum:{metric}{{*}} by {{repo}}",
+            },
+        )
+        resp.raise_for_status()
+        for series in resp.json().get("series", []):
+            scope = series.get("scope", "")
+            if not scope.startswith(REPO_TAG):
+                continue
+            points = [p[1] for p in series.get("pointlist", []) if p[1] is not None]
+            if points:
+                out.setdefault(scope[len(REPO_TAG) :], {})[key] = int(points[-1])
+    return out
+
+
 def gather(http: httpx.Client) -> Facts:
     """Read the account once for everything the rules need."""
     slos = http.get("/api/v1/slo", params={"limit": 1000})
@@ -203,6 +381,8 @@ def gather(http: httpx.Client) -> Facts:
     return Facts(
         slos_by_service=_by_service_tag(slos.json().get("data", [])),
         monitors_by_service=_by_service_tag(monitors.json()),
+        dora_deploys_by_service=_dora_deploy_counts(http),
+        open_alerts_by_repo=_open_alert_counts(http),
     )
 
 

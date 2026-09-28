@@ -20,6 +20,7 @@ def entity(**over) -> dict:
         "metadata": {
             "name": "svc",
             "owner": "reid",
+            "tags": ["repo:svc-repo"],
             "links": [
                 {"name": "Repository", "type": "repo", "url": "https://github.com/x/y"},
                 {"name": "Board", "type": "dashboard", "url": "https://app.datadoghq.com/d/a"},
@@ -116,6 +117,61 @@ def _client(handler) -> httpx.Client:
     )
 
 
+def test_dora_rule_counts_deployments_for_the_entity_name():
+    facts = scorecard.Facts(dora_deploys_by_service={"svc": 12})
+    ok, why = scorecard.reports_deploys_to_dora(entity(), facts)
+    assert ok
+    assert "12 deployment(s)" in why
+
+
+def test_dora_rule_fails_with_a_fix_shaped_remark_when_no_events_exist():
+    ok, why = scorecard.reports_deploys_to_dora(entity(), NO_FACTS)
+    assert not ok
+    assert "emits nothing" in why
+
+
+def test_security_rule_passes_only_on_read_telemetry_showing_zero():
+    facts = scorecard.Facts(
+        open_alerts_by_repo={"svc-repo": {"code": 0, "leaks": 0, "errors": 0}}
+    )
+    ok, why = scorecard.security_posture_clean(entity(), facts)
+    assert ok
+    assert "0 open alerts" in why
+
+
+def test_security_rule_spells_out_open_alerts():
+    facts = scorecard.Facts(open_alerts_by_repo={"svc-repo": {"code": 2, "leaks": 1}})
+    ok, why = scorecard.security_posture_clean(entity(), facts)
+    assert not ok
+    assert "2 code-scanning" in why and "1 secret-scanning" in why
+
+
+def test_security_rule_treats_missing_telemetry_as_a_finding_not_a_zero():
+    """The repo the collector never enrolled must fail, and the remark must
+    name the fix (extend REPOS), because 'no data' and 'no alerts' are
+    different claims."""
+    ok, why = scorecard.security_posture_clean(entity(), NO_FACTS)
+    assert not ok
+    assert "no scanner telemetry" in why and "REPOS" in why
+
+
+def test_security_rule_treats_a_collector_error_as_unreadable_not_clean():
+    facts = scorecard.Facts(
+        open_alerts_by_repo={"svc-repo": {"code": 0, "leaks": 0, "errors": 1}}
+    )
+    ok, why = scorecard.security_posture_clean(entity(), facts)
+    assert not ok
+    assert "could not read" in why
+
+
+def test_security_rule_requires_the_repo_tag():
+    doc = entity()
+    doc["metadata"]["tags"] = []
+    ok, why = scorecard.security_posture_clean(doc, NO_FACTS)
+    assert not ok
+    assert "repo:" in why
+
+
 def test_gather_groups_slos_and_monitors_by_their_service_tag():
     """Both lists come back shaped the same way, from differently shaped JSON.
 
@@ -137,15 +193,46 @@ def test_gather_groups_slos_and_monitors_by_their_service_tag():
                     ]
                 },
             )
-        assert request.url.path == "/api/v1/monitor"
+        if request.url.path == "/api/v1/monitor":
+            return httpx.Response(
+                200,
+                json=[
+                    {"name": "SSL cert", "tags": ["service:hihelloreid", "rc1:341"]},
+                    {"name": "Fleet LLM spend", "tags": ["service:agent-fleet"]},
+                    {"name": "host pack", "tags": ["monitor_pack:host"]},
+                    {"name": "null tags", "tags": None},
+                ],
+            )
+        if request.url.path == "/api/v2/query/timeseries":
+            # One bucket per series; a null bucket must not crash the sum.
+            return httpx.Response(
+                200,
+                json={
+                    "data": {
+                        "attributes": {
+                            "series": [
+                                {"group_tags": ["service:hihelloreid"]},
+                                {"group_tags": ["service:quiet"]},
+                                {"group_tags": ["env:prod"]},
+                            ],
+                            "values": [[25.0], [None], [3.0]],
+                        }
+                    }
+                },
+            )
+        assert request.url.path == "/api/v1/query"
+        # The three RC1-359 gauges answer the same shape; two points per
+        # series because the window spans two daily runs — the LATEST point
+        # is the answer, not the sum.
         return httpx.Response(
             200,
-            json=[
-                {"name": "SSL cert", "tags": ["service:hihelloreid", "rc1:341"]},
-                {"name": "Fleet LLM spend", "tags": ["service:agent-fleet"]},
-                {"name": "host pack", "tags": ["monitor_pack:host"]},
-                {"name": "null tags", "tags": None},
-            ],
+            json={
+                "series": [
+                    {"scope": "repo:pr_agent", "pointlist": [[1.0, 2.0], [2.0, 1.0]]},
+                    {"scope": "repo:reid_basic", "pointlist": [[1.0, 0.0], [2.0, 0.0]]},
+                    {"scope": "env:prod", "pointlist": [[1.0, 9.0]]},
+                ]
+            },
         )
 
     facts = scorecard.gather(_client(handler))
@@ -153,6 +240,14 @@ def test_gather_groups_slos_and_monitors_by_their_service_tag():
     assert facts.monitors_by_service == {
         "hihelloreid": ["SSL cert"],
         "agent-fleet": ["Fleet LLM spend"],
+    }
+    # The null-bucket series and the service-less series both drop out.
+    assert facts.dora_deploys_by_service == {"hihelloreid": 25}
+    # Latest point per repo, same value for all three gauges in this fake;
+    # the repo-less series drops out.
+    assert facts.open_alerts_by_repo == {
+        "pr_agent": {"code": 1, "leaks": 1, "errors": 1},
+        "reid_basic": {"code": 0, "leaks": 0, "errors": 0},
     }
 
 

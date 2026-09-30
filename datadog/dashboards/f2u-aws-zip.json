@@ -1,0 +1,479 @@
+{
+  "description": "RC1-477: the Cohere comparison program's standing pane — operational, retrieval-quality and judged-quality metrics per seat, arms side by side. Committed as code in tpm-automation-platform/datadog/ and covered by the daily drift CI. Cost metrics are nanodollars: formulas divide by 1e9 and pin the unit (RC1-405). Eval-run Cohere spans include the trial-key pacing sleep — see the header note before reading span-duration latency.",
+  "id": "f2u-aws-zip",
+  "layout_type": "ordered",
+  "notify_list": null,
+  "reflow_type": "auto",
+  "restricted_roles": [],
+  "template_variables": null,
+  "title": "Model Bake-off — Cohere vs. incumbents",
+  "widgets": [
+    {
+      "definition": {
+        "background_color": "transparent",
+        "content": "**The Cohere bake-off — one pane over the three seat comparisons** (RC1-477; data producers RC1-473/474/475).\n\nStanding verdicts, 2026-09-29: **embedding seat — OpenAI keeps it** (near-tie, rerank net-neutral) · **generation seat — Haiku keeps it** (Command ~1.8× faster but 2× verbose, 2 judged fails) · **reviewer seat — Claude keeps it** (Command lost recall/categorisation; `tool_choice` unsupported).\n\n**Read the numbers with three caveats.** (1) Cohere *eval-run* spans include the 6.5 s trial-key pacing sleep inside the span, and eval spans join the production ml_app/service — span-duration latency for Command is inflated until unpaced production traffic exists; the APM p50 widgets are honest per-call latency. (2) `command-a-plus-05-2026` has **no published per-token price**, so cost widgets show the priced arms only — the illustrative Command figure lives in RC1-475. (3) Retrieval gauges post once per eval run: \"no data\" on a short window is cadence, not outage.",
+        "font_size": "14",
+        "has_padding": true,
+        "text_align": "left",
+        "type": "note"
+      },
+      "id": 3984080444898818
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Generation seat — hihelloreid-chat (RC1-475: Haiku keeps the seat)",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "alias": "claude (anthropic)",
+                      "formula": "q0"
+                    },
+                    {
+                      "alias": "command (cohere)",
+                      "formula": "q1"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:trace.anthropic.request.hits{service:hihelloreid}.as_count()"
+                    },
+                    {
+                      "data_source": "metrics",
+                      "name": "q1",
+                      "query": "sum:trace.cohere.chat.hits{service:hihelloreid}.as_count()"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Model calls by arm",
+              "type": "timeseries"
+            },
+            "id": 3371461873842433
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "alias": "claude",
+                      "formula": "q0"
+                    },
+                    {
+                      "alias": "command",
+                      "formula": "q1"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "p50:trace.anthropic.request{service:hihelloreid}"
+                    },
+                    {
+                      "data_source": "metrics",
+                      "name": "q1",
+                      "query": "p50:trace.cohere.chat{service:hihelloreid}"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Latency p50 by arm (s) — APM, honest for unpaced traffic",
+              "type": "timeseries"
+            },
+            "id": 1841677767877448
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "formula": "default_zero(q0 / q1)"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:ml_obs.span.llm.total.tokens{ml_app:hihelloreid-chat} by {model_name}.as_count()"
+                    },
+                    {
+                      "data_source": "metrics",
+                      "name": "q1",
+                      "query": "sum:ml_obs.span{span_kind:llm,ml_app:hihelloreid-chat} by {model_name}.as_count()"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Tokens per call by model",
+              "type": "timeseries"
+            },
+            "id": 7184382137656115
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "custom_unit": "$",
+              "precision": 4,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "(q0 / 1000000000) / q1"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "sum",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:ml_obs.span.llm.total.cost{ml_app:hihelloreid-chat}.as_count()"
+                    },
+                    {
+                      "aggregator": "sum",
+                      "data_source": "metrics",
+                      "name": "q1",
+                      "query": "sum:ml_obs.span{span_kind:llm,ml_app:hihelloreid-chat,model_name:claude*}.as_count()"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Cost per answer — Claude arm",
+              "type": "query_value"
+            },
+            "id": 7566063598203089
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "llm_observability",
+                      "group_by": [
+                        {
+                          "facet": "@assessment",
+                          "limit": 10
+                        }
+                      ],
+                      "indexes": [
+                        "*"
+                      ],
+                      "name": "q0",
+                      "search": {
+                        "query": "@ml_app:hihelloreid-chat @assessment:*"
+                      }
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Judge verdicts by assessment — hallucination judge on prod ml_app",
+              "type": "timeseries"
+            },
+            "id": 4396554359024857
+          }
+        ]
+      },
+      "id": 4045525081165985
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Embedding seat — retrieval quality (RC1-473: OpenAI keeps the seat)",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "background_color": "transparent",
+              "content": "Gauges posted per eval run by `reid_basic/scripts/eval_retrieval.py --post-datadog` (23 golden questions, deterministic metadata ground truth, pool k=10). Arms: `embed_model:openai|cohere` × `rerank:on|off`. Rerank fixed the interference example but demotes deliberately-broad chunks; the Cohere hop costs ~+320 ms in `rag.retrieve`.",
+              "font_size": "14",
+              "has_padding": true,
+              "text_align": "left",
+              "type": "note"
+            },
+            "id": 3344131163899017
+          },
+          {
+            "definition": {
+              "precision": 3,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:bakeoff.retrieval.hit_at_3{embed_model:openai,rerank:off}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "hit@3 — openai",
+              "type": "query_value"
+            },
+            "id": 221003855159301
+          },
+          {
+            "definition": {
+              "precision": 3,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:bakeoff.retrieval.hit_at_3{embed_model:cohere,rerank:off}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "hit@3 — cohere",
+              "type": "query_value"
+            },
+            "id": 3561697448149123
+          },
+          {
+            "definition": {
+              "precision": 3,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:bakeoff.retrieval.hit_at_3{embed_model:openai,rerank:on}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "hit@3 — openai+rerank",
+              "type": "query_value"
+            },
+            "id": 7245834213678575
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:bakeoff.retrieval.mrr{*} by {embed_model,rerank}"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "MRR by arm",
+              "type": "timeseries"
+            },
+            "id": 6765767205575507
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "formula": "q0 / 1000000"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "avg",
+                        "metric": "@duration"
+                      },
+                      "data_source": "llm_observability",
+                      "group_by": [
+                        {
+                          "facet": "rerank",
+                          "limit": 10
+                        }
+                      ],
+                      "indexes": [
+                        "*"
+                      ],
+                      "name": "q0",
+                      "search": {
+                        "query": "@name:rag.retrieve @event_type:span"
+                      }
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "rag.retrieve latency by rerank (ms)",
+              "type": "timeseries"
+            },
+            "id": 3069626514313443
+          }
+        ]
+      },
+      "id": 4559027980277250
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Reviewer seat — pr-review-agent (RC1-474: Claude keeps the seat)",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "background_color": "transparent",
+              "content": "**The Command arm never reaches LLM Obs** — it ran through `pr_agent/evals/cohere.py` against the pinned 13-case subset, and both arms live in the eval store (`pr-review-20260930T023659.389030Z` Claude, `pr-review-20260930T025623.132938Z` Command). Claude: recall 10/10, categorisation 10/10, $0.0447/review. Command: 9/10, 8/10, unpriced (~$0.0716 illustrative), decoy precision 2/2 vs Claude 1/2 — but `tool_choice` unsupported (~9% prose answers) and nondeterministic `422 INVALID_TOOL_GENERATION`. The cost gap is a caching story: no prompt cache on Cohere, while Claude serves ~78% of context at 0.1× cache-read. Widgets below are the Claude production arm only.",
+              "font_size": "14",
+              "has_padding": true,
+              "text_align": "left",
+              "type": "note"
+            },
+            "id": 5880135060221358
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "custom_unit": "$",
+              "precision": 2,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "avg",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "p50:pr_agent.review.cost_usd{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Cost per review — Claude (p50)",
+              "type": "query_value"
+            },
+            "id": 924429112047169
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "formula": "q0 / 1000000000"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:ml_obs.span.llm.total.cost{ml_app:pr-review-agent}.as_count()"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Review spend over time — pr-review-agent",
+              "type": "timeseries"
+            },
+            "id": 977526405515157
+          }
+        ]
+      },
+      "id": 3643365792119308
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Flag state — RC1-476 (pending go/no-go)",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "background_color": "transparent",
+              "content": "The Datadog Feature Flags probe (RC1-476) proved a live flip can drive the Cohere arms (allocation on→off→on propagated at the poll interval), and the go/no-go rides the 1-week MFCR read due ~2026-10-07. If GO, this group gets real targeting/rollout widgets for the flags that would drive `CHAT_PROVIDER` and `COHERE_RERANK_ENABLED`; until then flag state is runtime state, exempt from drift scope (platform #102). Flags archive, never delete — name them deliberately.",
+              "font_size": "14",
+              "has_padding": true,
+              "text_align": "left",
+              "type": "note"
+            },
+            "id": 6392633726875431
+          }
+        ]
+      },
+      "id": 6984620489899233
+    }
+  ]
+}

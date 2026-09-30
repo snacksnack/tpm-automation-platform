@@ -463,6 +463,17 @@ and stay there: the webhook payload template and the monitor routing are that
 service's configuration, already code, already reviewed. They are the reason
 `@webhook-incident-summarizer` appears in the monitor messages exported here.
 
+Also out of scope, by decision (RC1-476): **Feature Flags state**. Flag
+definitions, targeting allocations, and per-environment enable/disable live
+in Datadog's UI/API (`/api/v2/feature-flags`) and are runtime state in the
+same sense as `options.silenced` above — flipping an arm is the point of a
+flag, so exporting flag state here would read as drift every time one moves.
+The flags themselves are few and deliberately named (`rc1-476-probe`; flags
+archive rather than delete, so no junk names). If a flag ever becomes
+load-bearing configuration rather than an experiment arm, that is the moment
+it graduates into this repo's scope and the drift detector's — a human
+commits it, per the no-auto-sync rule.
+
 Also out of scope: the Notebooks and RUM application configs, and the GitHub
 integration tile's repository filter table, which has no API. Likewise a
 metric's own configuration — the percentile aggregation switched on for the

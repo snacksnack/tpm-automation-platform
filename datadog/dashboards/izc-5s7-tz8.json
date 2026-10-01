@@ -1,5 +1,6 @@
 {
   "description": "CI Visibility across the four delivery repos: pipeline outcomes, Fly deploys, durations, and the GitHub event stream. Hand-created for RC1-347 under the RC1-333 GitHub->Datadog epic. Read the banner before trusting any duration number. Security-posture group added under RC1-359 (own daily collector; see docs/delivery/code-security.md).",
+  "experience_type": "default",
   "id": "izc-5s7-tz8",
   "layout_type": "ordered",
   "notify_list": [],

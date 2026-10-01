@@ -1,5 +1,6 @@
 {
   "description": "One pane for the fleet's billed model calls: the fleet-reliability SLO with its hits/errors inputs, traffic and latency by service, and LLM Obs cost/tokens by ml_app and by model. Eight apps in service plus two dormant RC1-322 smoke-test leftovers. Reliability counts LLM Obs traces per production run across every ml_app (RC1-407, was APM and missed the concert workflow); only Traffic & latency is still APM by $service — see the header note. Hand-created (RC1-346). Cost metrics are nanodollars: formulas divide by 1e9 and pin the unit, because Datadog's own nanodollar metadata would otherwise apply the conversion twice (RC1-405). Cost, tokens and caching now also filter on $service (RC1-411): corpus sweeps and measure_pr.py runs report under the same ml_app as production traffic as service:evals and service:dry-run, so a fleet total that does not exclude them mixes measurement with billed production work.",
+  "experience_type": "default",
   "id": "bwm-uny-qqs",
   "layout_type": "ordered",
   "notify_list": null,

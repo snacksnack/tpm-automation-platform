@@ -1,5 +1,6 @@
 {
   "description": "Both public sites on one pane: availability SLOs, synthetic uptime/render checks, SSL expiry, and RUM. Hand-created (like the RC1-342 SLOs) — covers RC1-325, RC1-340–344.",
+  "experience_type": "default",
   "id": "aa2-k8g-ya8",
   "layout_type": "ordered",
   "notify_list": null,

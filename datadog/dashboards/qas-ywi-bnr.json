@@ -1,5 +1,6 @@
 {
   "description": "The estate watching its own meters: month-to-date usage vs ceilings (LLM Obs free tier, synthetics budget, custom metrics), trend lines where a dead lane or runaway meter shows first, and every monitor in the account. Hand-created (RC1-348).",
+  "experience_type": "default",
   "id": "qas-ywi-bnr",
   "layout_type": "ordered",
   "notify_list": null,

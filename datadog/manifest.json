@@ -24,6 +24,10 @@
     {
       "id": "qas-ywi-bnr",
       "why": "RC1-348 usage & cost — the estate watching its own Datadog bill"
+    },
+    {
+      "id": "f2u-aws-zip",
+      "why": "RC1-477 model bake-off — Cohere vs. incumbent arms across the three seats; retrieval gauges from reid_basic eval_retrieval.py --post-datadog"
     }
   ],
   "monitors": [

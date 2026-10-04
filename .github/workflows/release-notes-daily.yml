@@ -1,0 +1,66 @@
+# Yesterday's release notes → Confluence, once a day (RC1-497).
+#
+# One entry per service per day it deployed, on that service's page under
+# "Release Notes" in the RC1 space, then one #releases message linking the
+# pages that changed. Reads successful deploy runs only, so a merge whose
+# deploy failed is not reported as shipped.
+#
+# This is the one scheduled job here that writes outside Datadog metrics. It
+# publishes a report; it does not sync infrastructure state, which is what
+# the no-auto-sync rule is about.
+#
+# A re-run is safe: the day's entry is replaced, and a page that already says
+# the same thing is left alone and not re-announced. To backfill a day, run
+# it by hand with a date.
+name: Release notes
+
+on:
+  schedule:
+    # A "day" is a day in America/New_York. 05:23 UTC is past local midnight
+    # in both EST (05:00) and EDT (04:00), so "yesterday" is always complete.
+    - cron: "23 5 * * *"
+  workflow_dispatch:
+    inputs:
+      date:
+        description: Local day to write, YYYY-MM-DD (default yesterday)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Write the day's entries
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          # One Atlassian API token serves Jira and Confluence.
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          SLACK_RELEASES_WEBHOOK_URL: ${{ secrets.SLACK_RELEASES_WEBHOOK_URL }}
+          DAY: ${{ inputs.date }}
+        run: |
+          set -o pipefail
+          # A skipped job looks like a passing one in the run list (RC1-378),
+          # so say so where it can be seen.
+          if [ -z "$JIRA_EMAIL" ] || [ -z "$JIRA_API_TOKEN" ]; then
+            echo "::warning title=Release notes skipped::JIRA_EMAIL / JIRA_API_TOKEN not set — nothing written today."
+            echo "Set both repo secrets to enable the daily release notes." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          python -m kpi.release_notes digest ${DAY:+--date "$DAY"} | tee -a "$GITHUB_STEP_SUMMARY"

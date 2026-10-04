@@ -35,6 +35,12 @@ class Settings(BaseSettings):
     # Slack (drift/notify.py)
     slack_webhook_url: str | None = None
 
+    # Release notes (kpi/release_notes.py, RC1-497). A second incoming webhook
+    # because a webhook is bound to one channel, and this one is #releases.
+    # The GitHub token only buys rate limit: every repo it reads is public.
+    slack_releases_webhook_url: str | None = None
+    github_token: str | None = None
+
     # Grafana Cloud stack (kpi/dashboards.py --push, RC1-318). The URL is not a
     # secret; the service-account token is, and it is NOT a setting — it lives
     # in ~/.zshrc as GRAFANA_TOKEN, the same single-home rule as

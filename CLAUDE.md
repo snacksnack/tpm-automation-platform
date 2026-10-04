@@ -100,9 +100,10 @@ Run everything through `uv run`; `.python-version` pins 3.12.
   `RC1-NNN: what changed`, a short body, no Co-Authored-By trailer. Claude opens
   the PR; Reid merges.
 - Every story leaves a record in `docs/` with its numbers.
-- Six Actions workflows: `ci.yml` (ruff + pytest, every PR and push to main);
-  `fly-deploy.yml` (push to main → deploy → gate on three consecutive healthy
-  `/healthz` reads; a stopped machine reports "warning", not "critical");
+- Eight Actions workflows: `ci.yml` (ruff + pytest, every PR and push to main);
+  `fly-deploy.yml` (push to main → deploy → gate on three healthy `/healthz`
+  reads; a stopped machine reports "warning", not "critical");
   `drift-daily.yml` 12:17 UTC; `security-posture.yml` 11:41; `datadog-drift.yml`
-  13:23 + any PR touching `datadog/**`; `scorecard-daily.yml` 13:47. Every
+  13:23 + any PR touching `datadog/**`; `scorecard-daily.yml` 13:47;
+  `release-notes-daily.yml` 05:23; `release-notify.yml` (reusable). Every
   production path is Actions-driven; Heroku auto-deploy stays off.

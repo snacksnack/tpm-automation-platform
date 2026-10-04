@@ -1,0 +1,79 @@
+# Announce a deploy in #releases (RC1-497). Reusable: a deploy workflow in any
+# estate repo calls this as a job that `needs` its deploy job, so it runs only
+# after the deploy succeeded:
+#
+#   release-notify:
+#     needs: deploy
+#     permissions: { contents: read, actions: read, pull-requests: read }
+#     uses: snacksnack/tpm-automation-platform/.github/workflows/release-notify.yml@main
+#     with: { service: my-service, workflow: fly-deploy.yml }
+#     secrets:
+#       SLACK_RELEASES_WEBHOOK_URL: ${{ secrets.SLACK_RELEASES_WEBHOOK_URL }}
+#
+# The logic lives in kpi/release_notes.py and is read from this repo's main,
+# so a change to the message is one PR here, not one per calling repo.
+#
+# This job never fails. The deploy is already live when it starts, and a red
+# run would say otherwise — the DORA close step in the calling workflow reads
+# run conclusions. A missing secret or a failed post is a warning annotation.
+name: Release notify
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        description: The deployed service's name, as it should read in Slack
+        required: true
+        type: string
+      workflow:
+        description: File name of the calling deploy workflow (e.g. fly-deploy.yml)
+        required: true
+        type: string
+    secrets:
+      SLACK_RELEASES_WEBHOOK_URL:
+        required: false
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+jobs:
+  notify:
+    name: Post to #releases
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: snacksnack/tpm-automation-platform
+          ref: main
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Not `pip install -e .`: the module needs two packages, and the full
+      # install would add ddtrace and a minute to every deploy in the estate.
+      - name: Install dependencies
+        run: pip install httpx pydantic-settings
+
+      - name: Announce the deploy
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SLACK_RELEASES_WEBHOOK_URL: ${{ secrets.SLACK_RELEASES_WEBHOOK_URL }}
+          SERVICE: ${{ inputs.service }}
+          WORKFLOW: ${{ inputs.workflow }}
+        run: |
+          if [ -z "$SLACK_RELEASES_WEBHOOK_URL" ]; then
+            echo "::warning title=Release notify skipped::SLACK_RELEASES_WEBHOOK_URL not set — this deploy was not announced."
+            exit 0
+          fi
+          python -m kpi.release_notes notify \
+            --repo "${GITHUB_REPOSITORY#*/}" \
+            --service "$SERVICE" \
+            --workflow "$WORKFLOW" \
+            --sha "$GITHUB_SHA" \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            || echo "::warning title=Release notify failed::The deploy is live; its #releases message was not posted. The daily digest will still record it."

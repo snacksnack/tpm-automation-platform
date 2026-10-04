@@ -217,6 +217,14 @@ def test_a_service_with_no_deploys_that_day_gets_no_entry():
         assert rn.collect_day(http, PATH, DAY) is None
 
 
+def test_a_day_whose_deploys_carried_no_merged_pr_gets_no_entry():
+    with _github(
+        runs=[_run(2, "d1", "2026-10-01T15:05:00Z"), _run(1, "before", "2026-09-30T15:00:00Z")],
+        compare={"before...d1": ["d1"]},
+    ) as http:
+        assert rn.collect_day(http, PATH, DAY) is None
+
+
 def test_a_merge_whose_deploy_failed_is_not_reported_as_shipped():
     # PR 2 merged on the day but its deploy failed, so its run is not in the
     # success list and the day's range ends at d1. It ships the day a later

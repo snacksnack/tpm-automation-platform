@@ -64,9 +64,18 @@ class DeployPath:
     workflow: str  # the deploy workflow's file name
 
 
-#: The deploy paths the digest covers. The pilot only; rolling out to another
-#: repo is one row here plus the `release-notify.yml` call in its workflow.
-PATHS = (DeployPath("tpm-automation-platform", "tpm-drift-detector", "fly-deploy.yml"),)
+#: The deploy paths the digest covers. Adding a repo is one row here plus the
+#: `release-notify.yml` call in its deploy workflow. The service is the name
+#: the deploy reports to DORA; the summarizer's one workflow ships two DORA
+#: services and gets one page, under the backend's name.
+PATHS = (
+    DeployPath("tpm-automation-platform", "tpm-drift-detector", "fly-deploy.yml"),
+    DeployPath("pr_agent", "pr-review-agent-snacksnack", "fly-deploy.yml"),
+    DeployPath("launch-planner-agent", "launch-planner-agent", "fly-deploy.yml"),
+    DeployPath("reid_basic", "hihelloreid", "heroku-release.yml"),
+    DeployPath("ai-incident-summarizer", "incident-summarizer", "deploy.yml"),
+    DeployPath("stale-ticket-bot", "stale-ticket-bot", "deploy.yml"),
+)
 
 
 @dataclass(frozen=True)

@@ -79,14 +79,46 @@ Not yet verified: the Slack posts and the reusable workflow, which need the
 | `SLACK_RELEASES_WEBHOOK_URL` | this one, and every repo that calls `release-notify.yml` | both messages |
 | `JIRA_EMAIL`, `JIRA_API_TOKEN` | this one | the digest (one Atlassian token serves Jira and Confluence) |
 
-## Rolling out to another repo
+## Rollout
 
-1. Add its row to `PATHS` in `kpi/release_notes.py` (the digest).
-2. Add the `release-notify` job to its deploy workflow and set the webhook
-   secret on the repo (the per-deploy message).
+| repo | service (page and message name) | deploy workflow | digest | per-deploy message |
+|---|---|---|---|---|
+| tpm-automation-platform | tpm-drift-detector | `fly-deploy.yml` | live | live |
+| pr_agent | pr-review-agent-snacksnack | `fly-deploy.yml` | row added | PR in that repo |
+| launch-planner-agent | launch-planner-agent | `fly-deploy.yml` | row added | PR in that repo |
+| reid_basic | hihelloreid | `heroku-release.yml` | row added | PR in that repo |
+| ai-incident-summarizer | incident-summarizer | `deploy.yml` | row added | PR in that repo |
+| stale-ticket-bot | stale-ticket-bot | `deploy.yml` | row added | PR in that repo |
+| school-search | | `fly-deploy.yml` | not yet | not yet |
+| agent-evals | | `release.yml` | not yet | not yet |
 
-Every deploying repo is public except school-search; the digest reads with
-the default Actions token, which cannot see a private repo, so that one needs
-a token before its row is added. agent-evals releases on a tag, not on
-`main`; `successful_runs` filters on the branch and needs a small change
-there, which is also where its GitHub Release text would be written.
+The five new rows were dry-run against real history for 09-25 through 10-03
+before merging: every repo read, PRs and stories resolved (09-26, the busiest
+day, was 14 deploys and 14 PRs across all six).
+
+Two things that differ by repo:
+
+- **reid_basic** deploys from a `workflow_run` trigger, where `GITHUB_SHA` is
+  main's tip when the run starts, not the sha that shipped. The reusable
+  workflow reads `github.event.workflow_run.head_sha` when it is there.
+- **ai-incident-summarizer** ships two DORA services (backend and dashboard)
+  from one workflow. It gets one page and one message, under the backend's
+  name, sent after both jobs pass.
+
+Still out:
+
+- **school-search** is private. The digest reads with the default Actions
+  token, which cannot see another private repo; it needs a token first.
+- **agent-evals** releases on a tag, not on `main`. `successful_runs` filters
+  on the branch and needs a small change there, which is also where its
+  GitHub Release text would be written.
+
+Adding a repo: one row in `PATHS`, the `release-notify` job in its deploy
+workflow, and `SLACK_RELEASES_WEBHOOK_URL` set on the repo.
+
+## A coupling to know about
+
+Every calling repo runs `release-notify.yml@main`. A change here that breaks
+the workflow's inputs makes every caller's deploy workflow invalid, and an
+invalid workflow does not start. Keep `service` and `workflow` as the only
+required inputs; add anything new as optional.

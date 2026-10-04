@@ -64,6 +64,10 @@ jobs:
           SLACK_RELEASES_WEBHOOK_URL: ${{ secrets.SLACK_RELEASES_WEBHOOK_URL }}
           SERVICE: ${{ inputs.service }}
           WORKFLOW: ${{ inputs.workflow }}
+          # A workflow_run-triggered deploy (reid_basic's Heroku Release) ships
+          # the sha CI ran on; GITHUB_SHA there is whatever main's tip is by
+          # the time the run starts.
+          SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
           if [ -z "$SLACK_RELEASES_WEBHOOK_URL" ]; then
             echo "::warning title=Release notify skipped::SLACK_RELEASES_WEBHOOK_URL not set — this deploy was not announced."
@@ -73,7 +77,7 @@ jobs:
             --repo "${GITHUB_REPOSITORY#*/}" \
             --service "$SERVICE" \
             --workflow "$WORKFLOW" \
-            --sha "$GITHUB_SHA" \
+            --sha "$SHA" \
             --run-id "$GITHUB_RUN_ID" \
             --run-attempt "$GITHUB_RUN_ATTEMPT" \
             || echo "::warning title=Release notify failed::The deploy is live; its #releases message was not posted. The daily digest will still record it."

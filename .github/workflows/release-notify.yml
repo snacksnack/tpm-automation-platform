@@ -67,7 +67,8 @@ jobs:
           # A workflow_run-triggered deploy (reid_basic's Heroku Release) ships
           # the sha CI ran on; GITHUB_SHA there is whatever main's tip is by
           # the time the run starts.
-          SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          # A tag-triggered release (agent-evals) is named by its tag.
+          SHA: ${{ github.event.workflow_run.head_sha || (github.ref_type == 'tag' && github.ref_name) || github.sha }}
         run: |
           if [ -z "$SLACK_RELEASES_WEBHOOK_URL" ]; then
             echo "::warning title=Release notify skipped::SLACK_RELEASES_WEBHOOK_URL not set — this deploy was not announced."

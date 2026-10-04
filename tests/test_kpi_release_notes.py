@@ -33,8 +33,8 @@ def _pr(number: int, branch: str, title: str, merged_at: str | None, base: str =
     }
 
 
-def _run(run_id: int, sha: str, finished: str) -> dict:
-    return {"id": run_id, "head_sha": sha, "updated_at": finished}
+def _run(run_id: int, sha: str, finished: str, branch: str = "main") -> dict:
+    return {"id": run_id, "head_sha": sha, "head_branch": branch, "updated_at": finished}
 
 
 def _github(
@@ -43,6 +43,7 @@ def _github(
     compare: dict[str, list[str]] | None = None,
     pulls: dict[str, list[dict]] | None = None,
     attempts: dict[tuple[int, int], str] | None = None,
+    tags: bool = False,
 ) -> httpx.Client:
     """`runs` is what the API returns for status=success, newest first."""
 
@@ -50,7 +51,8 @@ def _github(
         path = request.url.path
         if path == f"{REPO}/actions/workflows/deploy.yml/runs":
             assert request.url.params["status"] == "success"
-            assert request.url.params["branch"] == "main"
+            # A tag-released path must not be filtered to the default branch.
+            assert request.url.params.get("branch") == (None if tags else "main")
             return httpx.Response(200, json={"workflow_runs": runs})
         if path.startswith(f"{REPO}/compare/"):
             shas = (compare or {})[path.removeprefix(f"{REPO}/compare/")]
@@ -174,6 +176,54 @@ def test_a_deploy_with_no_merged_pr_posts_nothing():
         runs=[_run(10, "prev", "2026-10-01T09:00:00Z")], compare={"prev...head": ["head"]}
     ) as http:
         assert rn.notify(http, PATH, sha="head", run_id=11, run_attempt=1) is None
+
+
+# --- a tag-released path ---------------------------------------------------------------------
+
+TAGGED = rn.DeployPath("repo", "lib", "deploy.yml", tags=True)
+
+
+def test_a_release_is_ranged_and_named_by_tag_not_by_sha():
+    # The run's head_sha is deliberately useless here: for an annotated tag it
+    # can be the tag object, so the tag name is what gets compared and linked.
+    pr = _pr(40, "rc1-9-x", "RC1-9: x", "2026-10-01T10:00:00Z")
+    with _github(
+        runs=[_run(10, "tagobj1", "2026-09-22T20:00:00Z", branch="v0.6.2")],
+        compare={"v0.6.2...v0.6.3": ["c1"]},
+        pulls={"c1": [pr]},
+        tags=True,
+    ) as http:
+        text = rn.notify(http, TAGGED, sha="v0.6.3", run_id=11, run_attempt=1)
+    first, second = text.splitlines()
+    assert (
+        first == f"*lib* released <https://github.com/{rn.OWNER}/repo/releases/tag/v0.6.3|v0.6.3>"
+    )
+    assert "#40" in second
+
+
+def test_a_release_day_entry_links_the_tag():
+    pr = _pr(40, "rc1-9-x", "RC1-9: x", "2026-10-01T10:00:00Z")
+    with _github(
+        runs=[
+            _run(11, "tagobj2", "2026-10-01T15:00:00Z", branch="v0.6.3"),
+            _run(10, "tagobj1", "2026-09-22T20:00:00Z", branch="v0.6.2"),
+        ],
+        compare={"v0.6.2...v0.6.3": ["c1"]},
+        pulls={"c1": [pr]},
+        tags=True,
+    ) as http:
+        entry = rn.collect_day(http, TAGGED, date(2026, 10, 1))
+    assert entry.head_sha == "v0.6.3"
+    assert '<p>1 release, ending at <a href="https://github.com/' in rn.render_section(entry)
+    assert '/releases/tag/v0.6.3">v0.6.3</a>' in rn.render_section(entry)
+
+
+def test_notify_uses_the_known_path_for_a_repo_the_digest_covers(monkeypatch):
+    seen: list[rn.DeployPath] = []
+    monkeypatch.setattr(rn, "notify", lambda http, path, **k: seen.append(path))
+    argv = ["notify", "--repo", "agent-evals", "--service", "agent-evals"]
+    assert rn.main([*argv, "--workflow", "release.yml", "--sha", "v1", "--run-id", "1"]) == 0
+    assert seen[0].tags is True
 
 
 # --- collect_day -----------------------------------------------------------------------------

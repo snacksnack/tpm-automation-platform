@@ -62,6 +62,9 @@ class DeployPath:
     repo: str
     service: str
     workflow: str  # the deploy workflow's file name
+    #: True for a library that releases on a pushed `v*` tag instead of
+    #: deploying from the default branch. Its runs are identified by tag name.
+    tags: bool = False
 
 
 #: The deploy paths the digest covers. Adding a repo is one row here plus the
@@ -75,6 +78,7 @@ PATHS = (
     DeployPath("reid_basic", "hihelloreid", "heroku-release.yml"),
     DeployPath("ai-incident-summarizer", "incident-summarizer", "deploy.yml"),
     DeployPath("stale-ticket-bot", "stale-ticket-bot", "deploy.yml"),
+    DeployPath("agent-evals", "agent-evals", "release.yml", tags=True),
 )
 
 
@@ -129,19 +133,27 @@ def story_key(branch: str, title: str) -> str | None:
     return None
 
 
-def successful_runs(http: httpx.Client, repo: str, workflow: str) -> list[Run]:
-    """Successful runs of one deploy workflow on the default branch, newest
-    first. A failed or in-progress run is never in this list, which is what
-    keeps an unshipped merge out of the notes."""
+def successful_runs(http: httpx.Client, path: DeployPath) -> list[Run]:
+    """Successful runs of one deploy workflow, newest first. A failed or
+    in-progress run is never in this list, which is what keeps an unshipped
+    merge out of the notes.
+
+    A tag-released path is not filtered by branch (a tag push has none), and
+    its runs carry the tag name where the others carry a sha: GitHub resolves
+    a tag anywhere it takes a commit, and for an annotated tag the run's own
+    sha can be the tag object, which the compare endpoint cannot walk.
+    """
+    params: dict[str, str | int] = {"status": "success", "per_page": 50}
+    if not path.tags:
+        params["branch"] = DEFAULT_BRANCH
     resp = http.get(
-        f"/repos/{OWNER}/{repo}/actions/workflows/{workflow}/runs",
-        params={"branch": DEFAULT_BRANCH, "status": "success", "per_page": 50},
+        f"/repos/{OWNER}/{path.repo}/actions/workflows/{path.workflow}/runs", params=params
     )
     resp.raise_for_status()
     return [
         Run(
             id=r["id"],
-            sha=r["head_sha"],
+            sha=r["head_branch"] if path.tags else r["head_sha"],
             finished_at=datetime.fromisoformat(r["updated_at"].replace("Z", "+00:00")),
         )
         for r in resp.json()["workflow_runs"]
@@ -207,9 +219,18 @@ def _story_url(story: str) -> str:
     return f"{settings.jira_base_url}/browse/{story}"
 
 
+def shipped_ref(path: DeployPath, ref: str) -> tuple[str, str]:
+    """(url, label) for what a deploy shipped: the commit, or the tag."""
+    repo_url = f"https://github.com/{OWNER}/{path.repo}"
+    if path.tags:
+        return f"{repo_url}/releases/tag/{ref}", ref
+    return f"{repo_url}/commit/{ref}", ref[:8]
+
+
 def render_deploy_message(path: DeployPath, sha: str, prs: list[PullRequest]) -> str:
-    commit_url = f"https://github.com/{OWNER}/{path.repo}/commit/{sha}"
-    lines = [f"*{path.service}* deployed <{commit_url}|{sha[:8]}>"]
+    url, label = shipped_ref(path, sha)
+    verb = "released" if path.tags else "deployed"
+    lines = [f"*{path.service}* {verb} <{url}|{label}>"]
     for pr in prs:
         line = f"• <{pr.url}|#{pr.number}> {_slack_text(pr.title)}"
         if pr.story:
@@ -233,7 +254,7 @@ def notify(
         return None
     # This run is still in progress, so it is not in the list; the filter
     # covers a re-run, whose id already has a completed attempt behind it.
-    previous = [r for r in successful_runs(http, path.repo, path.workflow) if r.id != run_id]
+    previous = [r for r in successful_runs(http, path) if r.id != run_id]
     base = previous[0].sha if previous else None
     prs = shipped_prs(http, path.repo, base, sha)
     if not prs:
@@ -254,7 +275,7 @@ def collect_day(http: httpx.Client, path: DeployPath, day: date) -> DayEntry | N
     nothing. The range runs from the last deploy before the day to the last
     deploy of the day, so the day's entry is the day's net change."""
     start, end = day_window(day)
-    runs = successful_runs(http, path.repo, path.workflow)
+    runs = successful_runs(http, path)
     today = [r for r in runs if start <= r.finished_at < end]
     if not today:
         return None
@@ -269,8 +290,9 @@ def collect_day(http: httpx.Client, path: DeployPath, day: date) -> DayEntry | N
 def render_section(entry: DayEntry) -> str:
     """One day as Confluence storage XHTML. The `<h2>` holds the ISO date and
     nothing else: it is the key `merge_day` finds the section by."""
-    commit_url = f"https://github.com/{OWNER}/{entry.path.repo}/commit/{entry.head_sha}"
-    deploys = "1 deploy" if entry.deploys == 1 else f"{entry.deploys} deploys"
+    url, label = shipped_ref(entry.path, entry.head_sha)
+    noun = "release" if entry.path.tags else "deploy"
+    deploys = f"1 {noun}" if entry.deploys == 1 else f"{entry.deploys} {noun}s"
     items = []
     for pr in entry.prs:
         item = f'<a href="{html.escape(pr.url)}">#{pr.number}</a> {html.escape(pr.title)}'
@@ -279,7 +301,7 @@ def render_section(entry: DayEntry) -> str:
         items.append(f"<li>{item}</li>")
     return (
         f"<h2>{entry.day.isoformat()}</h2>"
-        f'<p>{deploys}, ending at <a href="{html.escape(commit_url)}">{entry.head_sha[:8]}</a>.</p>'
+        f'<p>{deploys}, ending at <a href="{html.escape(url)}">{label}</a>.</p>'
         f"<ul>{''.join(items)}</ul>"
     )
 
@@ -401,7 +423,12 @@ def _describe(e: Exception) -> str:
 
 
 def _notify_main(args: argparse.Namespace) -> int:
-    path = DeployPath(args.repo, args.service, args.workflow)
+    # A path the digest knows carries its own settings (a tag-released repo);
+    # any other caller is an ordinary deploy from the default branch.
+    path = next(
+        (p for p in PATHS if (p.repo, p.workflow) == (args.repo, args.workflow)),
+        DeployPath(args.repo, args.service, args.workflow),
+    )
     with github_client(settings.github_token) as http:
         text = notify(http, path, sha=args.sha, run_id=args.run_id, run_attempt=args.run_attempt)
     if text is None:
@@ -484,7 +511,7 @@ def main(argv: list[str] | None = None) -> int:
     n.add_argument("--repo", required=True)
     n.add_argument("--service", required=True)
     n.add_argument("--workflow", required=True, help="the deploy workflow's file name")
-    n.add_argument("--sha", required=True)
+    n.add_argument("--sha", required=True, help="the deployed sha, or the tag for a release")
     n.add_argument("--run-id", required=True, type=int)
     n.add_argument("--run-attempt", type=int, default=1)
     n.add_argument("--dry-run", action="store_true", help="print the message; do not post")

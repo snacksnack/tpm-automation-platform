@@ -69,8 +69,10 @@ Confluence returned the stored body byte-for-byte, which is what the
 "already current" check depends on. The 09-29 entry is the 00:27 UTC deploy
 of 09-30: the New York day boundary doing its job.
 
-Not yet verified: the Slack posts and the reusable workflow, which need the
-`#releases` webhook and a deploy from `main`.
+The Slack posts and the reusable workflow were verified the same day by the
+merge of the pilot PR itself (#105, deploy run 37201391018), and the digest
+from Actions by a manual run for 10-04 (37201672301) and a repeat that
+reported "already current" and posted nothing (37201711980).
 
 ## Secrets
 
@@ -81,22 +83,23 @@ Not yet verified: the Slack posts and the reusable workflow, which need the
 
 ## Rollout
 
-| repo | service (page and message name) | deploy workflow | digest | per-deploy message |
-|---|---|---|---|---|
-| tpm-automation-platform | tpm-drift-detector | `fly-deploy.yml` | live | live |
-| pr_agent | pr-review-agent-snacksnack | `fly-deploy.yml` | row added | PR in that repo |
-| launch-planner-agent | launch-planner-agent | `fly-deploy.yml` | row added | PR in that repo |
-| reid_basic | hihelloreid | `heroku-release.yml` | row added | PR in that repo |
-| ai-incident-summarizer | incident-summarizer | `deploy.yml` | row added | PR in that repo |
-| stale-ticket-bot | stale-ticket-bot | `deploy.yml` | row added | PR in that repo |
-| school-search | | `fly-deploy.yml` | not yet | not yet |
-| agent-evals | | `release.yml` | not yet | not yet |
+| repo | service (page and message name) | deploy workflow | state |
+|---|---|---|---|
+| tpm-automation-platform | tpm-drift-detector | `fly-deploy.yml` | live 10-04 |
+| pr_agent | pr-review-agent-snacksnack | `fly-deploy.yml` | live 10-04 |
+| launch-planner-agent | launch-planner-agent | `fly-deploy.yml` | live 10-04 |
+| reid_basic | hihelloreid | `heroku-release.yml` | live 10-04 |
+| ai-incident-summarizer | incident-summarizer | `deploy.yml` | live 10-04 |
+| stale-ticket-bot | stale-ticket-bot | `deploy.yml` | live 10-04 |
+| agent-evals | agent-evals | `release.yml` (tag) | wired; first message at the next tag |
+| school-search | | `fly-deploy.yml` | left out by decision (10-04) |
 
-The five new rows were dry-run against real history for 09-25 through 10-03
-before merging: every repo read, PRs and stories resolved (09-26, the busiest
-day, was 14 deploys and 14 PRs across all six).
+"Live" means the repo's own rollout PR deployed and its message arrived in
+`#releases`. The rows were dry-run against real history for 09-25 through
+10-03 first: every repo read, PRs and stories resolved (09-26, the busiest
+day, was 14 deploys and 14 PRs across six repos).
 
-Two things that differ by repo:
+Three things that differ by repo:
 
 - **reid_basic** deploys from a `workflow_run` trigger, where `GITHUB_SHA` is
   main's tip when the run starts, not the sha that shipped. The reusable
@@ -104,14 +107,17 @@ Two things that differ by repo:
 - **ai-incident-summarizer** ships two DORA services (backend and dashboard)
   from one workflow. It gets one page and one message, under the backend's
   name, sent after both jobs pass.
+- **agent-evals** is a library: a pushed `v*` tag is the release. Its row is
+  `tags=True`, which drops the branch filter and identifies each run by tag
+  name instead of sha, so the range is `v0.6.2...v0.6.3`. The tag name is
+  used because an annotated tag's run sha can be the tag object, which the
+  compare endpoint cannot walk; checked live, `v0.6.1...v0.6.2` (v0.6.1 is
+  annotated) returns the five PRs that release carried. Its message reads
+  "released" and links the tag. Its `release.yml` also creates the GitHub
+  Release with GitHub's generated notes, the same PR list in GitHub's format.
 
-Still out:
-
-- **school-search** is private. The digest reads with the default Actions
-  token, which cannot see another private repo; it needs a token first.
-- **agent-evals** releases on a tag, not on `main`. `successful_runs` filters
-  on the branch and needs a small change there, which is also where its
-  GitHub Release text would be written.
+**school-search** stays out. It is private, and the digest reads with the
+default Actions token, which cannot see another private repo.
 
 Adding a repo: one row in `PATHS`, the `release-notify` job in its deploy
 workflow, and `SLACK_RELEASES_WEBHOOK_URL` set on the repo.

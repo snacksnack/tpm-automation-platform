@@ -1,10 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  The KPI program's weekly brief: scripts/kpi_weekly.sh Monday 08:00 local —
+  The KPI program's weekly brief: scripts/kpi_weekly.sh Monday 10:30 local —
   narrate both programs from the week's readings, archive to kpi_briefs, post
-  to Slack (RC1-306). An hour after com.reidcollins.kpi-daily so Monday's
-  readings land first; a missed Monday fires at wake, same as the daily job.
+  to Slack (RC1-306). An hour after the weekly eval sweep starts (09:30,
+  com.hihelloreid.agent-evals.weekly) so the brief reports this Monday's runs
+  (RC1-498); the script re-reads the eval store itself and waits for a sweep
+  that is mid-run, so the hour is a courtesy, not the guarantee. A missed
+  Monday fires at wake, same as the daily job.
+
+  After changing the schedule, reload it:
+    launchctl unload ~/Library/LaunchAgents/com.reidcollins.kpi-weekly.plist
+    cp scripts/launchd/com.reidcollins.kpi-weekly.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.reidcollins.kpi-weekly.plist
 
   Install (deliberate — it posts to Slack every week):
     cp scripts/launchd/com.reidcollins.kpi-weekly.plist ~/Library/LaunchAgents/
@@ -32,9 +40,9 @@
     <key>Weekday</key>
     <integer>1</integer>
     <key>Hour</key>
-    <integer>8</integer>
+    <integer>10</integer>
     <key>Minute</key>
-    <integer>0</integer>
+    <integer>30</integer>
   </dict>
   <key>StandardOutPath</key>
   <string>/Users/reidcollins/programming/personal/tpm-automation-platform/data/kpi-sim/weekly.log</string>

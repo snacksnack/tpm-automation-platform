@@ -14,8 +14,10 @@ because that question has exactly two halves:
   scorable cases; program-level, the *minimum* across billed subjects. The
   minimum, not the mean: one bad system is a bad answer to "is the output
   good", no matter how the other five average out. Its so-what is a decision
-  the sponsor pre-agreed: two consecutive readings under 80 % freeze prompt
-  changes on that repo.
+  the sponsor pre-agreed: a subject under 80 % on two consecutive runs
+  freezes prompt changes on that repo. Runs, not daily readings: the same
+  run re-read tomorrow is not a second measurement (RC1-498,
+  `docs/kpi/gated-pass-rate.md`).
 - **`real-cost-per-run`** — billed dollars (the org's Anthropic cost report
   plus the store's Heroku invoice, prorated) over the runs actually taken.
   Until RC1-308 the cost half was a *construction* — model spend from a

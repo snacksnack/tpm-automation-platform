@@ -96,6 +96,11 @@ def _previous_pass_rate(rows: list[EvalRunRow], latest: EvalRunRow) -> float | N
     return next((rate for r in earlier if (rate := _pass_rate(r)) is not None), None)
 
 
+def _previous_run_was_under(rows: list[EvalRunRow], latest: EvalRunRow) -> bool:
+    previous = _previous_pass_rate(rows, latest)
+    return previous is not None and previous < PASS_RATE_FLOOR
+
+
 def gated_pass_rate(program: Program, series: list[ProgramSnapshot]) -> Reading:
     """The minimum pass rate across billed subjects, tripped by a subject
     under the floor on two consecutive *runs*.
@@ -128,10 +133,7 @@ def gated_pass_rate(program: Program, series: list[ProgramSnapshot]) -> Reading:
     age = (snap.sim_date - latest[worst].started_at.date()).days
     state, reason = _freshness(age, f"{worst}'s latest run is {age} days old")
     under = sorted(s for s, v in rates.items() if v < PASS_RATE_FLOOR)
-    repeat = [
-        s for s in under
-        if (prev := _previous_pass_rate(billed, latest[s])) is not None and prev < PASS_RATE_FLOOR
-    ]
+    repeat = [s for s in under if _previous_run_was_under(billed, latest[s])]
     # Each rate carries its case count: 33 % of three cases is one noisy
     # check away from 67 %, and reads nothing like 33 % of thirty.
     detail = "; ".join(

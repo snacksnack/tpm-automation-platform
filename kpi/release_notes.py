@@ -133,30 +133,50 @@ def story_key(branch: str, title: str) -> str | None:
     return None
 
 
+#: How many times the run list is fetched; the answer with the most runs wins.
+RUN_LIST_READS = 3
+
+
 def successful_runs(http: httpx.Client, path: DeployPath) -> list[Run]:
     """Successful runs of one deploy workflow, newest first. A failed or
     in-progress run is never in this list, which is what keeps an unshipped
     merge out of the notes.
+
+    The list is read `RUN_LIST_READS` times and the longest answer kept.
+    GitHub intermittently serves this endpoint from a snapshot weeks old: a
+    200 with a complete-looking list that simply ends early (caught
+    2026-10-05: 84 runs ending 09-17 for a workflow that ran the day before,
+    1 call in 72). One stale read is indistinguishable from a quiet day, and
+    the first scheduled digest lost two services' entries to it. A run list
+    only grows, so the longest of several reads is the newest.
+
+    The success filter is applied here rather than with `status=success` so
+    all reads are of the same unfiltered list and their lengths compare.
 
     A tag-released path is not filtered by branch (a tag push has none), and
     its runs carry the tag name where the others carry a sha: GitHub resolves
     a tag anywhere it takes a commit, and for an annotated tag the run's own
     sha can be the tag object, which the compare endpoint cannot walk.
     """
-    params: dict[str, str | int] = {"status": "success", "per_page": 50}
+    params: dict[str, str | int] = {"per_page": 100}
     if not path.tags:
         params["branch"] = DEFAULT_BRANCH
-    resp = http.get(
-        f"/repos/{OWNER}/{path.repo}/actions/workflows/{path.workflow}/runs", params=params
-    )
-    resp.raise_for_status()
+    best: dict = {"total_count": -1, "workflow_runs": []}
+    for _ in range(RUN_LIST_READS):
+        resp = http.get(
+            f"/repos/{OWNER}/{path.repo}/actions/workflows/{path.workflow}/runs", params=params
+        )
+        resp.raise_for_status()
+        if resp.json()["total_count"] > best["total_count"]:
+            best = resp.json()
     return [
         Run(
             id=r["id"],
             sha=r["head_branch"] if path.tags else r["head_sha"],
             finished_at=datetime.fromisoformat(r["updated_at"].replace("Z", "+00:00")),
         )
-        for r in resp.json()["workflow_runs"]
+        for r in best["workflow_runs"]
+        if r["conclusion"] == "success"
     ]
 
 

@@ -74,6 +74,29 @@ merge of the pilot PR itself (#105, deploy run 37201391018), and the digest
 from Actions by a manual run for 10-04 (37201672301) and a repeat that
 reported "already current" and posted nothing (37201711980).
 
+## The run list can lie, so it is read three times
+
+The first scheduled digest (2026-10-05, for 10-04) wrote four of six
+services. hihelloreid and stale-ticket-bot had each deployed one PR the day
+before and were reported as "no deploys". Their per-deploy messages had
+posted correctly.
+
+The cause is GitHub's list-workflow-runs endpoint. It intermittently answers
+200 with a snapshot weeks old: a complete-looking list that ends early.
+Caught in a loop of 72 calls: one answer for `fly-deploy.yml` here held 84
+runs ending 2026-09-17, for a workflow that had run three times the day
+before. The same call was right before and after. Nothing in the status or
+headers marks it, and to the digest a stale list is a quiet day.
+
+`successful_runs` now reads the list three times and keeps the longest: a
+run list only grows, so the longest read is the newest. At the observed rate
+that takes a miss from about 1 in 70 per repo per day to about 1 in 370,000.
+The first guess, that `status=success` was the stale part, was wrong: the
+unfiltered list did the same thing.
+
+The schedule is also not punctual. The 05:23 UTC run started at 12:20. The
+digest is for "yesterday", so lateness costs nothing but the hour it appears.
+
 ## Secrets
 
 | secret | repo | for |

@@ -33,8 +33,16 @@ def _pr(number: int, branch: str, title: str, merged_at: str | None, base: str =
     }
 
 
-def _run(run_id: int, sha: str, finished: str, branch: str = "main") -> dict:
-    return {"id": run_id, "head_sha": sha, "head_branch": branch, "updated_at": finished}
+def _run(
+    run_id: int, sha: str, finished: str, branch: str = "main", conclusion: str = "success"
+) -> dict:
+    return {
+        "id": run_id,
+        "head_sha": sha,
+        "head_branch": branch,
+        "updated_at": finished,
+        "conclusion": conclusion,
+    }
 
 
 def _github(
@@ -45,15 +53,16 @@ def _github(
     attempts: dict[tuple[int, int], str] | None = None,
     tags: bool = False,
 ) -> httpx.Client:
-    """`runs` is what the API returns for status=success, newest first."""
+    """`runs` is the workflow's whole run list, newest first."""
 
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
         if path == f"{REPO}/actions/workflows/deploy.yml/runs":
-            assert request.url.params["status"] == "success"
+            # Filtered here, not by the API, so repeated reads compare.
+            assert "status" not in request.url.params
             # A tag-released path must not be filtered to the default branch.
             assert request.url.params.get("branch") == (None if tags else "main")
-            return httpx.Response(200, json={"workflow_runs": runs})
+            return httpx.Response(200, json={"total_count": len(runs), "workflow_runs": runs})
         if path.startswith(f"{REPO}/compare/"):
             shas = (compare or {})[path.removeprefix(f"{REPO}/compare/")]
             return httpx.Response(200, json={"commits": [{"sha": s} for s in shas]})
@@ -178,6 +187,21 @@ def test_a_deploy_with_no_merged_pr_posts_nothing():
         assert rn.notify(http, PATH, sha="head", run_id=11, run_attempt=1) is None
 
 
+def test_a_stale_run_list_loses_to_a_longer_read():
+    # GitHub sometimes answers with a snapshot that ends weeks ago. One such
+    # read among several must not make a deploy day look like a quiet one.
+    fresh = [_run(2, "new", "2026-10-01T15:00:00Z"), _run(1, "old", "2026-09-17T15:00:00Z")]
+    answers = iter([fresh[1:], fresh, fresh[1:]])
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        runs = next(answers)
+        return httpx.Response(200, json={"total_count": len(runs), "workflow_runs": runs})
+
+    with httpx.Client(base_url=rn.GITHUB_API, transport=httpx.MockTransport(handler)) as http:
+        assert [r.sha for r in rn.successful_runs(http, PATH)] == ["new", "old"]
+    assert next(answers, None) is None  # exactly RUN_LIST_READS reads
+
+
 # --- a tag-released path ---------------------------------------------------------------------
 
 TAGGED = rn.DeployPath("repo", "lib", "deploy.yml", tags=True)
@@ -276,14 +300,15 @@ def test_a_day_whose_deploys_carried_no_merged_pr_gets_no_entry():
 
 
 def test_a_merge_whose_deploy_failed_is_not_reported_as_shipped():
-    # PR 2 merged on the day but its deploy failed, so its run is not in the
-    # success list and the day's range ends at d1. It ships the day a later
-    # deploy carries it.
+    # PR 2 merged on the day but its deploy failed (and one was skipped), so
+    # the day's range ends at d1. It ships the day a later deploy carries it.
     pr1 = _pr(1, "rc1-1-a", "RC1-1: a", "2026-10-01T15:00:00Z")
     pr2 = _pr(2, "rc1-2-b", "RC1-2: b", "2026-10-01T19:00:00Z")
     with _github(
         runs=[
             _run(4, "d3", "2026-10-02T15:00:00Z"),
+            _run(3, "d2", "2026-10-01T19:05:00Z", conclusion="failure"),
+            _run(5, "d2", "2026-10-01T19:01:00Z", conclusion="skipped"),
             _run(2, "d1", "2026-10-01T15:05:00Z"),
             _run(1, "before", "2026-09-30T15:00:00Z"),
         ],

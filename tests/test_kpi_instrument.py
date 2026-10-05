@@ -150,8 +150,50 @@ def test_gated_pass_rate_is_the_minimum_over_billed_subjects_case_weighted():
     r = measures.gated_pass_rate(EVAL, [snap])
     assert r.value == 60.0 and r.state == "ok" and not r.tripped and "minimum is bad" in r.detail
     assert r.as_of == TODAY - timedelta(days=1)
-    # two consecutive measurements under the floor trip it
-    assert measures.gated_pass_rate(EVAL, [snap, snap]).tripped
+    # every rate carries its case count
+    assert "bad 60 % (6/10)" in r.detail and "under 80 % on one run only" in r.detail
+
+
+def test_one_bad_run_read_on_consecutive_days_does_not_trip_gated_pass_rate():
+    # RC1-498: the daily job re-reads the same weekly run. Two days are not
+    # two measurements; the old rule tripped here and held for a week.
+    bad = [_run("wbs", days_ago=9, passed=10), _run("wbs", days_ago=2, cases=3, passed=1)]
+    monday = _eval_snapshot(bad, today=TODAY - timedelta(days=1))
+    tuesday = _eval_snapshot(bad)
+    r = measures.gated_pass_rate(EVAL, [monday, tuesday])
+    assert r.value == 33.3 and not r.tripped
+    assert "wbs 33 % (1/3)" in r.detail and "not yet a trip: wbs" in r.detail
+
+
+def test_a_second_bad_run_of_the_same_subject_trips_gated_pass_rate():
+    snap = _eval_snapshot([
+        _run("wbs", days_ago=9, passed=7), _run("wbs", days_ago=2, cases=3, passed=1),
+    ])
+    r = measures.gated_pass_rate(EVAL, [snap])  # one snapshot is enough: runs, not days
+    assert r.tripped and "under 80 % on two consecutive runs: wbs" in r.detail
+
+
+def test_a_subject_that_is_not_the_worst_still_trips_on_its_second_bad_run():
+    # The freeze the tree commits to is per repo, so the minimum's subject
+    # being on its first bad run must not hide another on its second.
+    snap = _eval_snapshot([
+        _run("first-time", days_ago=9, passed=10), _run("first-time", days_ago=2, passed=3),
+        _run("repeat", days_ago=9, passed=7), _run("repeat", days_ago=2, passed=7),
+    ])
+    r = measures.gated_pass_rate(EVAL, [snap])
+    assert r.value == 30.0 and "minimum is first-time" in r.detail
+    assert r.tripped and r.detail.endswith("two consecutive runs: repeat")
+
+
+def test_a_run_that_could_not_be_scored_is_not_the_previous_measurement():
+    # An all-errored run measured nothing; the run before it is the previous
+    # measurement, in both directions.
+    errored = _run("x", days_ago=5, cases=3, errored=3, passed=0)
+    latest = _run("x", days_ago=2, passed=5)
+    was_bad = _eval_snapshot([_run("x", days_ago=9, passed=5), errored, latest])
+    was_good = _eval_snapshot([_run("x", days_ago=9, passed=10), errored, latest])
+    assert measures.gated_pass_rate(EVAL, [was_bad]).tripped
+    assert not measures.gated_pass_rate(EVAL, [was_good]).tripped
 
 
 def test_gated_pass_rate_no_signal_and_stale():

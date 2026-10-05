@@ -18,7 +18,8 @@ them.
 - Code: `kpi/narrate.py` (the stage), `kpi/briefs_store.py` (the archive),
   `kpi/templates/narrate.md` (the versioned prompt),
   `scripts/kpi_weekly.sh` + `scripts/launchd/com.reidcollins.kpi-weekly.plist`
-  (Monday 08:00 local, an hour after the daily job).
+  (Monday 10:30 local, after the weekly eval sweep; the script re-reads the
+  eval store first, RC1-498).
 - Transport: the same incoming webhook as the drift digest
   (`drift/notify.py`, `SLACK_WEBHOOK_URL` in `.env`).
 

@@ -145,7 +145,7 @@ does knowing that cost?* Two outcomes, four leading indicators:
 
 | KPI | meaning |
 | --- | --- |
-| `gated-pass-rate` *(outcome)* | Passing share of scorable eval cases, program-level as the **minimum** across billed subjects — one bad system is a bad answer no matter the average. Under 80 % twice: freeze prompt changes on that repo. |
+| `gated-pass-rate` *(outcome)* | Passing share of scorable eval cases, program-level as the **minimum** across billed subjects — one bad system is a bad answer no matter the average. A subject under 80 % on two consecutive runs: freeze prompt changes on that repo. |
 | `real-cost-per-run` *(outcome)* | Billed dollars (the org's Anthropic cost report + the store's Heroku invoice, prorated) per eval run taken. Trips at 3x the price-table attribution — the gap is money the measurement program cannot account for. |
 | `measurement-freshness-days` | Days since each subject's last run, program-level the worst. A regression in a subject nobody runs *cannot appear* in the pass rate. |
 | `error-rate` | Share of cases that produced nothing to score — a pass rate over a collapsed denominator moves before it lies. |

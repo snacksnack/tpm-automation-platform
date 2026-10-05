@@ -80,32 +80,77 @@ def _broken(kpi_id: str, snap: ProgramSnapshot, reason: str, **kw) -> Reading:
 # --- eval-run-store measures ----------------------------------------------------------------
 
 
+def _pass_rate(r: EvalRunRow) -> float | None:
+    """Passing share of a run's scorable cases; None when none could be scored."""
+    scorable = r.cases - r.errored
+    return r.passed / scorable * 100 if scorable > 0 else None
+
+
+def _previous_pass_rate(rows: list[EvalRunRow], latest: EvalRunRow) -> float | None:
+    """The same subject's most recent earlier run that could be scored."""
+    earlier = sorted(
+        (r for r in rows if r.subject == latest.subject and r.started_at < latest.started_at),
+        key=lambda r: r.started_at,
+        reverse=True,
+    )
+    return next((rate for r in earlier if (rate := _pass_rate(r)) is not None), None)
+
+
+def _previous_run_was_under(rows: list[EvalRunRow], latest: EvalRunRow) -> bool:
+    previous = _previous_pass_rate(rows, latest)
+    return previous is not None and previous < PASS_RATE_FLOOR
+
+
 def gated_pass_rate(program: Program, series: list[ProgramSnapshot]) -> Reading:
+    """The minimum pass rate across billed subjects, tripped by a subject
+    under the floor on two consecutive *runs*.
+
+    The trip compares runs, not days (RC1-498). The adopted tree's commitment
+    is "a billed subject under 80 % on two consecutive measurements", and a
+    measurement is a run. The first version compared today's reading with
+    yesterday's — but the daily job re-reads the same weekly run every day,
+    so one noisy run tripped the KPI the next morning and held it for a week
+    (work-breakdown, 2026-09-28: 1/3 on a three-case subject, 3/3 the run
+    before and the run after). Any subject on its second bad run trips it,
+    not only the worst one: the freeze the tree commits to is per repo.
+    """
     snap = series[-1]
     if gone := _eval_source_gone(snap):
         return _broken("gated-pass-rate", snap, gone)
-    latest = _latest_per_subject(_billed(snap.eval_runs))
+    billed = _billed(snap.eval_runs)
+    latest = _latest_per_subject(billed)
     rates: dict[str, float] = {}
     no_signal = []
     for subject, r in latest.items():
-        scorable = r.cases - r.errored
-        if scorable <= 0:
+        rate = _pass_rate(r)
+        if rate is None:
             no_signal.append(subject)
         else:
-            rates[subject] = r.passed / scorable * 100
+            rates[subject] = rate
     if not rates:
         return _broken("gated-pass-rate", snap, "no billed subject has a scorable case (no-signal)")
     worst, value = min(rates.items(), key=lambda kv: kv[1])
     age = (snap.sim_date - latest[worst].started_at.date()).days
     state, reason = _freshness(age, f"{worst}'s latest run is {age} days old")
-    previous = _previous_value(program, series, gated_pass_rate)
-    tripped = value < PASS_RATE_FLOOR and previous is not None and previous < PASS_RATE_FLOOR
-    detail = "; ".join(f"{s} {v:.0f} %" for s, v in sorted(rates.items(), key=lambda kv: kv[1]))
+    under = sorted(s for s, v in rates.items() if v < PASS_RATE_FLOOR)
+    repeat = [s for s in under if _previous_run_was_under(billed, latest[s])]
+    # Each rate carries its case count: 33 % of three cases is one noisy
+    # check away from 67 %, and reads nothing like 33 % of thirty.
+    detail = "; ".join(
+        f"{s} {v:.0f} % ({latest[s].passed}/{latest[s].cases - latest[s].errored})"
+        for s, v in sorted(rates.items(), key=lambda kv: kv[1])
+    )
+    if repeat:
+        detail += f"; under {PASS_RATE_FLOOR:.0f} % on two consecutive runs: {', '.join(repeat)}"
+    elif under:
+        detail += (
+            f"; under {PASS_RATE_FLOOR:.0f} % on one run only, not yet a trip: {', '.join(under)}"
+        )
     if no_signal:
         detail += f"; no-signal: {', '.join(no_signal)}"
     return Reading(
         kpi_id="gated-pass-rate", sim_date=snap.sim_date, value=round(value, 1), state=state,
-        reason=reason, tripped=tripped, as_of=latest[worst].started_at.date(),
+        reason=reason, tripped=bool(repeat), as_of=latest[worst].started_at.date(),
         detail=f"minimum is {worst}; {detail}",
     )
 

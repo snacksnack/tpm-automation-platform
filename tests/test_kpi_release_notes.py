@@ -1,17 +1,19 @@
-"""Release notes (RC1-497) — offline, no network.
+"""Release notes (RC1-497, RC1-502) — offline, no network.
 
 GitHub and Confluence are each a small in-memory fake behind an httpx
 MockTransport, so the run filtering, the commit → PR mapping and the page
 create/update/unchanged paths are real code paths. The acceptance criteria
 that are about behavior — no second message on a re-run, a failed deploy not
 reported as shipped, a re-run replacing the day's entry — each have a test
-named for them.
+named for them. The model is a fake client: the summary tests are about when
+it is called and what happens when it fails, not about its prose.
 """
 
 from __future__ import annotations
 
 import json
-from datetime import date
+from datetime import UTC, date, datetime
+from types import SimpleNamespace
 
 import httpx
 import pytest
@@ -20,6 +22,20 @@ from kpi import release_notes as rn
 
 PATH = rn.DeployPath("repo", "svc", "deploy.yml")
 REPO = f"/repos/{rn.OWNER}/repo"
+
+
+@pytest.fixture(autouse=True)
+def _no_live_credentials(monkeypatch):
+    """A developer's `.env` holds real keys. No test may reach Confluence,
+    Slack or the model with them."""
+    for name in ("jira_email", "jira_api_token", "anthropic_api_key", "slack_releases_webhook_url"):
+        monkeypatch.setattr(rn.settings, name, None)
+
+
+def _announce(http: httpx.Client, path: rn.DeployPath, *, sha: str, **run) -> str | None:
+    """The #releases message for a deploy, or None when it carried nothing."""
+    prs = rn.deploy_prs(http, path, sha=sha, **run)
+    return rn.render_deploy_message(path, sha, prs) if prs else None
 
 
 def _pr(number: int, branch: str, title: str, merged_at: str | None, base: str = "main") -> dict:
@@ -141,7 +157,7 @@ def test_the_message_names_the_service_links_the_pr_and_the_story():
         compare={"prev...head1234abcd": ["head1234abcd"]},
         pulls={"head1234abcd": [pr]},
     ) as http:
-        text = rn.notify(http, PATH, sha="head1234abcd", run_id=11, run_attempt=1)
+        text = _announce(http, PATH, sha="head1234abcd", run_id=11, run_attempt=1)
     first, second = text.splitlines()
     assert (
         first == f"*svc* deployed <https://github.com/{rn.OWNER}/repo/commit/head1234abcd|head1234>"
@@ -152,9 +168,15 @@ def test_the_message_names_the_service_links_the_pr_and_the_story():
     assert second.endswith("/browse/RC1-482|RC1-482>)")
 
 
+def test_the_message_links_the_release_notes_page_when_it_was_written():
+    pr = rn.PullRequest(1, "t", "https://github.com/x/y/pull/1", None)
+    first = rn.render_deploy_message(PATH, "head1234abcd", [pr], "https://w/p/2").splitlines()[0]
+    assert first.endswith("|head1234> · <https://w/p/2|release notes>")
+
+
 def test_a_rerun_of_a_green_run_does_not_post_a_second_message():
     with _github(runs=[], attempts={(11, 1): "success"}) as http:
-        assert rn.notify(http, PATH, sha="head", run_id=11, run_attempt=2) is None
+        assert _announce(http, PATH, sha="head", run_id=11, run_attempt=2) is None
 
 
 def test_a_rerun_after_a_failed_attempt_does_announce():
@@ -165,7 +187,7 @@ def test_a_rerun_after_a_failed_attempt_does_announce():
         pulls={"head": [pr]},
         attempts={(11, 1): "failure"},
     ) as http:
-        assert "#5" in rn.notify(http, PATH, sha="head", run_id=11, run_attempt=2)
+        assert "#5" in _announce(http, PATH, sha="head", run_id=11, run_attempt=2)
 
 
 def test_the_runs_own_id_is_never_its_own_base():
@@ -177,14 +199,14 @@ def test_the_runs_own_id_is_never_its_own_base():
         pulls={"head": [pr]},
         attempts={(11, 1): "failure"},
     ) as http:
-        assert "#5" in rn.notify(http, PATH, sha="head", run_id=11, run_attempt=2)
+        assert "#5" in _announce(http, PATH, sha="head", run_id=11, run_attempt=2)
 
 
 def test_a_deploy_with_no_merged_pr_posts_nothing():
     with _github(
         runs=[_run(10, "prev", "2026-10-01T09:00:00Z")], compare={"prev...head": ["head"]}
     ) as http:
-        assert rn.notify(http, PATH, sha="head", run_id=11, run_attempt=1) is None
+        assert _announce(http, PATH, sha="head", run_id=11, run_attempt=1) is None
 
 
 def test_a_stale_run_list_loses_to_a_longer_read():
@@ -217,7 +239,7 @@ def test_a_release_is_ranged_and_named_by_tag_not_by_sha():
         pulls={"c1": [pr]},
         tags=True,
     ) as http:
-        text = rn.notify(http, TAGGED, sha="v0.6.3", run_id=11, run_attempt=1)
+        text = _announce(http, TAGGED, sha="v0.6.3", run_id=11, run_attempt=1)
     first, second = text.splitlines()
     assert (
         first == f"*lib* released <https://github.com/{rn.OWNER}/repo/releases/tag/v0.6.3|v0.6.3>"
@@ -244,7 +266,7 @@ def test_a_release_day_entry_links_the_tag():
 
 def test_notify_uses_the_known_path_for_a_repo_the_digest_covers(monkeypatch):
     seen: list[rn.DeployPath] = []
-    monkeypatch.setattr(rn, "notify", lambda http, path, **k: seen.append(path))
+    monkeypatch.setattr(rn, "deploy_prs", lambda http, path, **k: seen.append(path) or [])
     argv = ["notify", "--repo", "agent-evals", "--service", "agent-evals"]
     assert rn.main([*argv, "--workflow", "release.yml", "--sha", "v1", "--run-id", "1"]) == 0
     assert seen[0].tags is True
@@ -284,6 +306,22 @@ def test_a_day_is_a_new_york_day_not_a_utc_day():
     ) as http:
         assert rn.collect_day(http, PATH, DAY).head_sha == "late"
         assert rn.collect_day(http, PATH, date(2026, 10, 2)) is None
+
+
+def test_the_deploy_in_progress_counts_as_the_days_newest():
+    # Called from inside its own run, a deploy is not in the run list yet. The
+    # day's entry must still end at it and cover the earlier deploy's PR too.
+    pr1 = _pr(1, "rc1-1-a", "RC1-1: a", "2026-10-01T15:00:00Z")
+    pr2 = _pr(2, "rc1-2-b", "RC1-2: b", "2026-10-01T18:00:00Z")
+    now = datetime(2026, 10, 1, 18, 5, tzinfo=UTC)
+    with _github(
+        runs=[_run(2, "d1", "2026-10-01T15:05:00Z"), _run(1, "d0", "2026-09-30T15:00:00Z")],
+        compare={"d0...d2": ["c1", "c2"]},
+        pulls={"c1": [pr1], "c2": [pr2]},
+    ) as http:
+        entry = rn.collect_day(http, PATH, DAY, current=rn.Run(3, "d2", now))
+    assert (entry.deploys, entry.head_sha) == (2, "d2")
+    assert [p.number for p in entry.prs] == [1, 2]
 
 
 def test_a_service_with_no_deploys_that_day_gets_no_entry():
@@ -417,8 +455,9 @@ class FakeWiki:
 
 def test_the_first_entry_creates_the_parent_and_the_service_page_under_it():
     fake = FakeWiki()
-    url = rn.publish(fake.client(), _entry(DAY, 2))
-    assert url == "https://example.atlassian.net/wiki/spaces/RC1/pages/2"
+    published = rn.publish(fake.client(), _entry(DAY, 2))
+    assert published.url == "https://example.atlassian.net/wiki/spaces/RC1/pages/2"
+    assert published.changed
     (_, parent), (_, child) = fake.writes
     assert parent["title"] == rn.PARENT_TITLE and "parentId" not in parent
     assert child["title"] == "Release notes: svc" and child["parentId"] == "1"
@@ -428,7 +467,7 @@ def test_the_first_entry_creates_the_parent_and_the_service_page_under_it():
 def test_a_later_day_updates_the_page_with_the_next_version():
     old = rn.render_section(_entry(date(2026, 9, 30), 1))
     fake = FakeWiki({rn.PARENT_TITLE: rn.PARENT_BODY, "Release notes: svc": old})
-    assert rn.publish(fake.client(), _entry(DAY, 2)) is not None
+    assert rn.publish(fake.client(), _entry(DAY, 2)).changed
     ((method, payload),) = fake.writes
     assert method == "PUT" and payload["version"]["number"] == 2
     assert payload["body"]["value"] == rn.render_section(_entry(DAY, 2)) + old
@@ -437,11 +476,157 @@ def test_a_later_day_updates_the_page_with_the_next_version():
 def test_publishing_the_same_day_twice_writes_once():
     fake = FakeWiki({rn.PARENT_TITLE: rn.PARENT_BODY})
     wiki = fake.client()
-    assert rn.publish(wiki, _entry(DAY, 2)) is not None
+    first = rn.publish(wiki, _entry(DAY, 2))
     writes = len(fake.writes)
-    # None is what tells the caller not to post the Slack message again.
-    assert rn.publish(wiki, _entry(DAY, 2)) is None
+    # Unchanged is what tells the sweep not to post its Slack message again.
+    again = rn.publish(wiki, _entry(DAY, 2))
+    assert (first.changed, again.changed) == (True, False)
+    assert again.url == first.url  # a deploy still needs the link
     assert len(fake.writes) == writes
+
+
+# --- the summary -----------------------------------------------------------------------------
+
+
+class FakeModel:
+    """`client.messages.create`, answering with one structured-output block."""
+
+    def __init__(self, summary: str = "Plain words.", points: tuple[str, ...] = (), fail=None):
+        self.calls: list[dict] = []
+        self.messages = self
+        self._answer = json.dumps({"summary": summary, "points": list(points)})
+        self._fail = fail
+
+    def create(self, **kwargs):
+        self.calls.append(kwargs)
+        if self._fail:
+            raise self._fail
+        block = SimpleNamespace(type="text", text=self._answer)
+        return SimpleNamespace(stop_reason="end_turn", content=[block])
+
+    def summarize(self, entry: rn.DayEntry) -> rn.Summary | None:
+        return rn.summarize(self, entry)
+
+
+def test_the_model_is_handed_the_days_prs_and_nothing_else():
+    pr = rn.PullRequest(7, "RC1-7: t", "https://github.com/x/y/pull/7", "RC1-7", body="why " * 5)
+    entry = rn.DayEntry(path=PATH, day=DAY, deploys=1, head_sha="abc", prs=(pr,))
+    model = FakeModel(points=("One.", " "))
+    assert rn.summarize(model, entry) == rn.Summary("Plain words.", ("One.",))
+    (call,) = model.calls
+    assert call["model"] == rn.SUMMARY_MODEL
+    payload = json.loads(call["messages"][0]["content"])
+    assert payload["service"] == "svc" and payload["day"] == "2026-10-01"
+    assert payload["pull_requests"] == [
+        {
+            "number": 7,
+            "title": "RC1-7: t",
+            "story": "RC1-7",
+            "description": "why " * 5,
+            "description_truncated": False,
+        }
+    ]
+
+
+def test_a_long_description_is_cut_and_the_payload_says_so():
+    pr = rn.PullRequest(7, "t", "u", None, body="x" * (rn.BODY_CHARS + 1))
+    entry = rn.DayEntry(path=PATH, day=DAY, deploys=1, head_sha="abc", prs=(pr,))
+    (sent,) = rn.summary_payload(entry)["pull_requests"]
+    assert len(sent["description"]) == rn.BODY_CHARS and sent["description_truncated"] is True
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        FakeModel(fail=RuntimeError("529 overloaded")),
+        FakeModel(summary="   "),
+    ],
+)
+def test_a_model_that_fails_or_says_nothing_gives_no_summary_and_a_warning(model, capsys):
+    assert rn.summarize(model, _entry(DAY, 2)) is None
+    assert "::warning title=Release notes: no summary for svc::" in capsys.readouterr().out
+
+
+def test_a_summary_is_escaped_and_sits_between_the_date_and_the_facts():
+    html = rn.render_summary(rn.Summary("a <b> & c", ('it\'s "quoted"',)))
+    assert html == ('<p>a &lt;b&gt; &amp; c</p><ul><li>it\'s "quoted"</li></ul>' + rn.SUMMARY_NOTE)
+    section = rn.render_section(_entry(DAY, 7), html)
+    assert section == "<h2>2026-10-01</h2>" + html + rn.render_facts(_entry(DAY, 7))
+
+
+def test_the_entry_opens_with_the_summary_and_keeps_the_pr_list():
+    fake, model = FakeWiki({rn.PARENT_TITLE: rn.PARENT_BODY}), FakeModel()
+    published = rn.publish(fake.client(), _entry(DAY, 2), model.summarize)
+    assert published.summary == "new"
+    body = fake.pages["Release notes: svc"]["body"]
+    assert body.startswith("<h2>2026-10-01</h2><p>Plain words.</p>" + rn.SUMMARY_NOTE)
+    assert body.endswith(rn.render_facts(_entry(DAY, 2)))
+
+
+def test_a_second_deploy_the_same_day_rewrites_the_one_section_with_a_new_summary():
+    fake, model = FakeWiki({rn.PARENT_TITLE: rn.PARENT_BODY}), FakeModel()
+    wiki = fake.client()
+    rn.publish(wiki, _entry(DAY, 2), model.summarize)
+    published = rn.publish(wiki, _entry(DAY, 2, 3), model.summarize)
+    assert (published.changed, published.summary) == (True, "new")
+    assert len(model.calls) == 2  # the PR set changed, so the old words do not stand
+    body = fake.pages["Release notes: svc"]["body"]
+    assert body.count("<h2>") == 1 and "#3</a>" in body
+
+
+def test_the_sweep_leaves_a_current_page_alone_without_a_model_call():
+    fake, model = FakeWiki({rn.PARENT_TITLE: rn.PARENT_BODY}), FakeModel()
+    wiki = fake.client()
+    rn.publish(wiki, _entry(DAY, 2, 3), model.summarize)
+    writes, version = len(fake.writes), fake.pages["Release notes: svc"]["version"]
+    again = rn.publish(wiki, _entry(DAY, 2, 3), model.summarize)
+    assert (again.changed, again.summary) == (False, "kept")
+    assert len(model.calls) == 1 and len(fake.writes) == writes
+    assert fake.pages["Release notes: svc"]["version"] == version
+
+
+def test_a_changed_deploy_count_rewrites_the_facts_but_keeps_the_summary():
+    # A redeploy with no new PR moves the count and the sha, not the PR set.
+    fake, model = FakeWiki({rn.PARENT_TITLE: rn.PARENT_BODY}), FakeModel()
+    wiki = fake.client()
+    rn.publish(wiki, _entry(DAY, 2), model.summarize)
+    more = rn.DayEntry(PATH, DAY, deploys=2, head_sha="fedcba9876", prs=_entry(DAY, 2).prs)
+    published = rn.publish(wiki, more, model.summarize)
+    assert (published.changed, published.summary) == (True, "kept")
+    assert len(model.calls) == 1
+    assert "<p>Plain words.</p>" in fake.pages["Release notes: svc"]["body"]
+
+
+def test_a_summary_confluence_decorated_is_still_found():
+    note = "<em>Summary written by AI from the pull requests below.</em>"
+    kept = f'<p local-id="a">Plain words.</p><p local-id="b">{note}</p>'
+    body = '<h2 local-id="c">2026-10-01</h2>' + kept + rn.render_facts(_entry(DAY, 2))
+    assert rn.kept_summary(body, _entry(DAY, 2)) == kept
+    assert rn.kept_summary(body, _entry(DAY, 2, 3)) == ""
+    assert rn.kept_summary(body, _entry(date(2026, 10, 2), 2)) == ""
+
+
+def test_a_failed_model_call_still_writes_the_pr_list():
+    fake = FakeWiki({rn.PARENT_TITLE: rn.PARENT_BODY})
+    model = FakeModel(fail=RuntimeError("down"))
+    published = rn.publish(fake.client(), _entry(DAY, 2), model.summarize)
+    assert (published.changed, published.summary) == (True, "none")
+    assert fake.pages["Release notes: svc"]["body"] == rn.render_section(_entry(DAY, 2))
+
+
+def test_a_stale_summary_is_dropped_when_the_model_cannot_write_the_new_one():
+    fake = FakeWiki({rn.PARENT_TITLE: rn.PARENT_BODY})
+    wiki = fake.client()
+    rn.publish(wiki, _entry(DAY, 2), FakeModel().summarize)
+    rn.publish(wiki, _entry(DAY, 2, 3), FakeModel(fail=RuntimeError("down")).summarize)
+    assert fake.pages["Release notes: svc"]["body"] == rn.render_section(_entry(DAY, 2, 3))
+
+
+def test_a_missing_key_gives_no_summary_and_says_so_only_when_one_was_needed(capsys):
+    summarize = rn.summarizer()
+    assert capsys.readouterr().out == ""
+    assert summarize(_entry(DAY, 2)) is None
+    assert "ANTHROPIC_API_KEY is not set" in capsys.readouterr().out
 
 
 def test_a_missing_space_is_an_error_not_an_empty_page():
@@ -484,18 +669,90 @@ def test_a_repo_that_cannot_be_read_turns_the_run_red(monkeypatch, capsys):
     assert "::error title=Release notes: tpm-drift-detector::" in capsys.readouterr().out
 
 
-def test_notify_posts_once_when_there_is_something_to_say(monkeypatch):
-    monkeypatch.setattr(rn, "notify", lambda *a, **k: "msg")
+NOTIFY = ["notify", "--repo", "repo", "--service", "svc", "--workflow", "deploy.yml"]
+NOTIFY += ["--sha", "abcdef0123", "--run-id", "1"]
+
+
+def _a_deploy(monkeypatch) -> list[tuple[str, str]]:
+    """One deploy carrying PR #2, Slack configured; returns what gets posted."""
+    monkeypatch.setattr(rn, "deploy_prs", lambda *a, **k: list(_entry(DAY, 2).prs))
+    monkeypatch.setattr(rn, "collect_day", lambda http, path, day, current: _entry(day, 2))
     monkeypatch.setattr(rn.settings, "slack_releases_webhook_url", "https://hooks.example/x")
     posted: list[tuple[str, str]] = []
     monkeypatch.setattr(rn, "post_slack", lambda url, text: posted.append((url, text)))
-    argv = ["notify", "--repo", "repo", "--service", "svc", "--workflow", "deploy.yml"]
-    assert rn.main([*argv, "--sha", "abc", "--run-id", "1"]) == 0
-    assert posted == [("https://hooks.example/x", "msg")]
+    return posted
 
 
-def test_notify_with_nothing_to_announce_posts_nothing(monkeypatch):
-    monkeypatch.setattr(rn, "notify", lambda *a, **k: None)
+def test_notify_writes_the_page_first_then_posts_a_message_that_links_it(monkeypatch):
+    posted = _a_deploy(monkeypatch)
+    monkeypatch.setattr(rn.settings, "jira_email", "me@example.com")
+    monkeypatch.setattr(rn.settings, "jira_api_token", "t")
+    order: list[str] = []
+
+    def publish(wiki, entry, summarize):
+        order.append("page")
+        return rn.Published("https://w/p/2", True, "new")
+
+    monkeypatch.setattr(rn, "publish", publish)
+    monkeypatch.setattr(
+        rn, "post_slack", lambda url, text: order.append("slack") or posted.append(text)
+    )
+    assert rn.main(NOTIFY) == 0
+    assert order == ["page", "slack"]
+    assert "<https://w/p/2|release notes>" in posted[0]
+
+
+def test_notify_without_confluence_credentials_still_posts_without_a_link(monkeypatch, capsys):
+    posted = _a_deploy(monkeypatch)
+    monkeypatch.setattr(rn, "publish", lambda *a: pytest.fail("no credentials, no write"))
+    assert rn.main(NOTIFY) == 0
+    ((_, text),) = posted
+    assert "release notes>" not in text and "#2" in text
+    assert "::warning title=Release notes: page not written::" in capsys.readouterr().out
+
+
+def test_notify_still_posts_when_the_page_write_fails(monkeypatch, capsys):
+    posted = _a_deploy(monkeypatch)
+    monkeypatch.setattr(rn.settings, "jira_email", "me@example.com")
+    monkeypatch.setattr(rn.settings, "jira_api_token", "t")
+
+    def boom(*a):
+        raise httpx.ConnectError("down", request=httpx.Request("GET", "https://x.example/wiki"))
+
+    monkeypatch.setattr(rn, "publish", boom)
+    assert rn.main(NOTIFY) == 0
+    assert len(posted) == 1 and "release notes>" not in posted[0][1]
+    assert "The daily sweep will record this deploy." in capsys.readouterr().out
+
+
+def test_notify_dry_run_writes_and_posts_nothing(monkeypatch, capsys):
+    _a_deploy(monkeypatch)
+    monkeypatch.setattr(rn.settings, "jira_email", "me@example.com")
+    monkeypatch.setattr(rn.settings, "jira_api_token", "t")
+    monkeypatch.setattr(rn, "publish", lambda *a: pytest.fail("dry run must not write"))
+    monkeypatch.setattr(rn, "post_slack", lambda *a: pytest.fail("dry run must not post"))
+    assert rn.main([*NOTIFY, "--dry-run"]) == 0
+    assert "<h2>" in capsys.readouterr().out
+
+
+def test_notify_with_nothing_to_announce_writes_and_posts_nothing(monkeypatch):
+    monkeypatch.setattr(rn, "deploy_prs", lambda *a, **k: [])
+    monkeypatch.setattr(rn, "collect_day", lambda *a, **k: pytest.fail("must not collect"))
     monkeypatch.setattr(rn, "post_slack", lambda *a: pytest.fail("must not post"))
-    argv = ["notify", "--repo", "repo", "--service", "svc", "--workflow", "deploy.yml"]
-    assert rn.main([*argv, "--sha", "abc", "--run-id", "1"]) == 0
+    assert rn.main(NOTIFY) == 0
+
+
+def test_the_sweep_announces_only_the_pages_it_changed(monkeypatch, capsys):
+    monkeypatch.setattr(rn, "collect_day", lambda http, path, day: _entry(day, 2))
+    monkeypatch.setattr(rn.settings, "jira_email", "me@example.com")
+    monkeypatch.setattr(rn.settings, "jira_api_token", "t")
+    monkeypatch.setattr(rn.settings, "slack_releases_webhook_url", "https://hooks.example/x")
+    results = iter([rn.Published("https://w/p/1", True, "new")])
+    monkeypatch.setattr(
+        rn, "publish", lambda *a: next(results, rn.Published("https://w/p/9", False, "kept"))
+    )
+    posted: list[str] = []
+    monkeypatch.setattr(rn, "post_slack", lambda url, text: posted.append(text))
+    assert rn.main(["digest", "--date", "2026-10-01"]) == 0
+    assert posted == ["Release notes for 2026-10-01\n• <https://w/p/1|svc>: 1 PR"]
+    assert capsys.readouterr().out.count("already current") == len(rn.PATHS) - 1

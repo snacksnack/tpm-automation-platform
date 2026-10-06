@@ -1,17 +1,19 @@
-# Yesterday's release notes → Confluence, once a day (RC1-497).
+# The daily sweep of yesterday's release notes in Confluence (RC1-497,
+# RC1-502).
 #
-# One entry per service per day it deployed, on that service's page under
-# "Release Notes" in the RC1 space, then one #releases message linking the
-# pages that changed. Reads successful deploy runs only, so a merge whose
-# deploy failed is not reported as shipped.
+# Each deploy writes its own entry as it lands (release-notify.yml). This job
+# is the net under that: for every service that deployed yesterday it checks
+# the day's entry on the service's page under "Release Notes" in the RC1
+# space, writes the ones that are missing or wrong, and posts one #releases
+# message linking the pages it had to change. Reads successful deploy runs
+# only, so a merge whose deploy failed is not reported as shipped.
 #
 # This is the one scheduled job here that writes outside Datadog metrics. It
 # publishes a report; it does not sync infrastructure state, which is what
 # the no-auto-sync rule is about.
 #
-# A re-run is safe: the day's entry is replaced, and a page that already says
-# the same thing is left alone and not re-announced. To backfill a day, run
-# it by hand with a date.
+# A page that is already right is left alone: no model call, no new page
+# version, no message. To backfill a day, run it by hand with a date.
 name: Release notes
 
 on:
@@ -53,6 +55,9 @@ jobs:
           JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
           SLACK_RELEASES_WEBHOOK_URL: ${{ secrets.SLACK_RELEASES_WEBHOOK_URL }}
+          # Without the key an entry the sweep writes is the PR list alone.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
           DAY: ${{ inputs.date }}
         run: |
           set -o pipefail

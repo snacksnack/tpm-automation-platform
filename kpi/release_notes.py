@@ -1,4 +1,5 @@
-"""Release notes: a Slack message per deploy, a daily digest in Confluence (RC1-497).
+"""Release notes: each deploy writes its service's Confluence page, then tells
+#releases (RC1-497, RC1-502).
 
 A release here is a production deploy that succeeded — most of the estate
 ships on push to `main`, so there is no tag to hang a note on. The note is
@@ -6,43 +7,63 @@ built from merged pull requests, not a diff: the commits between the
 previously deployed sha and this one are mapped back to the PRs that carried
 them, and each PR names its story through the `rc1-NNN-slug` branch.
 
-Two commands, deliberately independent:
+Which PRs shipped is decided here, in Python. A model only writes the short
+plain-language summary that opens a day's entry, for a reader who cannot open
+GitHub (RC1-502); the PR list under it is the audit trail. No summary is
+never a reason to skip the entry: without a model key, or when the call
+fails, the entry is the PR list alone.
 
-    notify   run by a deploy workflow after the deploy succeeds (through the
-             reusable `release-notify.yml`). One message to #releases naming
-             the PRs that just shipped. A notification, not the record.
-    digest   run once a day. One entry per service per day on that service's
-             Confluence page, newest day first, then one #releases message
-             linking the pages that changed. This is the record.
+Two commands:
+
+    notify   run by a deploy workflow after the deploy succeeded (through the
+             reusable `release-notify.yml`). Rewrites today's section on the
+             service's page so it covers everything shipped today, then posts
+             one #releases message that links the page. The page is written
+             first, so the link never leads to a page that predates the
+             deploy.
+    digest   run once a day, for yesterday: the sweep. Writes any entry a
+             deploy-time write missed and leaves a page that is already right
+             untouched, without a model call. One #releases message links
+             the pages it had to change.
 
 Only successful deploy runs are read, so a merge whose deploy failed is not
 reported as shipped: it appears on the day a later deploy carries it out.
 
-The digest is a scheduled job that writes to Confluence. That is publishing
-a report, the same class as the drift digest going to Slack — it is not the
-infrastructure-state sync the repo forbids scheduled jobs from doing.
+Both commands write to Confluence. That is publishing a report, the same
+class as the drift digest going to Slack — it is not the infrastructure-state
+sync the repo forbids scheduled jobs from doing.
 
 Run: `python -m kpi.release_notes notify --repo R --service S --workflow W
      --sha SHA --run-id ID [--run-attempt N] [--dry-run]`
      `python -m kpi.release_notes digest [--date YYYY-MM-DD] [--dry-run]`
 Env (through `config.settings`): `GITHUB_TOKEN`, `SLACK_RELEASES_WEBHOOK_URL`,
-and for the digest `JIRA_EMAIL` + `JIRA_API_TOKEN` (one Atlassian token
-serves Jira and Confluence).
+`JIRA_EMAIL` + `JIRA_API_TOKEN` (one Atlassian token serves Jira and
+Confluence) and `ANTHROPIC_API_KEY`. Every one is optional; each missing one
+removes its piece and says so.
 """
 
 from __future__ import annotations
 
 import argparse
 import html
+import json
 import re
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import httpx
 
 from config import settings
+from observability import enable_llm_obs
+
+try:  # documented optional-dep exception: without the SDK the notes have no summary
+    import anthropic
+except ImportError:  # pragma: no cover - exercised only without anthropic
+    anthropic = None
 
 OWNER = "snacksnack"
 GITHUB_API = "https://api.github.com"
@@ -55,6 +76,16 @@ LOCAL_TZ = ZoneInfo("America/New_York")
 SPACE_KEY = "RC1"
 PARENT_TITLE = "Release Notes"
 PARENT_BODY = "<p>One page per service, one entry per day it deployed (RC1-497).</p>"
+
+#: The summary is a short rewrite of a handful of PR descriptions, the small
+#: model's seat (RC1-502).
+SUMMARY_MODEL = "claude-haiku-4-5"
+ML_APP = "release-notes"
+_TEMPLATE = Path(__file__).parent / "templates" / "release_summary.md"
+#: A PR description past this length is cut, and the payload says so. A
+#: Dependabot body is mostly an upstream changelog; its first screen says
+#: what was bumped.
+BODY_CHARS = 6000
 
 
 @dataclass(frozen=True)
@@ -88,6 +119,7 @@ class PullRequest:
     title: str
     url: str
     story: str | None  # "RC1-497", from the branch name or the title
+    body: str = ""  # the author's description; only the summary reads it
 
 
 @dataclass(frozen=True)
@@ -104,6 +136,19 @@ class DayEntry:
     deploys: int
     head_sha: str
     prs: tuple[PullRequest, ...]
+
+
+@dataclass(frozen=True)
+class Summary:
+    text: str
+    points: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class Published:
+    url: str
+    changed: bool  # False: the page already said exactly this
+    summary: str  # "new" (a model wrote it), "kept" (the page's own) or "none"
 
 
 # --------------------------------------------------------------------------- #
@@ -223,6 +268,7 @@ def shipped_prs(http: httpx.Client, repo: str, base: str | None, head: str) -> l
                     title=pr["title"],
                     url=pr["html_url"],
                     story=story_key(pr["head"]["ref"], pr["title"]),
+                    body=pr.get("body") or "",
                 ),
             )
     return [pr for _, pr in sorted(found.values(), key=lambda pair: pair[0])]
@@ -247,10 +293,14 @@ def shipped_ref(path: DeployPath, ref: str) -> tuple[str, str]:
     return f"{repo_url}/commit/{ref}", ref[:8]
 
 
-def render_deploy_message(path: DeployPath, sha: str, prs: list[PullRequest]) -> str:
+def render_deploy_message(
+    path: DeployPath, sha: str, prs: list[PullRequest], notes_url: str | None = None
+) -> str:
     url, label = shipped_ref(path, sha)
     verb = "released" if path.tags else "deployed"
     lines = [f"*{path.service}* {verb} <{url}|{label}>"]
+    if notes_url:
+        lines[0] += f" · <{notes_url}|release notes>"
     for pr in prs:
         line = f"• <{pr.url}|#{pr.number}> {_slack_text(pr.title)}"
         if pr.story:
@@ -264,38 +314,43 @@ def post_slack(webhook_url: str, text: str) -> None:
     resp.raise_for_status()
 
 
-def notify(
+def deploy_prs(
     http: httpx.Client, path: DeployPath, *, sha: str, run_id: int, run_attempt: int
-) -> str | None:
-    """The #releases message for the deploy that just succeeded, or None when
-    there is nothing to announce: a re-run of a run that was already green, or
-    a deploy that carried no merged PR (a redeploy of the same sha)."""
+) -> list[PullRequest]:
+    """The PRs the deploy that just succeeded carried. Empty when there is
+    nothing to announce: a re-run of a run that was already green, or a
+    deploy that carried no merged PR (a redeploy of the same sha)."""
     if earlier_attempt_succeeded(http, path.repo, run_id, run_attempt):
-        return None
+        return []
     # This run is still in progress, so it is not in the list; the filter
     # covers a re-run, whose id already has a completed attempt behind it.
     previous = [r for r in successful_runs(http, path) if r.id != run_id]
     base = previous[0].sha if previous else None
-    prs = shipped_prs(http, path.repo, base, sha)
-    if not prs:
-        return None
-    return render_deploy_message(path, sha, prs)
+    return shipped_prs(http, path.repo, base, sha)
 
 
 # --------------------------------------------------------------------------- #
-# The daily digest
+# A day's entry
 # --------------------------------------------------------------------------- #
 def day_window(day: date) -> tuple[datetime, datetime]:
     start = datetime.combine(day, time.min, tzinfo=LOCAL_TZ)
     return start, datetime.combine(day + timedelta(days=1), time.min, tzinfo=LOCAL_TZ)
 
 
-def collect_day(http: httpx.Client, path: DeployPath, day: date) -> DayEntry | None:
+def collect_day(
+    http: httpx.Client, path: DeployPath, day: date, *, current: Run | None = None
+) -> DayEntry | None:
     """What one service shipped on one local day, or None when it shipped
     nothing. The range runs from the last deploy before the day to the last
-    deploy of the day, so the day's entry is the day's net change."""
+    deploy of the day, so the day's entry is the day's net change.
+
+    `current` is the deploy calling from inside its own run: that run is
+    still in progress, so the run list does not have it yet, and it is the
+    newest deploy there is."""
     start, end = day_window(day)
     runs = successful_runs(http, path)
+    if current is not None:
+        runs = [current, *(r for r in runs if r.id != current.id)]
     today = [r for r in runs if start <= r.finished_at < end]
     if not today:
         return None
@@ -307,28 +362,156 @@ def collect_day(http: httpx.Client, path: DeployPath, day: date) -> DayEntry | N
     return DayEntry(path=path, day=day, deploys=len(today), head_sha=head, prs=tuple(prs))
 
 
-def render_section(entry: DayEntry) -> str:
-    """One day as Confluence storage XHTML. The `<h2>` holds the ISO date and
-    nothing else: it is the key `merge_day` finds the section by."""
+def summary_payload(entry: DayEntry) -> dict:
+    """The exact facts handed to the model: the day's PRs as their authors
+    described them."""
+    return {
+        "service": entry.path.service,
+        "day": entry.day.isoformat(),
+        "pull_requests": [
+            {
+                "number": pr.number,
+                "title": pr.title,
+                "story": pr.story,
+                "description": pr.body[:BODY_CHARS],
+                "description_truncated": len(pr.body) > BODY_CHARS,
+            }
+            for pr in entry.prs
+        ],
+    }
+
+
+_SUMMARY_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "summary": {"type": "string"},
+        "points": {"type": "array", "items": {"type": "string"}},
+    },
+    "required": ["summary", "points"],
+    "additionalProperties": False,
+}
+
+
+def model_client():
+    """The Anthropic client, or None when there is no SDK or no key."""
+    if anthropic is None or not settings.anthropic_api_key:
+        return None
+    return anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=60.0, max_retries=2)
+
+
+def summarize(client, entry: DayEntry) -> Summary | None:
+    """A plain-language summary of one day's entry, or None when the model
+    could not give one. Never raises: the summary decorates the record, and
+    a deploy's notes must not depend on the model being up."""
+    try:
+        resp = client.messages.create(
+            model=SUMMARY_MODEL,
+            max_tokens=1024,
+            system=_TEMPLATE.read_text(),
+            messages=[{"role": "user", "content": json.dumps(summary_payload(entry))}],
+            output_config={"format": {"type": "json_schema", "schema": _SUMMARY_SCHEMA}},
+        )
+        if resp.stop_reason != "end_turn":
+            raise ValueError(f"stop_reason {resp.stop_reason}")
+        data = json.loads(next(b.text for b in resp.content if b.type == "text"))
+        text = data["summary"].strip()
+        if not text:
+            raise ValueError("empty summary")
+        return Summary(text, tuple(p.strip() for p in data["points"] if p.strip()))
+    except Exception as e:  # any failure is "no summary", never a failed run
+        print(
+            f"::warning title=Release notes: no summary for {entry.path.service}::"
+            f"{type(e).__name__}: {e}. The entry is the PR list alone."
+        )
+        return None
+
+
+def summarizer() -> Callable[[DayEntry], Summary | None]:
+    """What `publish` calls when an entry needs a summary written. It warns
+    only then: a sweep that finds every page current never needs the key."""
+    client = model_client()
+    if client is not None:
+        enable_llm_obs(ML_APP, service="kpi.release_notes")
+
+    def run(entry: DayEntry) -> Summary | None:
+        if client is None:
+            print(
+                f"::warning title=Release notes: no summary for {entry.path.service}::"
+                "ANTHROPIC_API_KEY is not set. The entry is the PR list alone."
+            )
+            return None
+        return summarize(client, entry)
+
+    return run
+
+
+def _text(value: str) -> str:
+    # Quotes stay as they are: Confluence hands `&quot;` back as `"`, and a
+    # section that does not round-trip is rewritten on every run.
+    return html.escape(value, quote=False)
+
+
+#: Closes the summary. It tells the reader who wrote the lines above it, and
+#: it is how a later run finds the summary a page already has.
+SUMMARY_NOTE = "<p><em>Summary written by AI from the pull requests below.</em></p>"
+_SUMMARY_NOTE = re.compile(r"<p[^>]*>\s*<em[^>]*>\s*Summary written by AI[^<]*</em>\s*</p>")
+_PR_NUMBER = re.compile(r">#(\d+)</a>")
+
+
+def render_summary(summary: Summary | None) -> str:
+    if summary is None:
+        return ""
+    points = "".join(f"<li>{_text(p)}</li>" for p in summary.points)
+    return f"<p>{_text(summary.text)}</p>" + (f"<ul>{points}</ul>" if points else "") + SUMMARY_NOTE
+
+
+def render_facts(entry: DayEntry) -> str:
+    """The part of a day's section that Python decides: how many deploys,
+    where they ended, and the PRs they carried."""
     url, label = shipped_ref(entry.path, entry.head_sha)
     noun = "release" if entry.path.tags else "deploy"
     deploys = f"1 {noun}" if entry.deploys == 1 else f"{entry.deploys} {noun}s"
     items = []
     for pr in entry.prs:
-        item = f'<a href="{html.escape(pr.url)}">#{pr.number}</a> {html.escape(pr.title)}'
+        item = f'<a href="{html.escape(pr.url)}">#{pr.number}</a> {_text(pr.title)}'
         if pr.story:
             item += f' (<a href="{html.escape(_story_url(pr.story))}">{pr.story}</a>)'
         items.append(f"<li>{item}</li>")
     return (
-        f"<h2>{entry.day.isoformat()}</h2>"
         f'<p>{deploys}, ending at <a href="{html.escape(url)}">{label}</a>.</p>'
         f"<ul>{''.join(items)}</ul>"
     )
 
 
+def render_section(entry: DayEntry, summary_html: str = "") -> str:
+    """One day as Confluence storage XHTML: the date, the summary when there
+    is one, then the facts. The `<h2>` holds the ISO date and nothing else:
+    it is the key `merge_day` finds the section by."""
+    return f"<h2>{entry.day.isoformat()}</h2>{summary_html}{render_facts(entry)}"
+
+
 # Confluence can hand the heading back with attributes it added.
 _SECTION_START = re.compile(r"(?=<h2[^>]*>\s*\d{4}-\d{2}-\d{2}\s*</h2>)")
 _SECTION_DAY = re.compile(r"<h2[^>]*>\s*(\d{4}-\d{2}-\d{2})\s*</h2>")
+
+
+def kept_summary(body: str, entry: DayEntry) -> str:
+    """The summary the page already has for this day, as it stands, when it
+    still describes the same PRs; otherwise "". A summary is a reading of a
+    set of PRs, so the same set does not buy a second model call, and a
+    changed set does not keep the old words."""
+    for section in _SECTION_START.split(body)[1:]:
+        heading = _SECTION_DAY.match(section)
+        if heading.group(1) != entry.day.isoformat():
+            continue
+        note = _SUMMARY_NOTE.search(section)
+        if note is None:
+            return ""
+        listed = [int(n) for n in _PR_NUMBER.findall(section[note.end() :])]
+        if listed != [pr.number for pr in entry.prs]:
+            return ""
+        return section[heading.end() : note.end()]
+    return ""
 
 
 def merge_day(body: str, day: date, section: str) -> str:
@@ -404,25 +587,38 @@ def page_title(service: str) -> str:
     return f"Release notes: {service}"
 
 
-def publish(wiki: Confluence, entry: DayEntry) -> str | None:
-    """Write one day's entry to its service page. Returns the page URL when
-    the page changed, None when it already said exactly this — so a re-run
-    neither bumps the page version nor repeats the Slack message."""
+def publish(
+    wiki: Confluence,
+    entry: DayEntry,
+    summarize: Callable[[DayEntry], Summary | None] | None = None,
+) -> Published:
+    """Write one day's entry to its service page.
+
+    `summarize` is called only when the entry needs a summary the page does
+    not already have for these PRs. `changed` is False when the page already
+    said exactly this — so a re-run neither bumps the page version nor
+    repeats a Slack message."""
     space = wiki.space_id(SPACE_KEY)
     parent = wiki.find_page(space, PARENT_TITLE) or wiki.create_page(
         space, PARENT_TITLE, PARENT_BODY, None
     )
     title = page_title(entry.path.service)
-    section = render_section(entry)
     page = wiki.find_page(space, title)
+    current = page["body"]["storage"]["value"] if page else ""
+
+    summary_html, source = kept_summary(current, entry), "kept"
+    if not summary_html:
+        summary_html = render_summary(summarize(entry) if summarize else None)
+        source = "new" if summary_html else "none"
+    section = render_section(entry, summary_html)
+
     if page is None:
-        return wiki.url(wiki.create_page(space, title, section, parent["id"]))
-    current = page["body"]["storage"]["value"]
+        created = wiki.create_page(space, title, section, parent["id"])
+        return Published(wiki.url(created), True, source)
     merged = merge_day(current, entry.day, section)
-    if merged == current:
-        return None
-    wiki.update_page(page, merged)
-    return wiki.url(page)
+    if merged != current:
+        wiki.update_page(page, merged)
+    return Published(wiki.url(page), merged != current, source)
 
 
 def render_digest_message(day: date, published: list[tuple[DayEntry, str]]) -> str:
@@ -442,6 +638,31 @@ def _describe(e: Exception) -> str:
     return f"{type(e).__name__}: {e}"
 
 
+def _warn(title: str, why: str) -> None:
+    print(f"::warning title=Release notes: {title}::{why}")
+
+
+def _record(entry: DayEntry) -> str | None:
+    """Write the day's entry at deploy time; the page URL, or None when the
+    page could not be written. Never raises: the deploy is live, its #releases
+    message still goes out, and the daily sweep writes what this missed."""
+    if not (settings.jira_email and settings.jira_api_token):
+        _warn(
+            "page not written",
+            "JIRA_EMAIL / JIRA_API_TOKEN are not set. The daily sweep will record this deploy.",
+        )
+        return None
+    try:
+        with confluence_client(settings.jira_email, settings.jira_api_token) as http:
+            published = publish(Confluence(http, settings.jira_base_url), entry, summarizer())
+    except (httpx.HTTPError, LookupError) as e:
+        _warn("page not written", f"{_describe(e)}. The daily sweep will record this deploy.")
+        return None
+    state = "wrote" if published.changed else "already current:"
+    print(f"{state} {entry.day} (summary: {published.summary}) {published.url}")
+    return published.url
+
+
 def _notify_main(args: argparse.Namespace) -> int:
     # A path the digest knows carries its own settings (a tag-released repo);
     # any other caller is an ordinary deploy from the default branch.
@@ -449,15 +670,29 @@ def _notify_main(args: argparse.Namespace) -> int:
         (p for p in PATHS if (p.repo, p.workflow) == (args.repo, args.workflow)),
         DeployPath(args.repo, args.service, args.workflow),
     )
+    entry: DayEntry | None = None
     with github_client(settings.github_token) as http:
-        text = notify(http, path, sha=args.sha, run_id=args.run_id, run_attempt=args.run_attempt)
-    if text is None:
-        print("nothing to announce: a re-run of a green run, or no merged PR in this deploy")
-        return 0
-    print(text)
+        prs = deploy_prs(http, path, sha=args.sha, run_id=args.run_id, run_attempt=args.run_attempt)
+        if not prs:
+            print("nothing to announce: a re-run of a green run, or no merged PR in this deploy")
+            return 0
+        now = datetime.now(UTC)
+        try:
+            entry = collect_day(
+                http, path, now.astimezone(LOCAL_TZ).date(), current=Run(args.run_id, args.sha, now)
+            )
+        except httpx.HTTPError as e:
+            _warn("page not written", f"{_describe(e)}. The daily sweep will record this deploy.")
+
     if args.dry_run:
-        print("dry run — not posted")
+        if entry is not None:
+            print(render_section(entry, render_summary(summarizer()(entry))))
+        print(render_deploy_message(path, args.sha, prs))
+        print("dry run — page not written, message not posted")
         return 0
+    notes_url = _record(entry) if entry is not None else None
+    text = render_deploy_message(path, args.sha, prs, notes_url)
+    print(text)
     if not settings.slack_releases_webhook_url:
         print("SLACK_RELEASES_WEBHOOK_URL is not set — nothing posted", file=sys.stderr)
         return 2
@@ -490,28 +725,30 @@ def _digest_main(args: argparse.Namespace) -> int:
         print("JIRA_EMAIL / JIRA_API_TOKEN are not set — nothing written", file=sys.stderr)
         return 2
     else:
-        published: list[tuple[DayEntry, str]] = []
+        changed: list[tuple[DayEntry, str]] = []
+        summarize_entry = summarizer()
         with confluence_client(settings.jira_email, settings.jira_api_token) as http:
             wiki = Confluence(http, settings.jira_base_url)
             for entry in entries:
                 try:
-                    url = publish(wiki, entry)
+                    published = publish(wiki, entry, summarize_entry)
                 except (httpx.HTTPError, LookupError) as e:
                     failed[entry.path.service] = _describe(e)
                     continue
-                if url is None:
+                if not published.changed:
                     print(f"{entry.path.service}: entry for {day} already current")
                 else:
-                    print(f"{entry.path.service}: wrote {day} ({len(entry.prs)} PRs) to {url}")
-                    published.append((entry, url))
-        if published and settings.slack_releases_webhook_url:
+                    print(
+                        f"{entry.path.service}: wrote {day} ({len(entry.prs)} PRs, "
+                        f"summary: {published.summary}) to {published.url}"
+                    )
+                    changed.append((entry, published.url))
+        if changed and settings.slack_releases_webhook_url:
             try:
-                post_slack(
-                    settings.slack_releases_webhook_url, render_digest_message(day, published)
-                )
+                post_slack(settings.slack_releases_webhook_url, render_digest_message(day, changed))
             except httpx.HTTPError as e:
                 failed["slack"] = _describe(e)
-        elif published:
+        elif changed:
             print("SLACK_RELEASES_WEBHOOK_URL is not set — pages written, no message posted")
 
     for name, why in failed.items():
@@ -522,22 +759,24 @@ def _digest_main(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         prog="python -m kpi.release_notes",
-        description="Release notes from merged PRs: a Slack message per deploy and a "
-        "daily Confluence digest (RC1-497).",
+        description="Release notes from merged PRs: each deploy writes its Confluence "
+        "page and posts to Slack; a daily sweep repairs misses (RC1-497, RC1-502).",
     )
     sub = ap.add_subparsers(dest="command", required=True)
 
-    n = sub.add_parser("notify", help="announce the deploy that just succeeded")
+    n = sub.add_parser("notify", help="record and announce the deploy that just succeeded")
     n.add_argument("--repo", required=True)
     n.add_argument("--service", required=True)
     n.add_argument("--workflow", required=True, help="the deploy workflow's file name")
     n.add_argument("--sha", required=True, help="the deployed sha, or the tag for a release")
     n.add_argument("--run-id", required=True, type=int)
     n.add_argument("--run-attempt", type=int, default=1)
-    n.add_argument("--dry-run", action="store_true", help="print the message; do not post")
+    n.add_argument(
+        "--dry-run", action="store_true", help="print the entry and the message; write nothing"
+    )
     n.set_defaults(run=_notify_main)
 
-    d = sub.add_parser("digest", help="write one day's entries to Confluence")
+    d = sub.add_parser("digest", help="the daily sweep: write the entries a day is missing")
     d.add_argument(
         "--date",
         type=date.fromisoformat,

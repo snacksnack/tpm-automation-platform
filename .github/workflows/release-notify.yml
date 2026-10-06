@@ -1,6 +1,6 @@
-# Announce a deploy in #releases (RC1-497). Reusable: a deploy workflow in any
-# estate repo calls this as a job that `needs` its deploy job, so it runs only
-# after the deploy succeeded:
+# Record a deploy in Confluence, then announce it in #releases (RC1-497,
+# RC1-502). Reusable: a deploy workflow in any estate repo calls this as a job
+# that `needs` its deploy job, so it runs only after the deploy succeeded:
 #
 #   release-notify:
 #     needs: deploy
@@ -9,13 +9,29 @@
 #     with: { service: my-service, workflow: fly-deploy.yml }
 #     secrets:
 #       SLACK_RELEASES_WEBHOOK_URL: ${{ secrets.SLACK_RELEASES_WEBHOOK_URL }}
+#       JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+#       JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+#       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+#       DD_API_KEY: ${{ secrets.DD_API_KEY }}
 #
-# The logic lives in kpi/release_notes.py and is read from this repo's main,
-# so a change to the message is one PR here, not one per calling repo.
+# The job rewrites today's section on the service's "Release notes" page
+# (a plain-language summary, then the PR list) and then posts a #releases
+# message that links the page. The logic lives in kpi/release_notes.py and is
+# read from this repo's main, so a change to either is one PR here, not one
+# per calling repo.
+#
+# Every secret is optional, and each missing one removes one piece:
+#   SLACK_RELEASES_WEBHOOK_URL  no #releases message
+#   JIRA_EMAIL, JIRA_API_TOKEN  no page write (the daily sweep records the
+#                               deploy), and the message has no page link
+#   ANTHROPIC_API_KEY           the page entry is the PR list, with no summary
+#   DD_API_KEY                  the summary call is not traced in LLM Obs
+# A caller may pass only secrets declared below: passing one this file does
+# not declare makes the caller's whole deploy workflow invalid.
 #
 # This job never fails. The deploy is already live when it starts, and a red
 # run would say otherwise — the DORA close step in the calling workflow reads
-# run conclusions. A missing secret or a failed post is a warning annotation.
+# run conclusions. A missing secret or a failed step is a warning annotation.
 name: Release notify
 
 on:
@@ -32,6 +48,14 @@ on:
     secrets:
       SLACK_RELEASES_WEBHOOK_URL:
         required: false
+      JIRA_EMAIL:
+        required: false
+      JIRA_API_TOKEN:
+        required: false
+      ANTHROPIC_API_KEY:
+        required: false
+      DD_API_KEY:
+        required: false
 
 permissions:
   contents: read
@@ -40,7 +64,7 @@ permissions:
 
 jobs:
   notify:
-    name: Post to #releases
+    name: Record and announce
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -53,15 +77,21 @@ jobs:
         with:
           python-version: "3.12"
 
-      # Not `pip install -e .`: the module needs two packages, and the full
-      # install would add ddtrace and a minute to every deploy in the estate.
+      # Not `pip install -e .`: the module needs these four, not the service's
+      # whole dependency set. anthropic writes the summary and ddtrace traces
+      # that call (RC1-502); the bounds are pyproject.toml's.
       - name: Install dependencies
-        run: pip install httpx pydantic-settings
+        run: pip install httpx pydantic-settings "anthropic>=0.39" "ddtrace>=4.14,<5"
 
-      - name: Announce the deploy
+      - name: Record and announce the deploy
         env:
           GITHUB_TOKEN: ${{ github.token }}
           SLACK_RELEASES_WEBHOOK_URL: ${{ secrets.SLACK_RELEASES_WEBHOOK_URL }}
+          # One Atlassian API token serves Jira and Confluence.
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
           SERVICE: ${{ inputs.service }}
           WORKFLOW: ${{ inputs.workflow }}
           # A workflow_run-triggered deploy (reid_basic's Heroku Release) ships
@@ -70,8 +100,12 @@ jobs:
           # A tag-triggered release (agent-evals) is named by its tag.
           SHA: ${{ github.event.workflow_run.head_sha || (github.ref_type == 'tag' && github.ref_name) || github.sha }}
         run: |
+          # A skipped job looks like a passing one in the run list (RC1-378),
+          # so say what was skipped. The page is still written without Slack.
           if [ -z "$SLACK_RELEASES_WEBHOOK_URL" ]; then
-            echo "::warning title=Release notify skipped::SLACK_RELEASES_WEBHOOK_URL not set — this deploy was not announced."
+            echo "::warning title=Release notify: no message::SLACK_RELEASES_WEBHOOK_URL not set — this deploy was not announced in #releases."
+          fi
+          if [ -z "$SLACK_RELEASES_WEBHOOK_URL" ] && { [ -z "$JIRA_EMAIL" ] || [ -z "$JIRA_API_TOKEN" ]; }; then
             exit 0
           fi
           python -m kpi.release_notes notify \
@@ -81,4 +115,4 @@ jobs:
             --sha "$SHA" \
             --run-id "$GITHUB_RUN_ID" \
             --run-attempt "$GITHUB_RUN_ATTEMPT" \
-            || echo "::warning title=Release notify failed::The deploy is live; its #releases message was not posted. The daily digest will still record it."
+            || echo "::warning title=Release notify incomplete::The deploy is live; its #releases message was not posted. The daily sweep records any deploy whose page was not written."

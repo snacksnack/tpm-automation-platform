@@ -1,8 +1,11 @@
-# Release notes: a Slack message per deploy, a daily digest in Confluence (RC1-497)
+# Release notes: each deploy writes Confluence, then tells Slack (RC1-497, RC1-502)
 
-Every production deploy now leaves a record in two places. `#releases` says
-what just shipped as each deploy lands; Confluence holds one entry per service
-per day, which is the page to read or search later.
+Every production deploy leaves a record in two places. Confluence holds one
+entry per service per day, opening with a plain-language summary; `#releases`
+says what just shipped as each deploy lands and links that page.
+
+RC1-497 built this as a PR list written once a day. RC1-502 changed two of
+its decisions, and the reasons are in [What RC1-502 changed](#what-rc1-502-changed-and-why).
 
 ## What a release is, and what a note is built from
 
@@ -11,7 +14,8 @@ A release is a deploy run that succeeded. Most of the estate ships on push to
 requests between the previously deployed sha and this one: the commits in
 that range are mapped to their PRs through the GitHub API, and each PR names
 its story through the `rc1-NNN-slug` branch (the title is the fallback).
-There is no model in the path; the note is a list.
+Which PRs shipped is decided in Python. A model writes only the summary that
+opens the day's entry; the PR list under it is the audit trail.
 
 Only successful runs are read. A merge whose deploy failed is in no day's
 entry until a later deploy carries it out, and then it is in that day's.
@@ -20,15 +24,19 @@ entry until a later deploy carries it out, and then it is in that day's.
 
 | piece | where it runs | writes |
 |---|---|---|
-| `notify` | `release-notify.yml`, a reusable workflow a deploy workflow calls as a job that `needs` its deploy | one `#releases` message |
-| `digest` | `release-notes-daily.yml`, 05:23 UTC | the day's section on each service page, then one `#releases` message linking the pages that changed |
+| `notify` | `release-notify.yml`, a reusable workflow a deploy workflow calls as a job that `needs` its deploy | today's section on the service page, then one `#releases` message that links the page |
+| `digest` | `release-notes-daily.yml`, 05:23 UTC | the sweep: yesterday's section on any service page where it is missing or wrong, then one `#releases` message linking the pages it changed |
 
 Both are `kpi/release_notes.py`. The reusable workflow checks out this repo's
 `main`, so the logic has one home and a calling repo carries only the job
 stanza (it is in the header of `release-notify.yml`).
 
 A "day" is a day in America/New_York. 05:23 UTC is past local midnight in
-both EST and EDT, so yesterday is always complete when the job runs.
+both EST and EDT, so yesterday is always complete when the sweep runs.
+
+`notify` writes the page before it posts, so the link in the message never
+leads to a page that predates the deploy. A second deploy the same day
+rewrites the same section to cover both; there is one section per day.
 
 Pages live in the RC1 Confluence space: a `Release Notes` parent, one child
 per service titled `Release notes: <service>`, newest day first. Both are
@@ -42,14 +50,25 @@ created on first use.
 - **Re-running the digest** replaces the day's section. If the page already
   says the same thing it is not written, its version does not move, and
   Slack is not messaged again.
+- **A summary is written once per set of PRs.** A run that finds the day's
+  section already summarizing the same PRs keeps those words and makes no
+  model call. A redeploy that adds no PR changes the deploy count and the
+  sha in the section and keeps the summary.
 - **Backfilling**: run the workflow by hand with a date. Sections sort by
   date, so a backfilled day lands in order.
 
 ## Failure
 
 `notify` never fails its job: the deploy is live by then, and the DORA close
-step in `fly-deploy.yml` reads run conclusions. A missing webhook or a failed
-post is a warning annotation; the daily digest still records the deploy.
+step in `fly-deploy.yml` reads run conclusions. Each piece degrades on its
+own, with a warning annotation:
+
+| what is missing or failed | what still happens |
+|---|---|
+| the model key, or the model call | the entry is written as the PR list, with no summary |
+| the Atlassian secrets, or the page write | the `#releases` message posts without the page link; the sweep writes the entry the next morning |
+| the Slack webhook | the page is written; nothing is posted |
+
 `digest` skips with a warning when the Atlassian secrets are missing and goes
 red when a repo or a page could not be read or written.
 
@@ -102,7 +121,14 @@ digest is for "yesterday", so lateness costs nothing but the hour it appears.
 | secret | repo | for |
 |---|---|---|
 | `SLACK_RELEASES_WEBHOOK_URL` | this one, and every repo that calls `release-notify.yml` | both messages |
-| `JIRA_EMAIL`, `JIRA_API_TOKEN` | this one | the digest (one Atlassian token serves Jira and Confluence) |
+| `JIRA_EMAIL`, `JIRA_API_TOKEN` | this one, and every calling repo | the page write (one Atlassian token serves Jira and Confluence) |
+| `ANTHROPIC_API_KEY` | this one, and every calling repo | the summary |
+| `DD_API_KEY` | already on every repo | the summary call's LLM Observability trace (`ml_app` `release-notes`) |
+
+All are optional to the reusable workflow. A caller may pass only the secrets
+`release-notify.yml` declares: one it does not declare makes the caller's
+whole deploy workflow invalid, so this repo's change merges before any
+caller starts passing the new ones.
 
 ## Rollout
 
@@ -143,7 +169,7 @@ Three things that differ by repo:
 default Actions token, which cannot see another private repo.
 
 Adding a repo: one row in `PATHS`, the `release-notify` job in its deploy
-workflow, and `SLACK_RELEASES_WEBHOOK_URL` set on the repo.
+workflow, and the secrets above set on the repo.
 
 ## A coupling to know about
 
@@ -151,3 +177,48 @@ Every calling repo runs `release-notify.yml@main`. A change here that breaks
 the workflow's inputs makes every caller's deploy workflow invalid, and an
 invalid workflow does not start. Keep `service` and `workflow` as the only
 required inputs; add anything new as optional.
+
+## What RC1-502 changed, and why
+
+RC1-497 chose "a PR list, no model" and "written once a day". Both held up
+technically and failed the reader: a PR title means nothing to someone who
+cannot open the PR, and a stakeholder without GitHub access had nowhere to
+go from the `#releases` message, because the page was a day behind it.
+
+| | RC1-497 | RC1-502 |
+|---|---|---|
+| what an entry says | PR titles | a plain-language summary, then the PR titles |
+| when the page is written | once, the next morning | by each deploy, before its Slack message |
+| the Slack message | PR list | PR list plus a link to the page |
+| the daily job | the only writer | a sweep that repairs misses |
+
+The summary is Claude Haiku 4.5 (`claude-haiku-4-5`) reading each PR's title
+and description; the prompt is `kpi/templates/release_summary.md`. The diff
+is not sent: descriptions were enough on the entries tried, and a diff would
+pull implementation detail toward a stakeholder page. A description past
+6,000 characters is cut and the payload says so. Each summary ends with a
+line saying an AI wrote it from the PRs below.
+
+The write and the model call run in the calling repo's own job, which is why
+the Atlassian and Anthropic secrets are now needed on every calling repo.
+The alternative, handing off to a workflow here, keeps those secrets in one
+place but needs a cross-repo token with Actions write on this repo in every
+caller, which is a wider grant than the two it would replace.
+
+A deploy at the edge of the day can be filed a day early: `notify` files it
+under the day it runs, the sweep under the day the run finished. The sweep
+rewrites yesterday's section from the run list, so it corrects itself.
+
+### Verified before merge (2026-10-06)
+
+| check | result |
+|---|---|
+| `notify --dry-run` on the real 10-05 deploys of this repo and reid_basic | a summary and section for each, written by the model through structured output |
+| `digest --date 2026-10-05`, live, Slack off | both pages' 10-05 sections rewritten with a summary |
+| the same command again | both "already current": no model call, no page version |
+| LLM Observability, `@ml_app:release-notes` | 5 spans on `claude-haiku-4-5`, one per model call made above |
+
+The second row is a backfill of one day on two pages, done to prove the
+third: that Confluence hands a summary back in a form the next run
+recognizes. The deploy-time path (a real deploy writing its page and linking
+it) is first exercised by this change's own deploy.

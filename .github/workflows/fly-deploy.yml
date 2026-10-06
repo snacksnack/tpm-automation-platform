@@ -199,10 +199,11 @@ jobs:
             close_failure "$sha" "$(date -d "$t" +%s)"
           done < streak.tsv
 
-  # Announce the deploy in #releases (RC1-497). A separate job so it runs only
-  # after everything above passed, and it never fails: see release-notify.yml.
+  # Record the deploy in Confluence and announce it in #releases (RC1-497,
+  # RC1-502). A separate job so it runs only after everything above passed,
+  # and it never fails: see release-notify.yml.
   release-notify:
-    name: Announce release
+    name: Release notes
     needs: deploy
     permissions:
       contents: read
@@ -214,3 +215,7 @@ jobs:
       workflow: fly-deploy.yml
     secrets:
       SLACK_RELEASES_WEBHOOK_URL: ${{ secrets.SLACK_RELEASES_WEBHOOK_URL }}
+      JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+      JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      DD_API_KEY: ${{ secrets.DD_API_KEY }}

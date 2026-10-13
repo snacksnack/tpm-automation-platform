@@ -297,7 +297,16 @@ def monitor_payloads(
       otherwise hold the monitor, and the SLO built on it, red for the rest
       of the program. The standing level stays on the dashboard.
     - **unmeasured**: warning on stale (1), alert on broken (2) — the honesty
-      rule's alarm. The value chart goes quiet and this says why.
+      rule's alarm. The value chart goes quiet and this says why. It reads
+      `min(last_2d)`, not `max(last_1d)` (RC1-506): health ships once a day, so a
+      single transient `broken` point — a source that erred on one run and
+      recovered on the next — would otherwise latch this monitor, and the
+      `Program measurement health` SLO built on it, red for a full 24h. Requiring
+      the unmeasured state on *two consecutive* daily readings cancels the blip
+      against its neighbouring `ok` while a genuine multi-day break still fires;
+      same anti-latch reasoning as the tripped monitor (RC1-418) and the same
+      two-consecutive rule `real-cost-per-run` trips on. The heartbeat below
+      covers a wholly dead job.
     - **heartbeat**: a threshold that never fires plus `notify_no_data` — the
       Datadog-side twin of the dead-man's switch (RC1-319).
     """
@@ -321,7 +330,7 @@ def monitor_payloads(
         {
             "name": f"Program KPI unmeasured — {program_id}",
             "type": "metric alert",
-            "query": f"max(last_1d):max:{HEALTH_METRIC}{scope} by {{kpi}} >= 2",
+            "query": f"min(last_2d):max:{HEALTH_METRIC}{scope} by {{kpi}} >= 2",
             "message": _message(
                 f"{{{{kpi.name}}}} on {program_id} is unmeasured — "
                 "stale on warning, broken on alert. Never mistaken for a zero.",

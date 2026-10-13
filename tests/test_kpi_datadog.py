@@ -330,6 +330,17 @@ def test_unmeasured_monitor_warns_on_stale_and_alerts_on_broken():
     assert datadog.HEALTH_METRIC in m["query"]
 
 
+def test_unmeasured_monitor_needs_two_consecutive_readings_not_a_single_blip():
+    """RC1-506: health ships once a day, so `max(last_1d)` latches a single
+    transient `broken` for 24h and burns a whole day of the measurement SLO.
+    `min(last_2d)` requires the unmeasured state on two consecutive readings —
+    a blip is cancelled by its neighbouring `ok`, a real multi-day break fires."""
+    m = _monitors()["Program KPI unmeasured — simulated-program"]
+    assert m["query"] == (
+        "min(last_2d):max:kpi.program.health{program:simulated-program} by {kpi} >= 2"
+    )
+
+
 def test_heartbeat_threshold_can_never_fire_only_its_no_data_can():
     m = _monitors()["Program KPI heartbeat — simulated-program"]
     assert m["options"]["thresholds"]["critical"] > max(datadog.HEALTH.values())

@@ -96,3 +96,46 @@ The generated monitors are deliberately outside `datadog/manifest.json` (see
 
 The standing `kpi:scope-change-pct` alert clears on the first daily run after
 the push, when `newly_tripped` ships its 0 for the day.
+
+# The same latch on the unmeasured monitor (RC1-506)
+
+The `Program KPI unmeasured` monitor had the twin of the problem RC1-418 fixed
+above. Its query was
+
+```
+max(last_1d):max:kpi.program.health{program:X} by {kpi} >= 2
+```
+
+Health ships once a day, so a single **transient** `broken` point — a source
+that erred on one run and was `ok` on the next — latched this monitor in alert
+for a full 24 h, and the `Program measurement health` SLO built on it burned a
+whole day against a 99 %/30 d target.
+
+It bit on `eval-run-store`: measurement health read 93.3 % (error budget
+−567 %) on 2026-10-13, entirely from two days — `real-cost-per-run` shipped
+`health=2` at 2026-09-29 11:00 UTC and 2026-10-05 11:30 UTC (both late-running
+days; a billing/store source erred, then succeeded on retry). The *persisted*
+readings for both days settled to `ok` — no real measurement failure, but
+Datadog caught the broken intermediate and `max(last_1d)` held it.
+
+The fix requires the unmeasured state on **two consecutive** daily readings:
+
+```
+min(last_2d):max:kpi.program.health{program:X} by {kpi} >= 2
+```
+
+- **A single transient `broken`** → the adjacent `ok` (0) sits in the 2-day
+  window, so `min` is 0 and the monitor stays green. The blip no longer burns a
+  day.
+- **A genuine multi-day break** (the sim's planted source break, days 43–47, or
+  a truly dead source) → `min` stays ≥ 2 and it fires, one reading later than
+  before. The measurement SLO budgets ~7 h/month and real breaks here persist
+  for days, so trading same-day onset for no false burns is the right call —
+  the same two-consecutive rule `real-cost-per-run` already trips on.
+- **A wholly dead job** is not this monitor's beat: the heartbeat monitor still
+  pages via `notify_no_data` within 26 h, unchanged.
+
+Thresholds (`critical` 2 / `warning` 1) and the monitor name are untouched, so
+the push updates monitor 317618029 in place and the `Program measurement
+health` SLO's wiring survives. A test pins the query shape. Deploy the same way
+— `python -m kpi.datadog monitors --push`, outside the drift check.

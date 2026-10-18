@@ -18,7 +18,8 @@ from datetime import UTC, date, datetime
 
 import pytest
 
-from collectors.models import ProgramSnapshot, SourceHealth
+from collectors import programs
+from collectors.models import ProgramSnapshot, SourceHealth, SpendRow
 from kpi import measures, track
 from kpi.reading import Reading
 from kpi.readings_store import _COLUMNS, SCHEMA, row_for, stored_from_row
@@ -171,6 +172,60 @@ def test_result_buckets_readings_by_state():
     assert [r.kpi_id for r in result.ok] == ["a", "c"]
     assert [r.kpi_id for r in result.unmeasured] == ["b"]
     assert [r.kpi_id for r in result.tripped] == ["c"]
+
+
+# --- clock-error (mid-converge) carries the standing state through (RC1-511) -----------------
+
+
+def _spend_snapshot(
+    day: int, sim_date: date, *, clock_error: bool = False
+) -> ProgramSnapshot:
+    """A simulated-program day whose spend line trips cost-vs-envelope (two
+    weeks both over the 1.10 envelope). `clock_error` marks it mid-converge."""
+    clock = (
+        SourceHealth(source="clock", status="error", detail=f"converge to day {day} failed")
+        if clock_error
+        else SourceHealth(source="clock", status="ok", count=1, detail=f"day {day}")
+    )
+    return ProgramSnapshot(
+        program_id="simulated-program", collected_at=NOW, sim_date=sim_date, sim_day=day,
+        spend=[
+            SpendRow(week=1, week_start=date(2026, 9, 1), planned_usd=1200.0, actual_usd=2000.0),
+            SpendRow(week=2, week_start=date(2026, 9, 8), planned_usd=1200.0, actual_usd=2000.0),
+        ],
+        health=[clock, SourceHealth(source="spend", status="ok", count=2)],
+    )
+
+
+def _sim():
+    return programs.get("simulated-program")
+
+
+def test_clock_error_carries_the_tripped_flag_through():
+    """RC1-511: a mid-converge day must carry the prior day's standing trip, not
+    reset it to False — otherwise the next clean run reads as a fresh crossing
+    and the monitor re-fires on a KPI that never actually un-tripped."""
+    good = _spend_snapshot(0, date(2026, 9, 15))
+    before = measures.measure("cost-vs-envelope", _sim(), [good])
+    assert before.state == "ok" and before.tripped, "the fixture must trip on the clean day"
+
+    mid = _spend_snapshot(1, date(2026, 9, 16), clock_error=True)
+    carried = measures.measure("cost-vs-envelope", _sim(), [good, mid])
+
+    assert carried.state == "broken"
+    assert carried.tripped, "a mid-converge day must carry the standing trip through"
+    assert carried.value == before.value, "the carried reading keeps the last good value"
+    assert carried.sim_date == date(2026, 9, 16), "stamped with the day it stands in for"
+    assert "mid-converge" in carried.reason
+
+
+def test_clock_error_on_the_first_day_has_nothing_to_carry():
+    """No prior snapshot to stand in for: broken with no number and no trip,
+    rather than a crash."""
+    mid = _spend_snapshot(0, date(2026, 9, 15), clock_error=True)
+    reading = measures.measure("cost-vs-envelope", _sim(), [mid])
+    assert reading.state == "broken" and reading.value is None and not reading.tripped
+    assert "mid-converge" in reading.reason
 
 
 # --- the readings row ------------------------------------------------------------------------

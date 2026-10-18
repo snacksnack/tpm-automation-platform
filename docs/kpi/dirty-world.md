@@ -53,7 +53,10 @@ simulator was mid-converge" is a fact the KPI stage needs; `snapshot` exits 1.
 **5. The measures refuse to date a number from it.** Every simulated KPI reads
 `broken` with a reason naming the day converge was reaching for. This is the
 honesty rule — *never a number computed from an absence* — with the absence
-being the **date** rather than the data.
+being the **date** rather than the data. The `broken` reading carries the last
+good day's value *and* its `tripped` flag through, re-stamped with the dirty
+date — it does not invent a number, and it does not drop the standing trip
+(RC1-511, below).
 
 **6. `simulate verify` runs in the daily job**, after the tick and before the
 snapshot. It reads Jira, writes nothing, and goes red the morning a clock and a
@@ -81,3 +84,25 @@ good run with the series truncated there and write through
 `ReadingsStore.save(..., run_id=<good run>)`. Verify by comparing every stored
 reading against `docs/kpi/ledger/simulated-program.csv` — the whole ledger, not
 just the day touched.
+
+## A dirty day must not reset the crossing (RC1-511)
+
+On 2026-10-18 the Program KPI monitors fired two crossing alerts for
+`simulated-program` — `scope-change-pct` and `cost-vs-envelope` — with nothing
+in the program having changed. Both had been standing-tripped for weeks (the
+scripted scope add and the week-6 cost spike). The crossings were spurious.
+
+`kpi.program.newly_tripped` (RC1-418) fires on the day a KPI goes from not-tripped
+to tripped against the last reported day. The mid-converge guard returned a bare
+`_broken(...)`, which defaults `tripped` to `False`. So a dirty day dropped the
+standing trip, and the next clean run read as a fresh crossing and re-alerted:
+
+- run 124 (sim-day 52, `clock=error`): both KPIs `broken, tripped=False`.
+- run 126 (sim-day 53, clean): both `ok, tripped=True` → `newly_tripped=1` → two alerts.
+
+The Jira source break never had this bug — it recomputes the last good day and
+re-stamps it `broken`, keeping value *and* `tripped`. The fix makes the
+clock-error branch do the same: recompute as of the prior snapshot and carry its
+standing state through. The monitors were correct; the measure was resetting
+their baseline. Any mid-converge blip would otherwise re-fire every still-tripped
+KPI the following morning.

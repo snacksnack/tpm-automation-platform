@@ -766,9 +766,18 @@ def _simulated(kpi_id: str) -> Measure:
         # with the absence being the date rather than the data.
         clock = next((h for h in snap.health if h.source == "clock"), None)
         if clock is not None and clock.status == "error":
-            return _broken(
-                kpi_id, snap, f"the simulated world is mid-converge: {clock.detail}"
-            )
+            # RC1-511: the day is unmeasurable, but it must carry the last good
+            # day's standing state through — the same invariant the Jira source
+            # break honours below. A bare `_broken` defaults tripped=False, which
+            # resets the newly_tripped baseline (RC1-418) and makes the next clean
+            # run re-fire the monitor for every still-tripped KPI. Recompute as of
+            # the prior snapshot and re-stamp it broken, carrying value and tripped.
+            reason = f"the simulated world is mid-converge: {clock.detail}"
+            if len(series) > 1:
+                return measure(program, series[:-1]).model_copy(
+                    update={"sim_date": snap.sim_date, "state": "broken", "reason": reason}
+                )
+            return _broken(kpi_id, snap, reason)
         by_day: dict[int, ProgramSnapshot] = {}
         for s in series:
             if s.sim_day is None:

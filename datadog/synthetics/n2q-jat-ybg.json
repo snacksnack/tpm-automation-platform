@@ -24,6 +24,7 @@
   "message": "Portfolio up — hihelloreid.com is failing — the resume site (Heroku app hihelloreid) is down or slow. This site is an interview artifact; check it before anyone else does. (RC1-325)\n\n@hire.reid.collins@gmail.com\n@webhook-incident-summarizer",
   "name": "Portfolio up — www.hihelloreid.com",
   "options": {
+    "bits_ai_auto_investigate": false,
     "min_location_failed": 1,
     "monitor_priority": 2,
     "retry": {

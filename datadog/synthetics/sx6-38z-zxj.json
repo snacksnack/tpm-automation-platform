@@ -13,6 +13,7 @@
   "message": "The client-rendered /work page loaded but did not render — the HTTP uptime check cannot see this failure (the shell still returns 200). Check the browser console in the failed run's screenshot/replay. @hire.reid.collins@gmail.com\n@webhook-incident-summarizer",
   "name": "Portfolio renders — /work (browser)",
   "options": {
+    "bits_ai_auto_investigate": false,
     "device_ids": [
       "chrome.laptop_large"
     ],

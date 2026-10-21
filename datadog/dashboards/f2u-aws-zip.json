@@ -1,5 +1,6 @@
 {
   "description": "RC1-477: the Cohere comparison program's standing pane — operational, retrieval-quality and judged-quality metrics per seat, arms side by side. Committed as code in tpm-automation-platform/datadog/ and covered by the daily drift CI. Cost metrics are nanodollars: formulas divide by 1e9 and pin the unit (RC1-405). Eval-run Cohere spans include the trial-key pacing sleep — see the header note before reading span-duration latency.",
+  "experience_type": "default",
   "id": "f2u-aws-zip",
   "layout_type": "ordered",
   "notify_list": null,

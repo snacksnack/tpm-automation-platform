@@ -18,6 +18,7 @@
   "message": "The TLS certificate for incidents.hihelloreid.com expires in under 15 days. Heroku/Vercel normally auto-renew — if this fires, renewal is stuck and the site goes hard-down at expiry. @hire.reid.collins@gmail.com\n@webhook-incident-summarizer",
   "name": "SSL cert — incidents.hihelloreid.com",
   "options": {
+    "bits_ai_auto_investigate": false,
     "min_location_failed": 1,
     "monitor_priority": 3,
     "retry": {

@@ -166,7 +166,7 @@
                       ],
                       "name": "q0",
                       "search": {
-                        "query": "ci_level:pipeline"
+                        "query": "ci_level:pipeline @ci.status:(success OR error)"
                       }
                     },
                     {
@@ -187,7 +187,7 @@
                   "response_format": "scalar"
                 }
               ],
-              "title": "Success rate",
+              "title": "Pass rate (completed runs)",
               "type": "query_value"
             },
             "id": 5748216733221326,

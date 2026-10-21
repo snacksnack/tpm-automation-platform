@@ -120,6 +120,12 @@
     {
       "id": 322832422,
       "why": "RC1-451 log ingest guardrail — more than 10,000 ingested events in a day (warn 5,000) against a baseline of ~265/day, 1,231 max. Fires at half the index's 20,000/day cap, because the cap drops logs silently once reached"
+    },
+    {
+      "id": 335370262,
+      "why": "RC1-535 PR agent keep-warm/up alert, owned by synthetics test 69w-d3w-zv2",
+      "push": false,
+      "push_note": "Datadog creates this monitor from the test; edit synthetics/69w-d3w-zv2.json instead"
     }
   ],
   "synthetics": [
@@ -142,6 +148,10 @@
     {
       "id": "pcx-j8w-96n",
       "why": "RC1-341 SSL certificate expiry — incidents.hihelloreid.com"
+    },
+    {
+      "id": "69w-d3w-zv2",
+      "why": "RC1-535 keep-warm + uptime — pr-review-agent-snacksnack /healthz every 15 min; the reliable external trigger that replaces the GitHub wake.yml cron (GitHub throttled it to ~6 runs/day)"
     }
   ],
   "slos": [

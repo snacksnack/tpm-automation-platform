@@ -1,0 +1,28 @@
+{
+  "draft_status": "published",
+  "id": 335370262,
+  "message": "PR review agent keep-warm — a 15-min ping to pr-review-agent-snacksnack.fly.dev/healthz that starts the scale-to-zero Fly machine so the worker drains interrupted review jobs (RC1-535; replaces the GitHub wake.yml cron, which GitHub throttled to ~6 runs/day). Cold starts are absorbed by retries, so a failure here means the service is genuinely unreachable and queued reviews are stalled.\n\n@webhook-incident-summarizer",
+  "multi": false,
+  "name": "[Synthetics] PR agent keep-warm + up — pr-review-agent-snacksnack (RC1-535)",
+  "options": {
+    "include_tags": true,
+    "new_host_delay": 300,
+    "notify_audit": false,
+    "on_missing_data": "show_no_data",
+    "synthetics_check_id": "69w-d3w-zv2"
+  },
+  "priority": 4,
+  "query": "no_query",
+  "restricted_roles": null,
+  "tags": [
+    "pr-agent",
+    "generated:rc1-535",
+    "service:pr-review-agent-snacksnack",
+    "purpose:keep-warm",
+    "probe_dc:aws:us-east-1",
+    "check_type:api",
+    "check_status:live",
+    "ci_execution_rule:blocking"
+  ],
+  "type": "synthetics alert"
+}

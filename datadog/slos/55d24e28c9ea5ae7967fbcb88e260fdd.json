@@ -1,0 +1,48 @@
+{
+  "description": "Share of reconciliation runs that returned PASS, 30d. reconcile_result is the semantic verdict (consent counts, 100%-enumerated suppression integrity, segment parity, checksums, campaign rendering) — distinct from the pipeline_run crash signal. A fail here means the target disagrees with the approved spec. 95% to start; both live targets reconciled 100% at RC1-546/547.",
+  "id": "55d24e28c9ea5ae7967fbcb88e260fdd",
+  "monitor_tags": [],
+  "name": "ESP migration — reconciliation pass rate",
+  "query": {
+    "denominator": "sum:esp_migration.reconcile_result{service:esp-migration-agent}.as_count()",
+    "numerator": "sum:esp_migration.reconcile_result{service:esp-migration-agent,outcome:pass}.as_count()"
+  },
+  "sli_specification": {
+    "count": {
+      "good_events_formula": {
+        "formula": "query1"
+      },
+      "queries": [
+        {
+          "data_source": "metrics",
+          "name": "query1",
+          "query": "sum:esp_migration.reconcile_result{outcome:pass,service:esp-migration-agent}.as_count()"
+        },
+        {
+          "data_source": "metrics",
+          "name": "query2",
+          "query": "sum:esp_migration.reconcile_result{service:esp-migration-agent}.as_count()"
+        }
+      ],
+      "total_events_formula": {
+        "formula": "query2"
+      }
+    }
+  },
+  "tags": [
+    "kind:reliability",
+    "rc1:548",
+    "service:esp-migration-agent"
+  ],
+  "target_threshold": 95.0,
+  "thresholds": [
+    {
+      "target": 95.0,
+      "target_display": "95.",
+      "timeframe": "30d"
+    }
+  ],
+  "timeframe": "30d",
+  "type": "metric",
+  "type_id": 1
+}

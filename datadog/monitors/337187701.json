@@ -1,0 +1,28 @@
+{
+  "draft_status": "published",
+  "id": 337187701,
+  "message": "An ESP Migration Agent pipeline stage failed (discovery, propose, execute, or reconcile — the stage is in the monitor tags). The run's own stderr has the named error; these are laptop CLI runs, so check the terminal that ran it and the LLM Obs trace under ml_app:esp-migration-agent for the propose/discovery stages.\n\nCounts come from esp_migration.pipeline_run (telemetry/metrics.py, ADR-0008): telemetry never fails a run, so a failure here is the pipeline itself.\n\nRC1-548. @webhook-incident-summarizer",
+  "multi": true,
+  "name": "ESP migration — pipeline run failed",
+  "options": {
+    "include_tags": true,
+    "new_host_delay": 300,
+    "notify_audit": false,
+    "notify_no_data": false,
+    "renotify_interval": 0,
+    "require_full_window": false,
+    "thresholds": {
+      "critical": 0.0
+    }
+  },
+  "priority": 3,
+  "query": "sum(last_15m):sum:esp_migration.pipeline_run{service:esp-migration-agent,outcome:failure} by {stage}.as_count() > 0",
+  "restricted_roles": null,
+  "tags": [
+    "rc1:548",
+    "service:esp-migration-agent",
+    "kind:errors",
+    "generated:manual"
+  ],
+  "type": "query alert"
+}

@@ -1,0 +1,28 @@
+{
+  "draft_status": "published",
+  "id": 337187703,
+  "message": "The executor hit a TargetError mid-write: the migration stopped partway into the target (listmonk or brevo — the target is in the monitor tags). The engine is idempotent (diff + upserts), so the recovery is to fix the target-side cause and re-run `python -m executor.run --spec ... --execute`; a clean second run converges to zero writes. Always follow with `python -m executor.reconcile`.\n\nRC1-548. @webhook-incident-summarizer",
+  "multi": true,
+  "name": "ESP migration — executor write errors",
+  "options": {
+    "include_tags": true,
+    "new_host_delay": 300,
+    "notify_audit": false,
+    "notify_no_data": false,
+    "renotify_interval": 0,
+    "require_full_window": false,
+    "thresholds": {
+      "critical": 0.0
+    }
+  },
+  "priority": 3,
+  "query": "sum(last_15m):sum:esp_migration.executor_write_errors{service:esp-migration-agent} by {target}.as_count() > 0",
+  "restricted_roles": null,
+  "tags": [
+    "rc1:548",
+    "service:esp-migration-agent",
+    "kind:errors",
+    "generated:manual"
+  ],
+  "type": "query alert"
+}

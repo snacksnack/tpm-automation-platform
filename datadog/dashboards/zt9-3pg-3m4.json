@@ -1,0 +1,266 @@
+{
+  "description": "RC1-548: pipeline runs, gate approvals, executor writes, reconciliation, cost per migration stage (LLM Obs, ml_app:esp-migration-agent), deploys (DORA, tag = release). Defined as code in tpm-automation-platform/datadog/ — edit there or pull after a UI edit, or the drift CI goes red.",
+  "experience_type": "default",
+  "id": "zt9-3pg-3m4",
+  "layout_type": "ordered",
+  "notify_list": null,
+  "restricted_roles": [],
+  "template_variables": null,
+  "title": "ESP Migration Agent — service",
+  "widgets": [
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "bars",
+            "formulas": [
+              {
+                "formula": "q1"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q1",
+                "query": "sum:esp_migration.pipeline_run{service:esp-migration-agent} by {stage,outcome}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "Pipeline runs by stage & outcome",
+        "type": "timeseries"
+      },
+      "id": 7154518065483650
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "bars",
+            "formulas": [
+              {
+                "formula": "q1"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q1",
+                "query": "sum:esp_migration.gate_approval{service:esp-migration-agent} by {outcome}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "Gate approvals",
+        "type": "timeseries"
+      },
+      "id": 7384529912671195
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "bars",
+            "formulas": [
+              {
+                "formula": "writes"
+              },
+              {
+                "formula": "errs"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "writes",
+                "query": "sum:esp_migration.executor_writes{service:esp-migration-agent} by {target}.as_count()"
+              },
+              {
+                "data_source": "metrics",
+                "name": "errs",
+                "query": "sum:esp_migration.executor_write_errors{service:esp-migration-agent} by {target}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "Executor writes & write errors",
+        "type": "timeseries"
+      },
+      "id": 8301870407711807
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "bars",
+            "formulas": [
+              {
+                "formula": "q1"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q1",
+                "query": "sum:esp_migration.reconcile_result{service:esp-migration-agent} by {outcome,target}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "Reconciliation results",
+        "type": "timeseries"
+      },
+      "id": 7263112806627154
+    },
+    {
+      "definition": {
+        "autoscale": false,
+        "custom_unit": "$/run",
+        "precision": 3,
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "cost / clamp_min(traces, 1) / 1000000000"
+              }
+            ],
+            "queries": [
+              {
+                "aggregator": "sum",
+                "data_source": "metrics",
+                "name": "cost",
+                "query": "sum:ml_obs.span.llm.total.cost{ml_app:esp-migration-agent,!service:evals,!service:dry-run}.as_count()"
+              },
+              {
+                "aggregator": "sum",
+                "data_source": "metrics",
+                "name": "traces",
+                "query": "sum:ml_obs.trace{ml_app:esp-migration-agent,!service:evals,!service:dry-run}.as_count()"
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "time": {
+          "live_span": "1d"
+        },
+        "title": "Cost per migration stage (1d)",
+        "type": "query_value"
+      },
+      "id": 6965406796226514
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "bars",
+            "formulas": [
+              {
+                "formula": "cost / 1000000000",
+                "number_format": {
+                  "unit": {
+                    "label": "$",
+                    "type": "custom_unit_label"
+                  }
+                }
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "cost",
+                "query": "sum:ml_obs.span.llm.total.cost{ml_app:esp-migration-agent,!service:evals,!service:dry-run}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "LLM spend, dollars",
+        "type": "timeseries"
+      },
+      "id": 4245244140384928
+    },
+    {
+      "definition": {
+        "autoscale": false,
+        "precision": 0,
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "dora",
+                "indexes": [
+                  "deployment"
+                ],
+                "name": "q0",
+                "search": {
+                  "query": "service:esp-migration-agent"
+                }
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "time": {
+          "live_span": "1mo"
+        },
+        "title": "Deployments (30d)",
+        "type": "query_value"
+      },
+      "id": 7712577447839916
+    },
+    {
+      "definition": {
+        "show_error_budget": true,
+        "slo_id": "a2619adb7d495a76bf0db586ebb84fda",
+        "time_windows": [
+          "30d"
+        ],
+        "title": "Discovery report success (SLO)",
+        "type": "slo",
+        "view_mode": "overall",
+        "view_type": "detail"
+      },
+      "id": 2304080530474687
+    },
+    {
+      "definition": {
+        "show_error_budget": true,
+        "slo_id": "55d24e28c9ea5ae7967fbcb88e260fdd",
+        "time_windows": [
+          "30d"
+        ],
+        "title": "Reconciliation pass rate (SLO)",
+        "type": "slo",
+        "view_mode": "overall",
+        "view_type": "detail"
+      },
+      "id": 780112214944605
+    },
+    {
+      "definition": {
+        "color_preference": "text",
+        "display_format": "countsAndList",
+        "hide_zero_counts": true,
+        "query": "tag:(\"service:esp-migration-agent\")",
+        "sort": "status,asc",
+        "summary_type": "monitors",
+        "title": "ESP monitors",
+        "type": "manage_status"
+      },
+      "id": 1155946720517603
+    }
+  ]
+}

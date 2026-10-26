@@ -1,0 +1,29 @@
+{
+  "draft_status": "published",
+  "id": 337187704,
+  "message": "LLM cost per traced pipeline stage (propose or narrated discovery) moved above $0.40 over the last day — ~2.5x the measured baseline ($0.151 per mapping proposal, claude-opus-5-5, measured 2026-10-26). A payload growth, a model change, or retry looping shows up here before it shows up on the bill. Evals and probe spans are excluded by service, same as the fleet guardrail.\n\nml_obs.span.llm.total.cost is nanodollars (RC1-405), hence the /1e9.\n\nRC1-548. @webhook-incident-summarizer",
+  "multi": false,
+  "name": "ESP migration — cost per migration stage",
+  "options": {
+    "include_tags": true,
+    "new_host_delay": 300,
+    "notify_audit": false,
+    "notify_no_data": false,
+    "renotify_interval": 0,
+    "require_full_window": false,
+    "thresholds": {
+      "critical": 0.4,
+      "warning": 0.25
+    }
+  },
+  "priority": 3,
+  "query": "sum(last_1d):sum:ml_obs.span.llm.total.cost{ml_app:esp-migration-agent,!service:evals,!service:dry-run}.as_count() / clamp_min(sum:ml_obs.trace{ml_app:esp-migration-agent,!service:evals,!service:dry-run}.as_count(), 1) / 1000000000 > 0.4",
+  "restricted_roles": null,
+  "tags": [
+    "rc1:548",
+    "service:esp-migration-agent",
+    "kind:cost",
+    "generated:manual"
+  ],
+  "type": "query alert"
+}

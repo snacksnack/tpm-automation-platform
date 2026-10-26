@@ -763,6 +763,7 @@
                   }
                 }
               ],
+              "show_legend": false,
               "time": {
                 "type": "live",
                 "unit": "month",
@@ -935,6 +936,7 @@
                   }
                 }
               ],
+              "show_legend": false,
               "time": {
                 "type": "live",
                 "unit": "month",
@@ -1475,7 +1477,7 @@
       },
       "id": 6279957676312298,
       "layout": {
-        "height": 15,
+        "height": 16,
         "width": 12,
         "x": 0,
         "y": 19
@@ -1596,7 +1598,7 @@
         "height": 4,
         "width": 12,
         "x": 0,
-        "y": 13
+        "y": 35
       }
     },
     {
@@ -1644,10 +1646,19 @@
           },
           {
             "definition": {
-              "event_size": "s",
-              "query": "source:github",
+              "requests": [
+                {
+                  "columns": [],
+                  "query": {
+                    "data_source": "event_stream",
+                    "event_size": "s",
+                    "query_string": "source:github"
+                  },
+                  "response_format": "event_list"
+                }
+              ],
               "title": "GitHub events — pushes & PRs",
-              "type": "event_stream"
+              "type": "list_stream"
             },
             "id": 5411369841983008,
             "layout": {
@@ -1664,7 +1675,7 @@
         "height": 9,
         "width": 12,
         "x": 0,
-        "y": 17
+        "y": 39
       }
     },
     {
@@ -1807,11 +1818,7 @@
                 {
                   "formulas": [
                     {
-                      "formula": "q0",
-                      "limit": {
-                        "count": 10,
-                        "order": "desc"
-                      }
+                      "formula": "q0"
                     }
                   ],
                   "queries": [
@@ -1822,7 +1829,17 @@
                       "query": "sum:delivery.security.code_scan_alerts_open{*} by {repo}"
                     }
                   ],
-                  "response_format": "scalar"
+                  "response_format": "scalar",
+                  "sort": {
+                    "count": 10,
+                    "order_by": [
+                      {
+                        "index": 0,
+                        "order": "desc",
+                        "type": "formula"
+                      }
+                    ]
+                  }
                 }
               ],
               "time": {
@@ -1881,10 +1898,10 @@
       },
       "id": 1864975350737582,
       "layout": {
-        "height": 7,
+        "height": 8,
         "width": 12,
         "x": 0,
-        "y": 27
+        "y": 48
       }
     }
   ]

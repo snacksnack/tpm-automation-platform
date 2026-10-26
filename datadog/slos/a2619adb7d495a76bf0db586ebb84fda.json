@@ -1,0 +1,48 @@
+{
+  "description": "Share of discovery-report runs (python -m discovery.report) that completed, 30d. Counted by esp_migration.pipeline_run{stage:discovery} (RC1-548, ADR-0008); a run that raises counts outcome:failure and the CLI's own error output names the cause. 95% to start: sparse, deliberate CLI runs — recalibrate once there is a month of real cadence, per the RC1-409 recipe.",
+  "id": "a2619adb7d495a76bf0db586ebb84fda",
+  "monitor_tags": [],
+  "name": "ESP migration — discovery report success",
+  "query": {
+    "denominator": "sum:esp_migration.pipeline_run{service:esp-migration-agent,stage:discovery}.as_count()",
+    "numerator": "sum:esp_migration.pipeline_run{service:esp-migration-agent,stage:discovery,outcome:success}.as_count()"
+  },
+  "sli_specification": {
+    "count": {
+      "good_events_formula": {
+        "formula": "query1"
+      },
+      "queries": [
+        {
+          "data_source": "metrics",
+          "name": "query1",
+          "query": "sum:esp_migration.pipeline_run{outcome:success,service:esp-migration-agent,stage:discovery}.as_count()"
+        },
+        {
+          "data_source": "metrics",
+          "name": "query2",
+          "query": "sum:esp_migration.pipeline_run{service:esp-migration-agent,stage:discovery}.as_count()"
+        }
+      ],
+      "total_events_formula": {
+        "formula": "query2"
+      }
+    }
+  },
+  "tags": [
+    "kind:reliability",
+    "rc1:548",
+    "service:esp-migration-agent"
+  ],
+  "target_threshold": 95.0,
+  "thresholds": [
+    {
+      "target": 95.0,
+      "target_display": "95.",
+      "timeframe": "30d"
+    }
+  ],
+  "timeframe": "30d",
+  "type": "metric",
+  "type_id": 1
+}

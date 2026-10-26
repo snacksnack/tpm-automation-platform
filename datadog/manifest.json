@@ -28,6 +28,10 @@
     {
       "id": "f2u-aws-zip",
       "why": "RC1-477 model bake-off — Cohere vs. incumbent arms across the three seats; retrieval gauges from reid_basic eval_retrieval.py --post-datadog"
+    },
+    {
+      "id": "zt9-3pg-3m4",
+      "why": "RC1-548 ESP Migration Agent service — pipeline runs, gate approvals, executor writes, reconciliation, cost per stage, DORA deploys"
     }
   ],
   "monitors": [
@@ -126,6 +130,18 @@
       "why": "RC1-535 PR agent keep-warm/up alert, owned by synthetics test 69w-d3w-zv2",
       "push": false,
       "push_note": "Datadog creates this monitor from the test; edit synthetics/69w-d3w-zv2.json instead"
+    },
+    {
+      "id": 337187701,
+      "why": "RC1-548 ESP migration pipeline stage failed (esp_migration.pipeline_run outcome:failure)"
+    },
+    {
+      "id": 337187703,
+      "why": "RC1-548 ESP executor write errors (TargetError mid-write; idempotent re-run is the recovery)"
+    },
+    {
+      "id": 337187704,
+      "why": "RC1-548 ESP cost per migration stage > $0.40/1d (baseline $0.151/propose, 2026-10-26)"
     }
   ],
   "synthetics": [
@@ -182,6 +198,14 @@
     {
       "id": "0411019e350952e09bc9c78b2eb92646",
       "why": "RC1-467 fleet test health — 99% over 30d, passed/attempted ratio on the daily delivery.tests.* counts; deliberately no service: tag, so it answers no entity's Has-an-SLO rule"
+    },
+    {
+      "id": "a2619adb7d495a76bf0db586ebb84fda",
+      "why": "RC1-548 ESP discovery report success, 95%/30d"
+    },
+    {
+      "id": "55d24e28c9ea5ae7967fbcb88e260fdd",
+      "why": "RC1-548 ESP reconciliation pass rate, 95%/30d"
     }
   ],
   "log_indexes": [

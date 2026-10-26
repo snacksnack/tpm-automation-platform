@@ -2,8 +2,8 @@
   "_readme": [
     "The hand-built Datadog objects (RC1-378). One entry per object; the file",
     "beside it in dashboards/, monitors/, synthetics/ or slos/ is its export.",
-    "Generated objects \u2014 the two 'Program KPIs' dashboards, the six KPI",
-    "monitors, the seven program SLOs \u2014 belong to `python -m kpi.datadog` and",
+    "Generated objects — the two 'Program KPIs' dashboards, the six KPI",
+    "monitors, the seven program SLOs — belong to `python -m kpi.datadog` and",
     "are refused here on purpose: see docs/datadog-as-code.md.",
     "Datadog's own host monitor pack (283790038-45, tag monitor_pack:host) is",
     "installed by the Agent integration, not by us, and is left alone."
@@ -11,53 +11,53 @@
   "dashboards": [
     {
       "id": "aa2-k8g-ya8",
-      "why": "RC1-345 site observability \u2014 SLOs, Synthetics, SSL and RUM for hihelloreid.com in one pane"
+      "why": "RC1-345 site observability — SLOs, Synthetics, SSL and RUM for hihelloreid.com in one pane"
     },
     {
       "id": "bwm-uny-qqs",
-      "why": "RC1-346 agent fleet \u2014 one LLM Observability pane over the fleet's ml_apps (eight in service, two dormant smoke-test leftovers); roster RC1-406 + RC1-419, cost units RC1-405, scout column dropped RC1-427, reliability group on ml_obs.trace RC1-407"
+      "why": "RC1-346 agent fleet — one LLM Observability pane over the fleet's ml_apps (eight in service, two dormant smoke-test leftovers); roster RC1-406 + RC1-419, cost units RC1-405, scout column dropped RC1-427, reliability group on ml_obs.trace RC1-407"
     },
     {
       "id": "izc-5s7-tz8",
-      "why": "RC1-347 delivery \u2014 CI pipelines, deploy events and the DORA group across the four repos"
+      "why": "RC1-347 delivery — CI pipelines, deploy events and the DORA group across the four repos"
     },
     {
       "id": "qas-ywi-bnr",
-      "why": "RC1-348 usage & cost \u2014 the estate watching its own Datadog bill"
+      "why": "RC1-348 usage & cost — the estate watching its own Datadog bill"
     },
     {
       "id": "f2u-aws-zip",
-      "why": "RC1-477 model bake-off \u2014 Cohere vs. incumbent arms across the three seats; retrieval gauges from reid_basic eval_retrieval.py --post-datadog"
+      "why": "RC1-477 model bake-off — Cohere vs. incumbent arms across the three seats; retrieval gauges from reid_basic eval_retrieval.py --post-datadog"
     },
     {
       "id": "zt9-3pg-3m4",
-      "why": "RC1-548 ESP Migration Agent service \u2014 pipeline runs, gate approvals, executor writes, reconciliation, cost per stage, DORA deploys"
+      "why": "RC1-548 ESP Migration Agent service — pipeline runs, gate approvals, executor writes, reconciliation, cost per stage, DORA deploys"
     }
   ],
   "monitors": [
     {
       "id": 318097614,
-      "why": "RC1-349/377/411 fleet LLM spend guardrail \u2014 daily ceiling on production only (excludes service:evals, service:dry-run), warn $8 / alert $16"
+      "why": "RC1-349/377/411 fleet LLM spend guardrail — daily ceiling on production only (excludes service:evals, service:dry-run), warn $8 / alert $16"
     },
     {
       "id": 318833109,
-      "why": "RC1-377/411 fleet LLM cost per call \u2014 the price signal, production only, warn $0.05 / alert $0.075"
+      "why": "RC1-377/411 fleet LLM cost per call — the price signal, production only, warn $0.05 / alert $0.075"
     },
     {
       "id": 319523084,
-      "why": "RC1-395 PR agent cost per review \u2014 p95 over 1d, warn $0.50 / alert $1.00; per review where 318833109 is per call; message re-based on the no-scout pipeline RC1-427"
+      "why": "RC1-395 PR agent cost per review — p95 over 1d, warn $0.50 / alert $1.00; per review where 318833109 is per call; message re-based on the no-scout pipeline RC1-427"
     },
     {
       "id": 318355169,
-      "why": "RC1-335 CI pipeline failed \u2014 delivery repos"
+      "why": "RC1-335 CI pipeline failed — delivery repos"
     },
     {
       "id": 318355170,
-      "why": "RC1-335/354 production deploy failed \u2014 the Fly and Heroku paths"
+      "why": "RC1-335/354 production deploy failed — the Fly and Heroku paths"
     },
     {
       "id": 318762066,
-      "why": "RC1-370 incident-summarizer webhook test signal \u2014 the end of the summarizer pipeline"
+      "why": "RC1-370 incident-summarizer webhook test signal — the end of the summarizer pipeline"
     },
     {
       "id": 317622270,
@@ -91,39 +91,39 @@
     },
     {
       "id": 321205575,
-      "why": "RC1-408 LLM Obs evaluation judge spend \u2014 daily ceiling on the judges' own calls, billed to the datadog-llm-obs-evals workspace since 2026-09-12"
+      "why": "RC1-408 LLM Obs evaluation judge spend — daily ceiling on the judges' own calls, billed to the datadog-llm-obs-evals workspace since 2026-09-12"
     },
     {
       "id": 321408173,
-      "why": "RC1-415 eval trend page publish heartbeat \u2014 agent_evals.scheduled_run.publish_ok from the launchd job; red on a 0 or on 36 h without a point"
+      "why": "RC1-415 eval trend page publish heartbeat — agent_evals.scheduled_run.publish_ok from the launchd job; red on a 0 or on 36 h without a point"
     },
     {
       "id": 322028416,
-      "why": "RC1-443/444 LLM Obs judge verdict \u2014 alerts per ml_app and evaluation when an injection judge (pr-review-agent, hihelloreid-chat) or the chat hallucination judge returns a non-pass categorical verdict in 15 min"
+      "why": "RC1-443/444 LLM Obs judge verdict — alerts per ml_app and evaluation when an injection judge (pr-review-agent, hihelloreid-chat) or the chat hallucination judge returns a non-pass categorical verdict in 15 min"
     },
     {
       "id": 322753565,
-      "why": "RC1-456 daily drift run heartbeat \u2014 the drift detector emits no metric of its own, so drift-daily.yml reports its own success; backs the freshness SLO, because a CI-pipelines monitor cannot"
+      "why": "RC1-456 daily drift run heartbeat — the drift detector emits no metric of its own, so drift-daily.yml reports its own success; backs the freshness SLO, because a CI-pipelines monitor cannot"
     },
     {
       "id": 322765258,
-      "why": "RC1-456 concert intelligence heartbeat \u2014 the n8n workflow reports its own LLM Obs spans on every run including cached ones, so a two-day silence means the scheduled trigger stopped or the published copy broke"
+      "why": "RC1-456 concert intelligence heartbeat — the n8n workflow reports its own LLM Obs spans on every run including cached ones, so a two-day silence means the scheduled trigger stopped or the published copy broke"
     },
     {
       "id": 322827096,
-      "why": "RC1-457 PR review agent review errors \u2014 any failed review in 15 min, grouped under the agent's catalog entity so the Software Catalog can find it; queried by ml_app because RC1-447's rename stranded the service history"
+      "why": "RC1-457 PR review agent review errors — any failed review in 15 min, grouped under the agent's catalog entity so the Software Catalog can find it; queried by ml_app because RC1-447's rename stranded the service history"
     },
     {
       "id": 322827099,
-      "why": "RC1-457 incident summarizer Lambda errors \u2014 multi-alert by functionname so the alert names the failing stage of the eight-function chain; service:incident-summarizer comes from the SAM Globals (RC1-411)"
+      "why": "RC1-457 incident summarizer Lambda errors — multi-alert by functionname so the alert names the failing stage of the eight-function chain; service:incident-summarizer comes from the SAM Globals (RC1-411)"
     },
     {
       "id": 322832421,
-      "why": "RC1-451 cardinality guardrail \u2014 billable custom timeseries above 250 (warn 150) against a measured baseline of 27 avg / 81 max over 30d. The lab that set it pushed one metric to 501 series with a single unbounded tag. Cannot name the metric: estimated_usage.metrics.custom.by_metric reports N/A on this account"
+      "why": "RC1-451 cardinality guardrail — billable custom timeseries above 250 (warn 150) against a measured baseline of 27 avg / 81 max over 30d. The lab that set it pushed one metric to 501 series with a single unbounded tag. Cannot name the metric: estimated_usage.metrics.custom.by_metric reports N/A on this account"
     },
     {
       "id": 322832422,
-      "why": "RC1-451 log ingest guardrail \u2014 more than 10,000 ingested events in a day (warn 5,000) against a baseline of ~265/day, 1,231 max. Fires at half the index's 20,000/day cap, because the cap drops logs silently once reached"
+      "why": "RC1-451 log ingest guardrail — more than 10,000 ingested events in a day (warn 5,000) against a baseline of ~265/day, 1,231 max. Fires at half the index's 20,000/day cap, because the cap drops logs silently once reached"
     },
     {
       "id": 335370262,
@@ -147,57 +147,57 @@
   "synthetics": [
     {
       "id": "n2q-jat-ybg",
-      "why": "RC1-325 API uptime check \u2014 www.hihelloreid.com"
+      "why": "RC1-325 API uptime check — www.hihelloreid.com"
     },
     {
       "id": "efb-3qr-mkc",
-      "why": "RC1-325 API uptime check \u2014 incidents.hihelloreid.com"
+      "why": "RC1-325 API uptime check — incidents.hihelloreid.com"
     },
     {
       "id": "sx6-38z-zxj",
-      "why": "RC1-340 browser check \u2014 the client-rendered /work page actually renders"
+      "why": "RC1-340 browser check — the client-rendered /work page actually renders"
     },
     {
       "id": "d2p-mci-y92",
-      "why": "RC1-341 SSL certificate expiry \u2014 www.hihelloreid.com"
+      "why": "RC1-341 SSL certificate expiry — www.hihelloreid.com"
     },
     {
       "id": "pcx-j8w-96n",
-      "why": "RC1-341 SSL certificate expiry \u2014 incidents.hihelloreid.com"
+      "why": "RC1-341 SSL certificate expiry — incidents.hihelloreid.com"
     },
     {
       "id": "69w-d3w-zv2",
-      "why": "RC1-535 keep-warm + uptime \u2014 pr-review-agent-snacksnack /healthz every 15 min; the reliable external trigger that replaces the GitHub wake.yml cron (GitHub throttled it to ~6 runs/day)"
+      "why": "RC1-535 keep-warm + uptime — pr-review-agent-snacksnack /healthz every 15 min; the reliable external trigger that replaces the GitHub wake.yml cron (GitHub throttled it to ~6 runs/day)"
     }
   ],
   "slos": [
     {
       "id": "7fa581f8928851c8bf0886bc4906f64a",
-      "why": "RC1-342 portfolio availability \u2014 99.9% over 30d, reachable AND rendered"
+      "why": "RC1-342 portfolio availability — 99.9% over 30d, reachable AND rendered"
     },
     {
       "id": "96e9733af74753faa8124c5be22f0026",
-      "why": "RC1-342 incidents dashboard availability \u2014 99.9% over 30d"
+      "why": "RC1-342 incidents dashboard availability — 99.9% over 30d"
     },
     {
       "id": "dae4404ff9915b75b00806894db71b95",
-      "why": "RC1-456 PR review agent reliability \u2014 97% over 30d. Queried by ml_app, not service: RC1-447's rename stranded the history, and the new service name holds 4 traces against ml_app's 1,444"
+      "why": "RC1-456 PR review agent reliability — 97% over 30d. Queried by ml_app, not service: RC1-447's rename stranded the history, and the new service name holds 4 traces against ml_app's 1,444"
     },
     {
       "id": "e1759aa4ee7f5c0a80ffbe199a1129fe",
-      "why": "RC1-456 eval trend page freshness \u2014 97% over 30d on monitor 321408173; a heartbeat, because 2 traces in 30d cannot support a ratio"
+      "why": "RC1-456 eval trend page freshness — 97% over 30d on monitor 321408173; a heartbeat, because 2 traces in 30d cannot support a ratio"
     },
     {
       "id": "12be373350ec5f67a5076325cec468ce",
-      "why": "RC1-456 daily drift run freshness \u2014 97% over 30d on monitor 322753565"
+      "why": "RC1-456 daily drift run freshness — 97% over 30d on monitor 322753565"
     },
     {
       "id": "cfe2b45d7309524fa07c64e7ad15cbc4",
-      "why": "RC1-456 concert intelligence run freshness \u2014 97% over 30d on monitor 322765258; a heartbeat, because 26 traces in 30d cannot support a ratio"
+      "why": "RC1-456 concert intelligence run freshness — 97% over 30d on monitor 322765258; a heartbeat, because 26 traces in 30d cannot support a ratio"
     },
     {
       "id": "0411019e350952e09bc9c78b2eb92646",
-      "why": "RC1-467 fleet test health \u2014 99% over 30d, passed/attempted ratio on the daily delivery.tests.* counts; deliberately no service: tag, so it answers no entity's Has-an-SLO rule"
+      "why": "RC1-467 fleet test health — 99% over 30d, passed/attempted ratio on the daily delivery.tests.* counts; deliberately no service: tag, so it answers no entity's Has-an-SLO rule"
     },
     {
       "id": "a2619adb7d495a76bf0db586ebb84fda",
@@ -211,7 +211,7 @@
   "log_indexes": [
     {
       "id": "main",
-      "why": "RC1-451 the only log index. It shipped uncapped (daily_limit null, zero exclusion filters) against a baseline of ~265 indexed logs a day \u2014 the account's one unbounded spend. Capped at 20,000/day, ~40-75x headroom, with a warning at 80%."
+      "why": "RC1-451 the only log index. It shipped uncapped (daily_limit null, zero exclusion filters) against a baseline of ~265 indexed logs a day — the account's one unbounded spend. Capped at 20,000/day, ~40-75x headroom, with a warning at 80%."
     }
   ]
 }

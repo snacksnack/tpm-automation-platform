@@ -380,16 +380,22 @@ def test_clock_manifest_and_spend_line(tmp_path: Path):
 
 
 class _FlakyJira(FakeJira):
-    """Fails the Nth write, the way a Jira read timeout did on 2026-09-08."""
+    """Fails the Nth write, the way a Jira read timeout did on 2026-09-08.
 
-    def __init__(self, fail_on: int) -> None:
+    `forever` keeps failing from the Nth write on, which is what tells a
+    transient timeout apart from a broken world now that a converge gets one
+    retry before the clock is marked dirty (RC1-584).
+    """
+
+    def __init__(self, fail_on: int, *, forever: bool = False) -> None:
         super().__init__()
         self.fail_on = fail_on
+        self.forever = forever
         self.writes = 0
 
     def _maybe_fail(self) -> None:
         self.writes += 1
-        if self.writes == self.fail_on:
+        if self.writes == self.fail_on or (self.forever and self.writes > self.fail_on):
             raise TimeoutError("the read operation timed out")
 
     def set_estimation(self, key, points, board_id):
@@ -415,19 +421,47 @@ def test_converge_that_fails_part_way_raises_with_what_landed():
     assert exc.keys.get("epic") in jira.issues
 
 
-def test_a_dirty_converge_does_not_move_the_clock(tmp_path: Path):
-    """The 2026-09-08 bug: Jira advanced, the clock did not, and nothing said so."""
+def test_a_dirty_converge_does_not_move_the_clock(monkeypatch, tmp_path: Path):
+    """The 2026-09-08 bug: Jira advanced, the clock did not, and nothing said so.
+
+    Jira stays broken here, so the RC1-584 retry fails too and the RC1-417
+    verdict stands.
+    """
     from simulate import __main__ as cli
 
+    monkeypatch.setattr(cli, "RETRY_PAUSE_S", 0)
     state = SimState(tmp_path / "sim")
     state.write(15, {"epic": "PMA-1"})
-    rc = cli._converge_to(_FlakyJira(fail_on=1), state, 16, dry_run=False)
+    rc = cli._converge_to(_FlakyJira(fail_on=1, forever=True), state, 16, dry_run=False)
 
     assert rc == cli.EXIT_DIRTY
     clock = state.read_clock()
     assert clock.day == 15, "the clock must stay on the last day that fully landed"
     assert clock.converged is False
     assert clock.converging_to == 16
+
+
+def test_a_transient_converge_failure_is_retried_and_leaves_no_dirty_world(
+    monkeypatch, tmp_path: Path
+):
+    """RC1-584: on 2026-11-01 one timed-out read cost a whole day of KPI
+    readings. The action had landed in Jira and only its confirming response
+    was lost, so the retry finds the world already on the day and the clock is
+    written normally — no `converged: false`, nothing recorded unreadable."""
+    from simulate import __main__ as cli
+
+    monkeypatch.setattr(cli, "RETRY_PAUSE_S", 0)
+    state = SimState(tmp_path / "sim")
+    state.write(15, {"epic": "PMA-1"})
+
+    jira = _FlakyJira(fail_on=1)  # fails once, then answers
+    rc = cli._converge_to(jira, state, 16, dry_run=False)
+
+    assert rc == 0, "a transient timeout must not be reported as a dirty world"
+    clock = state.read_clock()
+    assert clock.day == 16, "the retry landed the day, so the clock moves"
+    assert clock.converged is True
+    assert jira.writes > jira.fail_on, "the converge was actually retried"
 
 
 def test_a_successful_converge_clears_the_dirty_marker(tmp_path: Path):
@@ -464,7 +498,7 @@ def test_a_clock_written_before_the_flag_reads_as_converged(tmp_path: Path):
 def test_tick_stops_on_a_dirty_converge_rather_than_stacking_days(monkeypatch, tmp_path: Path):
     from simulate import __main__ as cli
 
-    jira = _FlakyJira(fail_on=2)
+    jira = _FlakyJira(fail_on=2, forever=True)
 
     class _Ctx:
         def __enter__(self):
@@ -474,6 +508,7 @@ def test_tick_stops_on_a_dirty_converge_rather_than_stacking_days(monkeypatch, t
             return False
 
     monkeypatch.setattr(cli, "_jira", lambda: _Ctx())
+    monkeypatch.setattr(cli, "RETRY_PAUSE_S", 0)
     monkeypatch.setattr(cli.settings, "kpi_sim_dir", str(tmp_path / "sim"))
     SimState(tmp_path / "sim").write(0, {"epic": "PMA-1"})
 

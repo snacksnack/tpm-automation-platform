@@ -3,7 +3,9 @@
 Exit codes: 0 done; 1 `verify` found Jira out of step with the scenario, or a
 tick was refused (no seed, or the program is over); 2 a Jira error; 3 a
 converge mutated Jira and then failed, so the world is part-way between two
-days (RC1-417).
+days (RC1-417). A converge that fails gets one retry before that verdict
+(RC1-584), because converge is idempotent and most of these failures are a
+timed-out read, not a broken world.
 
 **1 and 3 are different failures and the daily job depends on it.** A 1 is
 routine — the program ends on day 69 and every tick after that is refused. A 3
@@ -24,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import time
 from pathlib import Path
 
 from config import settings
@@ -42,27 +45,67 @@ def _jira() -> JiraClient:
 EXIT_DIRTY = 3
 
 
+#: Seconds to wait before the one retry a failed converge gets (RC1-584).
+RETRY_PAUSE_S = 20
+
+
 def _converge_to(jira: JiraClient, state: SimState, day: int, *, dry_run: bool) -> int:
     try:
-        report = apply.converge(jira, day, board_id=settings.kpi_sim_board_id, dry_run=dry_run)
-    except apply.ConvergeError as exc:
-        if not dry_run:
-            state.mark_incomplete(day, exc.keys)
+        report = _converge_once(jira, day, dry_run=dry_run)
+    except apply.ConvergeError as first:
+        # RC1-584: converge is idempotent, so a transient failure gets one retry
+        # before the world is declared dirty. Without it a single timed-out read
+        # costs a whole day of KPI measurement, and on 2026-11-01 it did: the
+        # 07:00 job woke in a 2-second DarkWake, the one action it had to apply
+        # (`p-ga -> Done`) landed in Jira but its confirming read timed out, and
+        # the day was recorded unreadable even though Jira was by then exactly
+        # at day 67. A retry would have found it in sync and written the clock.
+        #
+        # Note what `applied` does and does not tell us. It excludes the action
+        # that raised, so "0 action(s)" means the first action was unconfirmed,
+        # NOT that Jira is untouched — that action may well have landed. This is
+        # why the retry, rather than a shortcut around mark_incomplete, is the
+        # fix: only a clean converge proves what day the world is on.
         print(
-            f"day {day:>2} ({scenario.sim_date(day)}): CONVERGE FAILED after "
-            f"{len(exc.applied)} action(s) — Jira is part-way between day "
-            f"{day - 1} and day {day}, and the clock stays on the last day that "
-            f"fully landed. Nothing should date a snapshot until a tick "
-            f"re-converges (converge is idempotent). Cause: {exc.__cause__}",
+            f"day {day:>2} ({scenario.sim_date(day)}): converge failed after "
+            f"{len(first.applied)} confirmed action(s) — retrying once in "
+            f"{RETRY_PAUSE_S}s, because converge is idempotent and a timeout is "
+            f"usually transient. Cause: {first.__cause__}",
             file=sys.stderr,
         )
-        return EXIT_DIRTY
+        time.sleep(RETRY_PAUSE_S)
+        try:
+            report = _converge_once(jira, day, dry_run=dry_run)
+        except apply.ConvergeError as exc:
+            return _mark_dirty(state, day, exc, dry_run=dry_run)
     if not dry_run:
         state.write(day, report.keys)
     n = len(report.actions)
     print(f"day {day:>2} ({scenario.sim_date(day)}, week {scenario.week_of(day)}): "
           f"{n} action(s){' [dry-run]' if dry_run else ''}")
     return 0
+
+
+def _converge_once(jira: JiraClient, day: int, *, dry_run: bool) -> apply.Report:
+    return apply.converge(jira, day, board_id=settings.kpi_sim_board_id, dry_run=dry_run)
+
+
+def _mark_dirty(
+    state: SimState, day: int, exc: apply.ConvergeError, *, dry_run: bool
+) -> int:
+    """The RC1-417 guard: a converge that failed twice leaves a world no day
+    number describes, so record it unreadable rather than mis-date it."""
+    if not dry_run:
+        state.mark_incomplete(day, exc.keys)
+    print(
+        f"day {day:>2} ({scenario.sim_date(day)}): CONVERGE FAILED after "
+        f"{len(exc.applied)} action(s) and a retry — Jira is part-way between "
+        f"day {day - 1} and day {day}, and the clock stays on the last day that "
+        f"fully landed. Nothing should date a snapshot until a tick re-converges "
+        f"(converge is idempotent). Cause: {exc.__cause__}",
+        file=sys.stderr,
+    )
+    return EXIT_DIRTY
 
 
 def cmd_seed(args, jira, state) -> int:

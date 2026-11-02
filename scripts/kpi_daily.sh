@@ -38,6 +38,19 @@
 # last exit status. Read data/kpi-sim/daily.log before assuming a break.
 
 set -u
+
+# Hold the machine awake for the length of the run (RC1-584). On 2026-11-01
+# launchd started this script inside a 2-second DarkWake on battery; the system
+# went back to sleep one second later, every Jira and Postgres call timed out,
+# and the resulting read-timeout converge cost a full day of KPI readings. `-i`
+# prevents idle sleep while the job runs. It does NOT wake a sleeping machine,
+# so a run that never starts at all is still a missed run — the heartbeat
+# monitor is what covers that. Re-exec before the `cd` so $0 still resolves.
+if [[ -z "${KPI_DAILY_CAFFEINATED:-}" ]] && command -v caffeinate >/dev/null 2>&1; then
+  export KPI_DAILY_CAFFEINATED=1
+  exec caffeinate -i "$0" "$@"
+fi
+
 cd "$(dirname "$0")/.." || exit 2
 PY="$PWD/.venv/bin/python"
 TICK=1

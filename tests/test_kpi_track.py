@@ -14,12 +14,18 @@ it, not by mocking a driver.
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
 from collectors import programs
-from collectors.models import ProgramSnapshot, SourceHealth, SpendRow
+from collectors.models import (
+    Issue,
+    ProgramSnapshot,
+    ProjectSnapshot,
+    SourceHealth,
+    SpendRow,
+)
 from kpi import measures, track
 from kpi.reading import Reading
 from kpi.readings_store import _COLUMNS, SCHEMA, row_for, stored_from_row
@@ -226,6 +232,103 @@ def test_clock_error_on_the_first_day_has_nothing_to_carry():
     reading = measures.measure("cost-vs-envelope", _sim(), [mid])
     assert reading.state == "broken" and reading.value is None and not reading.tripped
     assert "mid-converge" in reading.reason
+
+
+# --- a clock-error run must not win its sim-day (RC1-585) ------------------------------------
+
+
+KICKOFF = date(2026, 9, 7)
+GA = date(2026, 11, 13)
+
+
+def _jira_snapshot(
+    day: int, *, done: tuple[str, ...] = (), clock_error: bool = False
+) -> ProgramSnapshot:
+    """One simulated day with two stories, `a` (10 pts) and `b` (5 pts).
+
+    `done` names the slugs that read Done. Keeping `b` open leaves work
+    remaining, so forecast-slip-days reaches its trailing-window branch instead
+    of the all-Done shortcut. `clock_error` marks the snapshot mid-converge: the
+    world it saw does not match the date stamped on it.
+    """
+    clock = (
+        SourceHealth(source="clock", status="error", detail=f"converge to day {day} failed")
+        if clock_error
+        else SourceHealth(source="clock", status="ok", count=1, detail=f"day {day}")
+    )
+    issues = [
+        Issue(
+            key="PMA-1", summary="epic", status="In Progress", status_category="In Progress",
+            issue_type="Epic", due=GA, labels=["kpi-sim"],
+        ),
+    ]
+    for key, slug, points in (("PMA-2", "a", 10.0), ("PMA-3", "b", 5.0)):
+        closed = slug in done
+        issues.append(
+            Issue(
+                key=key, summary=f"story {slug}",
+                status="Done" if closed else "In Progress",
+                status_category="Done" if closed else "In Progress",
+                start=KICKOFF, due=GA, points=points,
+                labels=["kpi-sim", f"ks-{slug}", "ga-blocking"],
+            )
+        )
+    return ProgramSnapshot(
+        program_id="simulated-program", collected_at=NOW,
+        sim_date=KICKOFF + timedelta(days=day), sim_day=day,
+        jira=ProjectSnapshot(project_key="PMA", issues=issues),
+        health=[clock, SourceHealth(source="jira", status="ok", count=len(issues))],
+    )
+
+
+def test_a_clock_error_run_does_not_become_a_later_days_window_start():
+    """RC1-585: `by_day` kept the *latest* run for a day, so a mid-converge
+    re-snapshot became the historical frame every later day compared itself
+    against. On day 61 of the sim that counted 37 newly-done points instead of
+    146 and moved forecast-slip-days by 1.41 days.
+
+    Here day 0 is snapshotted twice: cleanly with the story still open, then
+    mid-converge with it already Done (the later world the failed converge was
+    reaching for). Day 14's trailing window starts on day 0, so picking the
+    wrong run hides the only completed work there is.
+    """
+    last = measures.SIM_WINDOW_DAYS
+    # Every day needs a snapshot or the series reads as having a gap. Day 0 is
+    # the one snapshotted twice: cleanly, then mid-converge.
+    series = [
+        _jira_snapshot(0),                                  # the real day 0: nothing Done
+        _jira_snapshot(0, done=("a",), clock_error=True),   # mid-converge, `a` already Done
+    ]
+    series += [_jira_snapshot(d) for d in range(1, last)]
+    series.append(_jira_snapshot(last, done=("a",)))        # `a` closed inside the window
+
+    reading = measures.measure("forecast-slip-days", _sim(), series)
+
+    assert reading.state == "ok", (
+        "the day being measured has a healthy clock; only an earlier day was dirty"
+    )
+    assert "10 pts Done in the last 14 days" in (reading.detail or ""), (
+        f"the window must start from the clean day-0 run, got {reading.detail!r}"
+    )
+    assert reading.value is not None, (
+        "with the mid-converge run as the window start, `a` looks already Done on "
+        "day 0, throughput reads 0 pts/day and the whole reading goes broken"
+    )
+
+
+def test_a_clock_error_run_is_still_used_when_it_is_the_only_one_for_its_day():
+    """The preference is a tie-break, not a filter: a day with nothing but a
+    mid-converge snapshot still has to supply a frame, or the series would gain
+    a hole and every measure would read broken on a gap instead."""
+    last = measures.SIM_WINDOW_DAYS
+    series = [_jira_snapshot(0, clock_error=True)]
+    series += [_jira_snapshot(d) for d in range(1, last)]
+    series.append(_jira_snapshot(last, done=("a",)))
+
+    reading = measures.measure("forecast-slip-days", _sim(), series)
+
+    assert "no snapshot for day" not in (reading.reason or ""), reading.reason
+    assert reading.state == "ok"
 
 
 # --- the readings row ------------------------------------------------------------------------

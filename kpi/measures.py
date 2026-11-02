@@ -753,6 +753,18 @@ _SIM_SPEND: dict[str, Callable[[ProgramSnapshot], Reading]] = {
 }
 
 
+def _clock_error(snap: ProgramSnapshot):
+    """The snapshot's clock health if it caught the simulator mid-converge, else
+    None (RC1-417).
+
+    Not None means the world it saw does not correspond to the sim-date stamped
+    on it, so it is neither a number to report for that day nor a frame to
+    compare a later day against (RC1-585).
+    """
+    clock = next((h for h in snap.health if h.source == "clock"), None)
+    return clock if clock is not None and clock.status == "error" else None
+
+
 def _simulated(kpi_id: str) -> Measure:
     jira_formula = _SIM_JIRA.get(kpi_id)
     spend_formula = _SIM_SPEND.get(kpi_id)
@@ -764,8 +776,8 @@ def _simulated(kpi_id: str) -> Measure:
         # every number computed from it would be filed under the wrong date —
         # which is the honesty rule's "never a number computed from an absence"
         # with the absence being the date rather than the data.
-        clock = next((h for h in snap.health if h.source == "clock"), None)
-        if clock is not None and clock.status == "error":
+        clock = _clock_error(snap)
+        if clock is not None:
             # RC1-511: the day is unmeasurable, but it must carry the last good
             # day's standing state through — the same invariant the Jira source
             # break honours below. A bare `_broken` defaults tripped=False, which
@@ -784,7 +796,23 @@ def _simulated(kpi_id: str) -> Measure:
                 return _broken(
                     kpi_id, snap, "a snapshot carries no sim-day: the program has no clock"
                 )
-            by_day[s.sim_day] = s  # the latest run for a day wins
+            # The latest run for a day wins, EXCEPT that a clock-error run never
+            # beats a clean one for the same day (RC1-585). A mid-converge
+            # snapshot reads a world that does not match the date stamped on it
+            # — that is the whole of RC1-417 — so it is the worst available view
+            # of its day, not the best. The day itself already knows this: a
+            # clock error on `series[-1]` takes the carry path above. What it did
+            # not know is that the same run was then handed to every later day
+            # whose trailing window starts on it, which on day 61 counted 37
+            # newly-done points instead of 146 and moved the reading 1.41 days.
+            # Keep an error run only when it is all there is for the day.
+            if (
+                _clock_error(s) is not None
+                and s.sim_day in by_day
+                and _clock_error(by_day[s.sim_day]) is None
+            ):
+                continue
+            by_day[s.sim_day] = s
         last = snap.sim_day
         missing = [d for d in range(last + 1) if d not in by_day]
         if missing:

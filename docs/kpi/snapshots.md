@@ -111,3 +111,71 @@ collected `ProgramSnapshot`s, never the scenario — and since RC1-310 they
 compute the simulated program's KPIs themselves (`kpi/measures.py`), with
 the ledger kept in `simulate/` as the independently-written expectation
 the `kpi-ledger` eval diffs them against.
+
+## Which run wins a sim-day (RC1-585)
+
+A day can be snapshotted more than once — a re-run after a fix, or a second
+scheduled job the morning a tick failed. `kpi/measures.py` folds the series
+into one frame per sim-day before any measure reads it, and the rule used to
+be simply *the latest run for a day wins*:
+
+```python
+by_day[s.sim_day] = s  # the latest run for a day wins
+```
+
+For an ordinary re-snapshot that is right: the later look is the better one.
+For a **clock-error** run it is exactly backwards. A mid-converge snapshot
+reads a world that does not correspond to the date stamped on it — that is the
+whole of RC1-417 — so it is the *worst* available view of its day, not the
+best.
+
+The measure already knew this about the day being reported: a clock error on
+`series[-1]` takes the carry path (RC1-511). What it did not know is that the
+same run was then handed to every **later** day whose trailing window starts on
+it. `forecast-slip-days` is the one measure with such a window
+(`SIM_WINDOW_DAYS = 14`, `then = frames[snap.day - 14]`).
+
+### What it cost
+
+Sim-day 47 sits inside the scripted source break (days 43-47), so the correct
+view of it is *no stories under the program*. It has two runs:
+
+| run | clock | jira | stories | Done pts |
+|---|---|---|---|---|
+| 109 | ok | `missing(0)` | 0 | 0 |
+| 111 | **error** | `ok(32)` | 31 | 109 |
+
+Run 111 caught the day-48 label restoration part-way while converging past day
+47. "Latest wins" picked it, so day 61 — whose window starts on day 47 — saw 31
+stories already Done and counted 37 newly-done points instead of 146:
+
+```
+with run 111 (before):  -4.11  | 5 pts remaining at  2.643 pts/day ( 37 pts Done in the last 14 days)
+with run 109 (after):   -5.52  | 5 pts remaining at 10.429 pts/day (146 pts Done in the last 14 days)
+ledger expects:         -5.52  | 5 pts remaining at 10.429 pts/day (146 pts Done in the last 14 days)
+```
+
+Two days were affected, and only one of them was ever reported:
+
+| window start | affected day | stored | ledger | gap | flagged by the ledger check |
+|---|---|---|---|---|---|
+| 47 | 61 | -4.11 | -5.52 | 1.41 | yes |
+| 52 | 66 | 0.27 | 0.04 | 0.23 | **no — tolerance is 1** |
+| 66 | 80 | — | — | — | beyond `last_day` 69 |
+
+Day 52's own reading is correct only by accident: it was repaired by hand on
+2026-11-02 from run 122, the clock-ok run, which is this fix applied manually.
+
+**The lesson worth keeping is the last column.** The ledger check compares each
+reading against its row's `tolerance`, so a divergence smaller than the
+tolerance is invisible. "N divergent" is a floor, not a count. When chasing a
+measure bug, compare *exactly* and treat the tolerance as the pass criterion
+only at the end.
+
+### The rule now
+
+Prefer a clock-ok run over a clock-error run for the same sim-day; keep the
+error run only when it is the only run that day, because a missing day is a
+gap and every measure reads `broken` on a gap. The day's own clock-error branch
+reads `series[-1]` and is untouched, so RC1-417 and RC1-511 behave exactly as
+before.

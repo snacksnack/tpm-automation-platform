@@ -106,3 +106,81 @@ clock-error branch do the same: recompute as of the prior snapshot and carry its
 standing state through. The monitors were correct; the measure was resetting
 their baseline. Any mid-converge blip would otherwise re-fire every still-tripped
 KPI the following morning.
+
+## A timeout is not a dirty world (RC1-584)
+
+On 2026-11-01 the guard above cost a full day of KPI measurement for a world
+that was never dirty.
+
+`launchd` started the 07:00 job inside a **2-second DarkWake** — the laptop was
+asleep on battery — and the machine went back to sleep one second later:
+
+```
+2026-11-01 07:07:28  DarkWake from Deep Idle ... Using BATT (Charge:100%) 2 secs
+2026-11-01 07:07:30  Entering Sleep state 'Sleep Service Back to Sleep'
+```
+
+Every network call then timed out. The run limped across later DarkWakes until
+07:24, and Heroku Postgres dropped in the middle of it too
+(`psycopg2.InterfaceError: connection already closed`, in `escalate`).
+
+`data/kpi-sim/daily.err`:
+
+```
+day 67 (2026-11-13): CONVERGE FAILED after 0 action(s) ... Cause: The read operation timed out
+```
+
+Day 67 needed exactly one action, `status p-ga -> Done`. **It landed.** Only the
+response confirming it was lost, so `ConvergeError` was raised with `applied`
+empty, the clock was marked incomplete, and all six sim KPIs shipped `broken`.
+Jira was by then exactly at day 67 — which the re-converge on 11-02 proved, by
+finding it in sync with 0 actions and `verify` reporting "day 67: Jira matches
+the scenario".
+
+The bill for one timed-out read: six `broken` readings, six escalations posted
+to Slack, run 156 overwriting day 66's good rows on the same sim-date, and the
+*Program KPI unmeasured* monitor firing on `cost-vs-envelope` the next morning,
+once the preceding `ok` point aged out of `min(last_2d)` (RC1-506).
+
+### Why the fix is a retry, not a shortcut
+
+`applied` excludes the action that raised. So `0 action(s)` means **the first
+action was unconfirmed, not that Jira is untouched** — as here, it may well have
+landed. Skipping `mark_incomplete` when `applied` is empty would therefore
+reintroduce exactly the RC1-417 bug the first time a first action lands and a
+second one does not.
+
+Only a clean converge proves what day the world is on, and converge is
+idempotent. So `_converge_to` retries once, after `RETRY_PAUSE_S`, before
+reaching the dirty verdict. A transient timeout now costs 20 seconds instead of
+a day; a genuinely half-applied world still fails twice and is still recorded
+unreadable. The guard is unchanged in substance — it just stops being triggered
+by the network.
+
+### And the cause underneath
+
+`scripts/kpi_daily.sh` re-execs itself under `caffeinate -i`, so the job holds
+the machine awake for its duration instead of dying in a two-second wake. This
+is the same remedy that recovered the 2026-10-05 incident by hand.
+
+`caffeinate -i` does **not** wake a sleeping machine. A run that never starts is
+still a missed run, and the heartbeat monitor is what covers that.
+
+### This was the fourth occurrence
+
+All four are in `daily.err`, all the same DarkWake cause, and the count of
+applied actions is what separates a real dirty world from a false one:
+
+| sim day | actions applied | world actually dirty |
+|---|---|---|
+| 42 | 2 | yes |
+| 48 | 34 | yes, and it left day 48's snapshot 3 issues short |
+| 53 | 0 | no |
+| 67 | 0 | no |
+
+Day 48 is the lasting damage: it is the source-break restoration day, the
+converge failed after re-labelling 34 stories, and the snapshot that followed
+caught only 32 of 35 issues. `scope-change-pct` recorded 3.7 against the
+ledger's 11.85 and `blocked-share-pct` 22.58 against 18.92. The measure is
+right and the snapshot is short, so no recompute can repair it — the day's raw
+data is simply incomplete, and Jira has long since moved on.

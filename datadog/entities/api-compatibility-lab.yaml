@@ -27,6 +27,10 @@ spec:
     - python
   type: library
 datadog:
+  pipelines:
+    fingerprints:
+      - "whsvIVGNhfvv"   # CI
+      - "zxSdGGAFQBYL"   # CodeQL
   codeLocations:
     - repositoryURL: https://github.com/snacksnack/api-compatibility-lab
       paths:

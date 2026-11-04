@@ -1,0 +1,33 @@
+apiVersion: v3
+kind: service
+metadata:
+  name: api-compatibility-lab
+  displayName: API Compatibility Lab
+  description: >-
+    Replays sanitized API traffic across two Stripe API versions to find the
+    behavioral breaks a schema diff misses, maps them to affected customer
+    workflows, and generates pinning regression tests. Phase 0 spike stage
+    (RC1-603).
+  owner: reid
+  tags:
+    - repo:api-compatibility-lab
+    - apm-service:api-compatibility-lab
+  links:
+    - name: Repository
+      type: repo
+      provider: GitHub
+      url: https://github.com/snacksnack/api-compatibility-lab
+    - name: Epic RC1-603
+      type: doc
+      url: https://hirereidcollins.atlassian.net/browse/RC1-603
+spec:
+  lifecycle: development
+  tier: "3"
+  languages:
+    - python
+  type: library
+datadog:
+  codeLocations:
+    - repositoryURL: https://github.com/snacksnack/api-compatibility-lab
+      paths:
+        - "**"

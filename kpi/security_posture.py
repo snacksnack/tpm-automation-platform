@@ -40,8 +40,10 @@ from kpi.datadog import GAUGE, ship
 
 OWNER = "snacksnack"
 
-#: The eight repos the scanners are enabled on (RC1-359 step 2 for the first
-#: five, RC1-470 for the last three).
+#: The repos the scanners are enabled on (RC1-359 step 2 for the first five,
+#: RC1-470 for the next three, RC1-613 for the last two). Enrolling a repo
+#: here requires adding it to the SECURITY_ALERTS_TOKEN fine-grained PAT
+#: first, or the daily run goes red on an unreadable repo and pages.
 REPOS = (
     "tpm-automation-platform",
     "pr_agent",
@@ -51,6 +53,8 @@ REPOS = (
     "ai-incident-summarizer",
     "n8n-concert-intelligence-agent",
     "stale-ticket-bot",
+    "api-compatibility-lab",
+    "esp-migration-agent",
 )
 
 CODE_METRIC = "delivery.security.code_scan_alerts_open"

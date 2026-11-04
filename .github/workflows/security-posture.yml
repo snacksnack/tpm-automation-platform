@@ -38,11 +38,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .
 
-      - name: Read the five repos' open alerts and post the gauges
+      - name: Read the enrolled repos' open alerts and post the gauges
         env:
           # A fine-grained PAT, read-only: Code scanning alerts + Secret
-          # scanning alerts on the five repos. The default GITHUB_TOKEN is
-          # scoped to this repo and cannot read the other four.
+          # scanning alerts on the repos in kpi/security_posture.py REPOS.
+          # The default GITHUB_TOKEN is scoped to this repo alone.
           SECURITY_ALERTS_TOKEN: ${{ secrets.SECURITY_ALERTS_TOKEN }}
           DD_API_KEY: ${{ secrets.DD_API_KEY }}
         run: |

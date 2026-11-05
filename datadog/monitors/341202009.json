@@ -1,0 +1,27 @@
+{
+  "draft_status": "published",
+  "id": 341202009,
+  "message": "The published false-break rate is no longer zero: a finding classified `breaking` was adjudicated as something no correct client would notice. That is a classifier problem, not a reporting one. CI gates on every breaking finding *having* a verdict, never on what the verdict says, so this is invisible to the build by design. RC1-611. @webhook-incident-summarizer",
+  "multi": false,
+  "name": "API Compatibility Lab — a finding was adjudicated a false break",
+  "options": {
+    "include_tags": true,
+    "new_host_delay": 300,
+    "notify_audit": false,
+    "notify_no_data": false,
+    "renotify_interval": 0,
+    "thresholds": {
+      "critical": 0.0
+    }
+  },
+  "priority": null,
+  "query": "max(last_1w):avg:compatlab.false_breaks.rate{*} > 0",
+  "restricted_roles": null,
+  "tags": [
+    "rc1:611",
+    "service:api-compatibility-lab",
+    "kind:quality",
+    "generated:manual"
+  ],
+  "type": "query alert"
+}

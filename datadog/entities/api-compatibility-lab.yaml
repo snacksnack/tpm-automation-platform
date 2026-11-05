@@ -6,8 +6,9 @@ metadata:
   description: >-
     Replays sanitized API traffic across two Stripe API versions to find the
     behavioral breaks a schema diff misses, maps them to affected customer
-    workflows, and generates pinning regression tests. Phase 0 spike stage
-    (RC1-603).
+    workflows, and generates pinned regression tests that pass on the old
+    version and fail on the new one. Phases 0-6 of RC1-603; not a finished
+    tool.
   owner: reid
   tags:
     - repo:api-compatibility-lab
@@ -20,6 +21,9 @@ metadata:
     - name: Epic RC1-603
       type: doc
       url: https://hirereidcollins.atlassian.net/browse/RC1-603
+    - name: Detection quality
+      type: dashboard
+      url: https://app.datadoghq.com/dashboard/94d-gks-ii2
 spec:
   lifecycle: development
   tier: "3"

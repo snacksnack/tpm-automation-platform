@@ -1,0 +1,579 @@
+{
+  "description": "RC1-611. Quality gauges posted per eval run, plus the repo's test health.",
+  "experience_type": "default",
+  "id": "94d-gks-ii2",
+  "layout_type": "ordered",
+  "notify_list": null,
+  "reflow_type": "auto",
+  "restricted_roles": [],
+  "template_variables": null,
+  "title": "API Compatibility Lab — detection quality",
+  "widgets": [
+    {
+      "definition": {
+        "background_color": "transparent",
+        "content": "**The lab measuring itself** (RC1-611). Six quality dimensions scored from the repository's committed artifacts by `uv run --group evals python -m evals --post-datadog` — no model, no spend. Runs land in the shared eval store, so a number that moves is attributable to a code version.\n\n**Cadence is per run, not continuous**: the weekly sweep (`agent-evals/scripts/scheduled_eval.sh weekly`) plus manual runs. Gaps on these graphs are runs that did not happen, which `agent_evals.scheduled_run.*` already watches — the monitors here deliberately do not alert on no data.\n\n**What is not here**: LLM Observability and cost, because this pipeline makes no model calls. The run records carry zero spend on purpose rather than omitting it. Test health is covered by the fleet-wide SLO (`test_service:api-compatibility-lab`).",
+        "font_size": "14",
+        "has_padding": true,
+        "text_align": "left",
+        "type": "note"
+      },
+      "id": 5621349340345906
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Against ground truth",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:compatlab.detection.caught{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Breaks caught",
+              "type": "query_value"
+            },
+            "id": 3092545561449975
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:compatlab.detection.exercised{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Breaks the corpus exercises",
+              "type": "query_value"
+            },
+            "id": 7335134883799014
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:compatlab.detection.inventory_m{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Documented breaks in the inventory",
+              "type": "query_value"
+            },
+            "id": 4299228116958930
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:compatlab.detection.missed{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Undetected (alerting)",
+              "type": "query_value"
+            },
+            "id": 5771986969918168
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 2,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:compatlab.false_breaks.rate{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "False-break rate",
+              "type": "query_value"
+            },
+            "id": 1023145999276742
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:compatlab.false_breaks.breaking_findings{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Breaking findings adjudicated",
+              "type": "query_value"
+            },
+            "id": 4376793108822314
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "alias": "caught",
+                      "formula": "q0"
+                    },
+                    {
+                      "alias": "exercised",
+                      "formula": "q1"
+                    },
+                    {
+                      "alias": "inventory M",
+                      "formula": "q2"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:compatlab.detection.caught{*}"
+                    },
+                    {
+                      "data_source": "metrics",
+                      "name": "q1",
+                      "query": "avg:compatlab.detection.exercised{*}"
+                    },
+                    {
+                      "data_source": "metrics",
+                      "name": "q2",
+                      "query": "avg:compatlab.detection.inventory_m{*}"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Recall over runs",
+              "type": "timeseries"
+            },
+            "id": 4540591930023274
+          }
+        ]
+      },
+      "id": 4917709483165327
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Customer impact and pinned tests",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 2,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:compatlab.impact.mapping_precision{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Workflow-mapping precision",
+              "type": "query_value"
+            },
+            "id": 8032028454577750
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:compatlab.impact.claims{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Impact claims",
+              "type": "query_value"
+            },
+            "id": 5803643612662183
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:compatlab.impact.workflows_affected{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Workflows affected",
+              "type": "query_value"
+            },
+            "id": 6086087175207133
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:compatlab.impact.workflows_blocked{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Workflows blocked outright",
+              "type": "query_value"
+            },
+            "id": 296131325875315
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:compatlab.pins.certified{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Pins certified",
+              "type": "query_value"
+            },
+            "id": 363545842281798
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:compatlab.pins.claimable{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Pins claimable",
+              "type": "query_value"
+            },
+            "id": 2663761385192164
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "alias": "certified",
+                      "formula": "q0"
+                    },
+                    {
+                      "alias": "claimable",
+                      "formula": "q1"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:compatlab.pins.certified{*}"
+                    },
+                    {
+                      "data_source": "metrics",
+                      "name": "q1",
+                      "query": "avg:compatlab.pins.claimable{*}"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Certified pins over runs",
+              "type": "timeseries"
+            },
+            "id": 7475173468253968
+          }
+        ]
+      },
+      "id": 8898610989976042
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Sanitization and suite health",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:compatlab.corpus.pii_findings{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "PII findings in the committed corpus",
+              "type": "query_value"
+            },
+            "id": 1632993401117608
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:compatlab.evals.cases_passed{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Dimensions passing",
+              "type": "query_value"
+            },
+            "id": 4723666621209433
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:compatlab.evals.cases_failed{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Dimensions failing",
+              "type": "query_value"
+            },
+            "id": 8258855148964558
+          },
+          {
+            "definition": {
+              "legend_layout": "horizontal",
+              "requests": [
+                {
+                  "display_type": "line",
+                  "formulas": [
+                    {
+                      "alias": "tests attempted",
+                      "formula": "q0"
+                    },
+                    {
+                      "alias": "tests passed",
+                      "formula": "q1"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "sum:delivery.tests.attempted{test_service:api-compatibility-lab}.as_count()"
+                    },
+                    {
+                      "data_source": "metrics",
+                      "name": "q1",
+                      "query": "sum:delivery.tests.passed{test_service:api-compatibility-lab}.as_count()"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": true,
+              "title": "Fleet test health, this repo's slice",
+              "type": "timeseries"
+            },
+            "id": 1016414748483090
+          }
+        ]
+      },
+      "id": 7727574650360445
+    }
+  ]
+}

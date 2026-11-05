@@ -1,0 +1,27 @@
+{
+  "draft_status": "published",
+  "id": 341202007,
+  "message": "A behavioral break the corpus exercises is no longer being caught by the differ. CI cannot see this: `compatlab score` gates on every breaking finding having a hand verdict, not on recall, so a break that stops being detected leaves the build green. Read the newest run on the quality trend page, then `uv run --group evals python -m evals --case detection-recall`. RC1-611. @webhook-incident-summarizer",
+  "multi": false,
+  "name": "API Compatibility Lab — a documented break went undetected",
+  "options": {
+    "include_tags": true,
+    "new_host_delay": 300,
+    "notify_audit": false,
+    "notify_no_data": false,
+    "renotify_interval": 0,
+    "thresholds": {
+      "critical": 0.0
+    }
+  },
+  "priority": null,
+  "query": "max(last_1w):avg:compatlab.detection.missed{*} > 0",
+  "restricted_roles": null,
+  "tags": [
+    "rc1:611",
+    "service:api-compatibility-lab",
+    "kind:quality",
+    "generated:manual"
+  ],
+  "type": "query alert"
+}

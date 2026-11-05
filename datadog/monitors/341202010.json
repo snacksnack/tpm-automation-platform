@@ -1,0 +1,27 @@
+{
+  "draft_status": "published",
+  "id": 341202010,
+  "message": "One of the six quality dimensions failed in the last eval run. The two that CI cannot see have their own monitors; this is the catch-all that keeps covering the rest if a CI gate is ever removed, and the one that notices a dimension nobody has written a monitor for yet. The run record names the characteristic. RC1-611. @webhook-incident-summarizer",
+  "multi": false,
+  "name": "API Compatibility Lab — a quality dimension failed",
+  "options": {
+    "include_tags": true,
+    "new_host_delay": 300,
+    "notify_audit": false,
+    "notify_no_data": false,
+    "renotify_interval": 0,
+    "thresholds": {
+      "critical": 0.0
+    }
+  },
+  "priority": null,
+  "query": "max(last_1w):avg:compatlab.evals.cases_failed{*} > 0",
+  "restricted_roles": null,
+  "tags": [
+    "rc1:611",
+    "service:api-compatibility-lab",
+    "kind:quality",
+    "generated:manual"
+  ],
+  "type": "query alert"
+}

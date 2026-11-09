@@ -158,6 +158,10 @@
     {
       "id": 341202010,
       "why": "RC1-611 compatlab.evals.cases_failed > 0 \u2014 catch-all over the six dimensions, so the four that CI does gate keep a monitor if a gate is ever removed"
+    },
+    {
+      "id": 342481052,
+      "why": "RC1-634 pocbench.evals.cases_failed > 0 \u2014 catch-all over the poc-benchmark-agent eval suite's gating cases; advisory ones never count"
     }
   ],
   "synthetics": [

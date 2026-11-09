@@ -13,10 +13,6 @@ metadata:
   tags:
     - repo:poc-benchmark-agent
     - ml-app:poc-benchmark-agent
-    # GitHub Actions runs from this repo do not reach CI Visibility (RC1-634):
-    # no pipeline events, so no fingerprints below and no CI-failure monitor
-    # coverage until the Datadog GitHub App is granted the repository.
-    - gap:no-pipeline-events
   links:
     - name: Repository
       type: repo
@@ -35,6 +31,12 @@ spec:
     - python
   type: library
 datadog:
+  pipelines:
+    fingerprints:
+      # CI Visibility was off for this repo until RC1-634 found it (the
+      # GitHub Actions per-repo toggle); CodeQL's fingerprint is added once
+      # its first run after the toggle arrives.
+      - "AQF9JJ56qcV6"   # CI
   codeLocations:
     - repositoryURL: https://github.com/snacksnack/poc-benchmark-agent
       paths:

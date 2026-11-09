@@ -1,0 +1,43 @@
+apiVersion: v3
+kind: service
+metadata:
+  name: poc-benchmark-agent
+  displayName: POC Benchmark Agent
+  description: >-
+    Profiles a customer's database workload, freezes success criteria before
+    any experiment, lets Claude propose configurations inside a fixed space
+    and budget while Python validates and decides, and scores the frozen
+    output on a held-out slice the loop never saw. Refusal is a valid output.
+    Phases 0-6 of RC1-595; not a finished tool.
+  owner: reid
+  tags:
+    - repo:poc-benchmark-agent
+    - ml-app:poc-benchmark-agent
+  links:
+    - name: Repository
+      type: repo
+      provider: GitHub
+      url: https://github.com/snacksnack/poc-benchmark-agent
+    - name: Epic RC1-595
+      type: doc
+      url: https://hirereidcollins.atlassian.net/browse/RC1-595
+    - name: Results document
+      type: doc
+      url: https://github.com/snacksnack/poc-benchmark-agent/blob/main/docs/results.md
+spec:
+  lifecycle: development
+  tier: "3"
+  languages:
+    - python
+  type: library
+datadog:
+  pipelines:
+    fingerprints:
+      # CI Visibility was off for this repo until RC1-634 found it (the
+      # GitHub Actions per-repo toggle); CodeQL's fingerprint is added once
+      # its first run after the toggle arrives.
+      - "AQF9JJ56qcV6"   # CI
+  codeLocations:
+    - repositoryURL: https://github.com/snacksnack/poc-benchmark-agent
+      paths:
+        - "**"

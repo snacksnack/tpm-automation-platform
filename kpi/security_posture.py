@@ -55,6 +55,7 @@ REPOS = (
     "stale-ticket-bot",
     "api-compatibility-lab",
     "esp-migration-agent",
+    "poc-benchmark-agent",
 )
 
 CODE_METRIC = "delivery.security.code_scan_alerts_open"

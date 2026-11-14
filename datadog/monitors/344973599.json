@@ -1,0 +1,27 @@
+{
+  "draft_status": "published",
+  "id": 344973599,
+  "message": "A gating case in the cik-triage eval suite (customer-install-kit) failed in the last run: diagnosis on the family 1 or family 2 bundle, abstention on the healthy bundle, budget discipline, metadata-only tracing or isolation. The run record names the characteristic. Advisory characteristics never count here. No-data is off: the weekly sweep has its own monitor. RC1-644. @webhook-incident-summarizer",
+  "multi": false,
+  "name": "Customer Install Kit — an eval case failed",
+  "options": {
+    "include_tags": true,
+    "new_host_delay": 300,
+    "notify_audit": false,
+    "notify_no_data": false,
+    "renotify_interval": 0,
+    "thresholds": {
+      "critical": 0.0
+    }
+  },
+  "priority": null,
+  "query": "max(last_1w):avg:cik.evals.cases_failed{*} > 0",
+  "restricted_roles": null,
+  "tags": [
+    "rc1:644",
+    "service:customer-install-kit",
+    "kind:quality",
+    "generated:manual"
+  ],
+  "type": "query alert"
+}

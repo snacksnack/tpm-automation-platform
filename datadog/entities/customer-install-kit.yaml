@@ -1,0 +1,42 @@
+apiVersion: v3
+kind: service
+metadata:
+  name: customer-install-kit
+  displayName: Customer Install Kit
+  description: >-
+    Installs a vendor app into a customer's own cloud account, proves it
+    works there with signed conformance reports, and triages failures from
+    share-safe diagnostic bundles: rules first, then a bounded Claude agent
+    that can only read the bundle and ask the customer for allowlisted
+    read-only checks. Traces are metadata-only by design (ADR 0009).
+    Phases 0-6 of RC1-594; not a finished tool.
+  owner: reid
+  tags:
+    - repo:customer-install-kit
+    - ml-app:cik-triage
+  links:
+    - name: Repository
+      type: repo
+      provider: GitHub
+      url: https://github.com/snacksnack/customer-install-kit
+    - name: Epic RC1-594
+      type: doc
+      url: https://hirereidcollins.atlassian.net/browse/RC1-594
+    - name: Phase 6 results
+      type: doc
+      url: https://github.com/snacksnack/customer-install-kit/blob/main/docs/phase6/report.md
+spec:
+  lifecycle: development
+  tier: "3"
+  languages:
+    - python
+  type: library
+datadog:
+  pipelines:
+    fingerprints:
+      - "Odut3xPdOlf9"   # ci
+      - "ItUUr4SvCzM8"   # CodeQL
+  codeLocations:
+    - repositoryURL: https://github.com/snacksnack/customer-install-kit
+      paths:
+        - "**"

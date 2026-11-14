@@ -162,6 +162,10 @@
     {
       "id": 342481052,
       "why": "RC1-634 pocbench.evals.cases_failed > 0 \u2014 catch-all over the poc-benchmark-agent eval suite's gating cases; advisory ones never count"
+    },
+    {
+      "id": 344973599,
+      "why": "RC1-644 cik.evals.cases_failed > 0 \u2014 catch-all over the cik-triage eval suite's gating cases; advisory ones never count"
     }
   ],
   "synthetics": [

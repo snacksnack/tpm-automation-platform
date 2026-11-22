@@ -61,11 +61,15 @@ REPO_TAG = "repo:"
 #: invisible (RC1-469).
 DORA_WINDOW_DAYS = 90
 
-#: How far back a test event still counts as "this repo reports to Test
-#: Optimization". Any branch, because the summarizer's CI runs only on pull
-#: requests; two weeks, because a repo nobody touched for a fortnight is
-#: quiet, not broken (RC1-467).
-TEST_WINDOW_DAYS = 14
+#: How far back to look for a repo's latest test-reporting CI run. The rules
+#: judge that run rather than counting events in a window, because a repo
+#: nobody touched for a fortnight is quiet, not broken (RC1-675). Any branch,
+#: because the summarizer's CI runs only on pull requests.
+TEST_HISTORY_DAYS = 90
+
+#: Owner prefix on CI Visibility's `@git.repository.name`. The bare repo name
+#: silently matches nothing.
+GITHUB_OWNER = "snacksnack"
 
 #: The RC1-359 security-posture gauges, one series per repo per day. The
 #: "leaks" key follows kpi/security_posture.py's naming rule: identifiers say
@@ -76,6 +80,24 @@ ALERT_METRICS = {
     "leaks": "delivery.security.secret_scan_alerts_open",
     "errors": "delivery.security.collector_errors",
 }
+
+
+@dataclass(frozen=True)
+class CiTestReport:
+    """What a repo's latest successful test-bearing CI run reported (RC1-675)."""
+
+    #: Workflow name, taken from the repo's newest test event.
+    pipeline: str
+
+    #: GitHub run id. Empty when CI Visibility has no successful run for the
+    #: workflow, so the reporting state cannot be judged.
+    run_id: str = ""
+
+    #: Test events carrying this run id.
+    events: int = 0
+
+    #: Average `test.code_coverage.lines_pct` in this run, if any carried it.
+    coverage: float | None = None
 
 
 @dataclass(frozen=True)
@@ -102,14 +124,10 @@ class Facts:
     #: scanner telemetry at all, which is a finding, not a zero.
     open_alerts_by_repo: dict[str, dict[str, int]] = field(default_factory=dict)
 
-    #: repo name -> test events reported to Test Optimization in the last
-    #: TEST_WINDOW_DAYS (any branch). The test service is the repo name
-    #: (RC1-452), so this is keyed like `open_alerts_by_repo`.
-    test_events_by_repo: dict[str, int] = field(default_factory=dict)
-
-    #: repo name -> average `test.code_coverage.lines_pct` over the same
-    #: window, present only for repos whose events carry coverage (RC1-468).
-    coverage_by_repo: dict[str, float] = field(default_factory=dict)
+    #: repo name -> its latest successful CI run's test reporting. The test
+    #: service is the repo name (RC1-452). A repo absent here has no test
+    #: event in TEST_HISTORY_DAYS.
+    ci_test_reports: dict[str, CiTestReport] = field(default_factory=dict)
 
 
 def _links(entity: dict) -> list[dict]:
@@ -235,26 +253,48 @@ def security_posture_clean(entity: dict, facts: Facts) -> tuple[bool, str]:
     return True, f"scanners read, 0 open alerts on repo:{repo}"
 
 
+def _test_reporting_gap(repo: str, report: CiTestReport | None) -> str:
+    """Why a repo's latest CI run cannot vouch for its test reporting, or ""."""
+    if report is None:
+        return (
+            f"no test events from repo:{repo} in {TEST_HISTORY_DAYS} days — either "
+            "CI never ran or the RC1-452 reporting wiring is missing; check the "
+            "repo's Actions history first"
+        )
+    if not report.run_id:
+        return (
+            f"repo:{repo} has test events but CI Visibility shows no successful "
+            f"{report.pipeline!r} run — check its per-repo GitHub Actions toggle"
+        )
+    if not report.events:
+        return (
+            f"latest successful {report.pipeline!r} run {report.run_id} on "
+            f"repo:{repo} reported no test events — the RC1-452 wiring regressed"
+        )
+    return ""
+
+
 def reports_test_results(entity: dict, facts: Facts) -> tuple[bool, str]:
-    """The entity's repo shipped test-level results to Test Optimization
-    recently. Joined by the `repo:` tag because repos and entities are not
-    1:1 — the platform repo backs two entities, and both rightly inherit its
-    test reporting (RC1-467)."""
+    """The repo's latest successful CI run shipped test-level results.
+
+    Judged on that run rather than a time window, so a quiet repo keeps its
+    pass and a broken one fails on its next run (RC1-675). Joined by the
+    `repo:` tag because repos and entities are not 1:1 — the platform repo
+    backs two entities, and both rightly inherit its test reporting (RC1-467).
+    """
     repo = _repo_tag(entity)
     if not repo:
         return False, f"entity declares no {REPO_TAG} tag, so it maps to no repository"
-    count = facts.test_events_by_repo.get(repo, 0)
-    if count:
-        return True, f"{count} test events from repo:{repo} in {TEST_WINDOW_DAYS} days"
-    return False, (
-        f"no test events from repo:{repo} in {TEST_WINDOW_DAYS} days — either "
-        "CI never ran or the RC1-452 reporting wiring regressed; the two are "
-        "different problems, check the repo's Actions history first"
-    )
+    report = facts.ci_test_reports.get(repo)
+    gap = _test_reporting_gap(repo, report)
+    if gap:
+        return False, gap
+    return True, f"{report.events} test events in latest {report.pipeline!r} run {report.run_id}"
 
 
 def reports_code_coverage(entity: dict, facts: Facts) -> tuple[bool, str]:
-    """The repo's test events carry `test.code_coverage.lines_pct` (RC1-468).
+    """The latest successful CI run's events carry
+    `test.code_coverage.lines_pct` (RC1-468, RC1-675).
 
     Presence only, no threshold: coverage here is a signal, not a gate, and a
     banded rule needs per-service baselines measured over more days than the
@@ -264,17 +304,19 @@ def reports_code_coverage(entity: dict, facts: Facts) -> tuple[bool, str]:
     repo = _repo_tag(entity)
     if not repo:
         return False, f"entity declares no {REPO_TAG} tag, so it maps to no repository"
-    coverage = facts.coverage_by_repo.get(repo)
-    if coverage is not None:
-        return True, f"lines_pct averages {coverage:.1f}% over {TEST_WINDOW_DAYS} days"
-    if facts.test_events_by_repo.get(repo, 0):
+    report = facts.ci_test_reports.get(repo)
+    gap = _test_reporting_gap(repo, report)
+    if gap:
+        return False, f"{gap}; no coverage without test reporting"
+    if report.coverage is None:
         return False, (
-            f"repo:{repo} reports tests but no event carries "
-            "code_coverage.lines_pct — the RC1-468 coverage flag regressed"
+            f"latest {report.pipeline!r} run {report.run_id} on repo:{repo} reports "
+            "tests but no event carries code_coverage.lines_pct — the RC1-468 "
+            "coverage flag regressed"
         )
-    return False, (
-        f"no test events from repo:{repo} in {TEST_WINDOW_DAYS} days, so no "
-        "coverage either — fix test reporting first"
+    return True, (
+        f"lines_pct averages {report.coverage:.1f}% in latest "
+        f"{report.pipeline!r} run {report.run_id}"
     )
 
 
@@ -334,15 +376,16 @@ RULES: tuple[Rule, ...] = (
     ),
     Rule(
         "Reports test results",
-        f"The entity's repo (its {REPO_TAG} tag) shipped test-level results to "
-        f"Test Optimization within {TEST_WINDOW_DAYS} days. The test service is "
-        "the repo name, and repos back entities many-to-one — both platform "
-        "entities inherit tpm-automation-platform's reporting (RC1-467).",
+        f"The latest successful CI run of the entity's repo (its {REPO_TAG} tag) "
+        "shipped test-level results to Test Optimization (RC1-675). The test "
+        "service is the repo name, and repos back entities many-to-one — both "
+        "platform entities inherit tpm-automation-platform's reporting (RC1-467).",
         reports_test_results,
     ),
     Rule(
         "Reports code coverage",
-        "The repo's test events carry code_coverage.lines_pct (RC1-468). "
+        "The test events from the repo's latest successful CI run carry "
+        "code_coverage.lines_pct (RC1-468, RC1-675). "
         "Presence, not a threshold: coverage is a signal here, and the band "
         "waits for per-service baselines (RC1-467).",
         reports_code_coverage,
@@ -447,30 +490,68 @@ def _open_alert_counts(http: httpx.Client) -> dict[str, dict[str, int]]:
     return out
 
 
-def _test_aggregate(http: httpx.Client, *, compute: dict, query: str) -> dict[str, float]:
-    """One Test Optimization aggregate over the rule window, keyed by the
-    `@test.service` facet (the repo name, RC1-452). The endpoint wants a FLAT
-    body — the spans-style `data`-wrapped one 400s."""
+def _newest_event(http: httpx.Client, path: str, query: str) -> dict | None:
+    """The newest CI event matching `query`, unwrapped, or None."""
+    resp = http.post(
+        path,
+        json={
+            "filter": {"query": query, "from": f"now-{TEST_HISTORY_DAYS}d", "to": "now"},
+            "sort": "-timestamp",
+            "page": {"limit": 1},
+        },
+    )
+    resp.raise_for_status()
+    rows = resp.json().get("data", [])
+    return rows[0].get("attributes", {}).get("attributes", {}) if rows else None
+
+
+def _test_aggregate(http: httpx.Client, *, compute: dict, query: str) -> float | None:
+    """One Test Optimization aggregate over the history window. The endpoint
+    wants a FLAT body — the spans-style `data`-wrapped one 400s."""
     resp = http.post(
         "/api/v2/ci/tests/analytics/aggregate",
         json={
             "compute": [compute],
-            "filter": {
-                "query": query,
-                "from": f"now-{TEST_WINDOW_DAYS}d",
-                "to": "now",
-            },
-            "group_by": [{"facet": "@test.service", "limit": 50}],
+            "filter": {"query": query, "from": f"now-{TEST_HISTORY_DAYS}d", "to": "now"},
         },
     )
     resp.raise_for_status()
-    out: dict[str, float] = {}
-    for bucket in resp.json().get("data", {}).get("buckets", []):
-        service = bucket.get("by", {}).get("@test.service")
-        value = bucket.get("computes", {}).get("c0")
-        if service and value is not None:
-            out[service] = float(value)
-    return out
+    buckets = resp.json().get("data", {}).get("buckets", [])
+    value = buckets[0].get("computes", {}).get("c0") if buckets else None
+    return float(value) if value is not None else None
+
+
+def _latest_ci_report(http: httpx.Client, repo: str) -> CiTestReport | None:
+    """Score the repo's latest successful run of its test-bearing workflow.
+
+    The workflow comes from the newest test event, since names vary by repo.
+    Only successful runs count: a run that failed at lint never reached its
+    tests, so its silence says nothing about reporting. Pipeline ids are
+    `<run>-<attempt>` while test events carry `<run>` (RC1-675).
+    """
+    newest = _newest_event(http, "/api/v2/ci/tests/events/search", f'@test.service:"{repo}"')
+    if newest is None:
+        return None
+    pipeline = newest.get("ci", {}).get("pipeline", {}).get("name", "")
+    run = _newest_event(
+        http,
+        "/api/v2/ci/pipelines/events/search",
+        f'ci_level:pipeline @git.repository.name:"{GITHUB_OWNER}/{repo}" '
+        f'@ci.pipeline.name:"{pipeline}" @ci.status:success',
+    )
+    if run is None:
+        return CiTestReport(pipeline=pipeline)
+    run_id = str(run.get("ci", {}).get("pipeline", {}).get("id", "")).rsplit("-", 1)[0]
+    scope = f'@test.service:"{repo}" @ci.pipeline.id:"{run_id}"'
+    events = _test_aggregate(http, compute={"aggregation": "count"}, query=scope)
+    coverage = _test_aggregate(
+        http,
+        compute={"aggregation": "avg", "metric": "@test.code_coverage.lines_pct"},
+        query=f"{scope} @test.code_coverage.lines_pct:*",
+    )
+    return CiTestReport(
+        pipeline=pipeline, run_id=run_id, events=int(events or 0), coverage=coverage
+    )
 
 
 def gather(http: httpx.Client) -> Facts:
@@ -479,19 +560,14 @@ def gather(http: httpx.Client) -> Facts:
     slos.raise_for_status()
     monitors = http.get("/api/v1/monitor", params={"page_size": 1000})
     monitors.raise_for_status()
-    events = _test_aggregate(http, compute={"aggregation": "count"}, query="*")
-    coverage = _test_aggregate(
-        http,
-        compute={"aggregation": "avg", "metric": "@test.code_coverage.lines_pct"},
-        query="@test.code_coverage.lines_pct:*",
-    )
+    repos = sorted({repo for entity in load().values() if (repo := _repo_tag(entity))})
+    reports = {repo: _latest_ci_report(http, repo) for repo in repos}
     return Facts(
         slos_by_service=_by_service_tag(slos.json().get("data", [])),
         monitors_by_service=_by_service_tag(monitors.json()),
         dora_deploys_by_service=_dora_deploy_counts(http),
         open_alerts_by_repo=_open_alert_counts(http),
-        test_events_by_repo={k: int(v) for k, v in events.items()},
-        coverage_by_repo=coverage,
+        ci_test_reports={repo: r for repo, r in reports.items() if r is not None},
     )
 
 

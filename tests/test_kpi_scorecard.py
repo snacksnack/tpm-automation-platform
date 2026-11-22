@@ -139,35 +139,48 @@ def test_security_rule_passes_only_on_read_telemetry_showing_zero():
     assert "0 open alerts" in why
 
 
-def test_test_results_rule_passes_on_recent_events():
-    facts = scorecard.Facts(test_events_by_repo={"svc-repo": 123})
-    ok, why = scorecard.reports_test_results(entity(), facts)
-    assert ok and "123" in why
+def ci_facts(**report) -> scorecard.Facts:
+    """Facts holding one CI report for the default entity's repo."""
+    fields = {"pipeline": "CI", "run_id": "42", "events": 123, "coverage": 83.6, **report}
+    return scorecard.Facts(ci_test_reports={"svc-repo": scorecard.CiTestReport(**fields)})
 
 
-def test_test_results_rule_fail_remark_names_both_possible_causes():
-    """Quiet CI and broken reporting look identical in the events store; the
-    remark must say so instead of asserting one of them."""
+def test_test_results_rule_passes_when_latest_run_reported():
+    """No clock in the verdict: a quiet repo keeps its pass (RC1-675)."""
+    ok, why = scorecard.reports_test_results(entity(), ci_facts())
+    assert ok and "123" in why and "42" in why
+
+
+def test_test_results_rule_fails_with_no_reporting_history():
     ok, why = scorecard.reports_test_results(entity(), NO_FACTS)
     assert not ok
     assert "no test events" in why and "Actions history" in why
 
 
-def test_coverage_rule_puts_the_measured_number_in_the_remark():
-    facts = scorecard.Facts(
-        test_events_by_repo={"svc-repo": 10}, coverage_by_repo={"svc-repo": 83.6}
+def test_test_results_rule_fails_when_latest_run_went_silent():
+    ok, why = scorecard.reports_test_results(entity(), ci_facts(events=0, coverage=None))
+    assert not ok and "regressed" in why and "42" in why
+
+
+def test_test_results_rule_does_not_pass_without_a_visible_run():
+    """Older test events cannot vouch for a run CI Visibility cannot see."""
+    ok, why = scorecard.reports_test_results(
+        entity(), ci_facts(run_id="", events=0, coverage=None)
     )
-    ok, why = scorecard.reports_code_coverage(entity(), facts)
+    assert not ok and "toggle" in why
+
+
+def test_coverage_rule_puts_the_measured_number_in_the_remark():
+    ok, why = scorecard.reports_code_coverage(entity(), ci_facts())
     assert ok and "83.6%" in why
 
 
 def test_coverage_rule_distinguishes_a_missing_flag_from_missing_tests():
-    reporting_without_coverage = scorecard.Facts(test_events_by_repo={"svc-repo": 10})
-    ok, why = scorecard.reports_code_coverage(entity(), reporting_without_coverage)
+    ok, why = scorecard.reports_code_coverage(entity(), ci_facts(coverage=None))
     assert not ok and "RC1-468" in why
 
     ok, why = scorecard.reports_code_coverage(entity(), NO_FACTS)
-    assert not ok and "fix test reporting first" in why
+    assert not ok and "no coverage without test reporting" in why
 
 
 def test_test_rules_fail_an_entity_with_no_repo_tag():
@@ -258,21 +271,29 @@ def test_gather_groups_slos_and_monitors_by_their_service_tag():
                     }
                 },
             )
+        if request.url.path == "/api/v2/ci/tests/events/search":
+            query = json.loads(request.content)["filter"]["query"]
+            rows = (
+                [{"attributes": {"attributes": {"ci": {"pipeline": {"name": "CI", "id": "77"}}}}}]
+                if '"reid_basic"' in query
+                else []
+            )
+            return httpx.Response(200, json={"data": rows})
+        if request.url.path == "/api/v2/ci/pipelines/events/search":
+            query = json.loads(request.content)["filter"]["query"]
+            assert '@git.repository.name:"snacksnack/reid_basic"' in query
+            assert "@ci.status:success" in query
+            row = {"attributes": {"attributes": {"ci": {"pipeline": {"id": "77-2"}}}}}
+            return httpx.Response(200, json={"data": [row]})
         if request.url.path == "/api/v2/ci/tests/analytics/aggregate":
-            # Answers both RC1-467 aggregates: the count query and the
-            # coverage average tell themselves apart by the compute block.
+            # The count and the coverage average tell themselves apart by the
+            # compute block; both must be scoped to the run, attempt stripped.
             body = json.loads(request.content)
+            assert '@ci.pipeline.id:"77"' in body["filter"]["query"]
             metric = body["compute"][0].get("metric")
             value = 71.7 if metric else 549
             return httpx.Response(
-                200,
-                json={
-                    "data": {
-                        "buckets": [
-                            {"by": {"@test.service": "reid_basic"}, "computes": {"c0": value}}
-                        ]
-                    }
-                },
+                200, json={"data": {"buckets": [{"computes": {"c0": value}}]}}
             )
         assert request.url.path == "/api/v1/query"
         # The three RC1-359 gauges answer the same shape; two points per
@@ -303,8 +324,11 @@ def test_gather_groups_slos_and_monitors_by_their_service_tag():
         "pr_agent": {"code": 1, "leaks": 1, "errors": 1},
         "reid_basic": {"code": 0, "leaks": 0, "errors": 0},
     }
-    assert facts.test_events_by_repo == {"reid_basic": 549}
-    assert facts.coverage_by_repo == {"reid_basic": 71.7}
+    assert facts.ci_test_reports == {
+        "reid_basic": scorecard.CiTestReport(
+            pipeline="CI", run_id="77", events=549, coverage=71.7
+        )
+    }
 
 
 def test_sync_rules_creates_only_the_missing_ones():

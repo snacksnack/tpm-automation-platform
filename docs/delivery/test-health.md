@@ -45,17 +45,22 @@ a month, roughly one bad fleet-wide day. **Ratchet it from the first full
 resolve entity → repo through the `repo:` tag, which handles the not-1:1
 mapping without a lookup table: both platform entities inherit
 `tpm-automation-platform`'s reporting, `incident-summarizer` reads
-`ai-incident-summarizer`. Window: 14 days, any branch — the summarizer's CI
-is PR-only, so a default-branch filter would fail it forever for a wiring
-choice, not a gap.
+`ai-incident-summarizer`. Any branch — the summarizer's CI is PR-only, so a
+default-branch filter would fail it forever for a wiring choice, not a gap.
+
+**RC1-675 replaced the 14-day window.** It failed six correctly wired repos
+for having no recent CI. Both rules now judge the latest successful run of the
+workflow that reports tests, looking back 90 days: a quiet repo passes, and a
+newer successful run with no test events fails. Live `show`, 2026-11-22: both
+rules 10/11, and the remaining red is `customer-install-kit`, which has never
+reported (RC1-676).
 
 Day-one score: **both rules 8/8 on merit** (live `show`, 2026-09-28; fleet
 coverage averages 70.6–100% per service). The scorecard grows 64 → 80
 outcomes, 75 passing; the five standing reds are untouched.
 
-The `Reports test results` fail remark deliberately names both possible
-causes — quiet CI and broken reporting look identical in the events store,
-and a remark asserting the wrong one costs the reader the first hour.
+Each fail remark now names its specific cause: no reporting history, no
+visible successful run, or a latest run that went silent.
 
 The coverage rule checks **presence, not a band**. The observed per-service
 baselines run 64–100% with by-design outliers (reid_basic's resume-sync

@@ -56,6 +56,7 @@ REPOS = (
     "api-compatibility-lab",
     "esp-migration-agent",
     "poc-benchmark-agent",
+    "customer-install-kit",
 )
 
 CODE_METRIC = "delivery.security.code_scan_alerts_open"

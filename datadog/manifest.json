@@ -166,7 +166,8 @@
     {
       "id": 344973599,
       "why": "RC1-644 cik.evals.cases_failed > 0 \u2014 catch-all over the cik-triage eval suite's gating cases; advisory ones never count"
-    }
+    },
+    {"id": 347869857, "why": "RC1-681 launch planner production 5xx"}
   ],
   "synthetics": [
     {
@@ -230,7 +231,8 @@
     {
       "id": "55d24e28c9ea5ae7967fbcb88e260fdd",
       "why": "RC1-548 ESP reconciliation pass rate, 95%/30d"
-    }
+    },
+    {"id": "991fe05b9e385a82a71cdc932e30f6fd", "why": "RC1-681 launch planner API request success — 99% over 30d, real routes only"}
   ],
   "log_indexes": [
     {

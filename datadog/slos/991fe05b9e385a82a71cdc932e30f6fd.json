@@ -1,0 +1,49 @@
+{
+  "description": "Share of production requests to real API routes that did not return a 5xx, 30d. Counted by launch_planner.request (RC1-455, ADR-0041). Client errors count as handled. endpoint:unmatched is excluded because it is mostly bots requesting unknown URLs. 99% to start on sparse traffic; recalibrate per the RC1-409 recipe. RC1-681.",
+  "id": "991fe05b9e385a82a71cdc932e30f6fd",
+  "monitor_tags": [],
+  "name": "Launch Planner — API request success",
+  "query": {
+    "denominator": "sum:launch_planner.request{service:launch-planner-agent,env:prod,!endpoint:unmatched}.as_count()",
+    "numerator": "sum:launch_planner.request{service:launch-planner-agent,env:prod,!endpoint:unmatched,!outcome:server_error}.as_count()"
+  },
+  "sli_specification": {
+    "count": {
+      "good_events_formula": {
+        "formula": "query1"
+      },
+      "queries": [
+        {
+          "data_source": "metrics",
+          "name": "query1",
+          "query": "sum:launch_planner.request{env:prod,service:launch-planner-agent,!endpoint:unmatched,!outcome:server_error}.as_count()"
+        },
+        {
+          "data_source": "metrics",
+          "name": "query2",
+          "query": "sum:launch_planner.request{env:prod,service:launch-planner-agent,!endpoint:unmatched}.as_count()"
+        }
+      ],
+      "total_events_formula": {
+        "formula": "query2"
+      }
+    }
+  },
+  "tags": [
+    "generated:manual",
+    "kind:reliability",
+    "rc1:681",
+    "service:launch-planner-agent"
+  ],
+  "target_threshold": 99.0,
+  "thresholds": [
+    {
+      "target": 99.0,
+      "target_display": "99.",
+      "timeframe": "30d"
+    }
+  ],
+  "timeframe": "30d",
+  "type": "metric",
+  "type_id": 1
+}

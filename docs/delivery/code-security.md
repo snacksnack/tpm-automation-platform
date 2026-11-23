@@ -365,3 +365,12 @@ repos, the collector would have shipped false zeros and the scorecard would
 have passed a repo nobody can read. Now only a 404 that says why ("no
 analysis", "disabled", "not enabled") counts as zero; a bare one is a
 collector error. A gap is never a zero, including this one.
+
+## RC1-680 — customer-install-kit (2026-11-22)
+
+Added the kit to `kpi/security_posture.REPOS` and to the `SECURITY_ALERTS_TOKEN`
+repository list, which now covers 12 repos and has no expiration. Its 4 open
+CodeQL alerts were closed in code, with no dismissals: two by limiting CI's
+`GITHUB_TOKEN` to read-only, and two false positives by renaming identifiers
+containing `trusted`, which CodeQL read as secrets. The logged values were a
+public repository URL and a public key fingerprint.

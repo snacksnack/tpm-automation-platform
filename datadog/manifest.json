@@ -36,7 +36,9 @@
     {
       "id": "94d-gks-ii2",
       "why": "RC1-611 API Compatibility Lab \u2014 detection quality: the six eval dimensions as gauges (recall against ground truth, false-break rate, workflow-mapping precision, certified pins, corpus PII), plus this repo's slice of fleet test health. Per-run cadence, not continuous"
-    }
+    },
+    {"id": "w4v-pt8-b4a", "why": "RC1-683 poc-benchmark-agent eval quality"},
+    {"id": "93n-dye-w9m", "why": "RC1-683 customer-install-kit eval quality"}
   ],
   "monitors": [
     {
@@ -232,7 +234,10 @@
       "id": "55d24e28c9ea5ae7967fbcb88e260fdd",
       "why": "RC1-548 ESP reconciliation pass rate, 95%/30d"
     },
-    {"id": "991fe05b9e385a82a71cdc932e30f6fd", "why": "RC1-681 launch planner API request success — 99% over 30d, real routes only"}
+    {"id": "991fe05b9e385a82a71cdc932e30f6fd", "why": "RC1-681 launch planner API request success — 99% over 30d, real routes only"},
+    {"id": "35c789a591b150c58021c6a8fd1543b9", "why": "RC1-683 api-compatibility-lab eval quality held — 90% over 30d"},
+    {"id": "386ab8a3e1f65fdc922932f9d4e95166", "why": "RC1-683 poc-benchmark-agent eval quality held — 90% over 30d"},
+    {"id": "d6921c6502d55c37bb81af8869571355", "why": "RC1-683 customer-install-kit eval quality held — 90% over 30d"}
   ],
   "log_indexes": [
     {

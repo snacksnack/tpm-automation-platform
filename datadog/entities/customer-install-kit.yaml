@@ -17,6 +17,9 @@ metadata:
     # A library customers install themselves: CI only, nothing is deployed.
     - deploy:none
   links:
+    - name: Eval quality
+      type: dashboard
+      url: https://app.datadoghq.com/dashboard/93n-dye-w9m
     - name: Repository
       type: repo
       provider: GitHub

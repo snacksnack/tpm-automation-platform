@@ -1,0 +1,26 @@
+{
+  "description": "Share of 30d with no gating eval case failed in the latest eval window. This is a quality objective, not availability. One failure keeps its monitor red for a week, about 23% of the window, so a single failed eval breaches the 90% target. No data counts as up: agent_evals.scheduled_run.* watches whether runs happen. RC1-683.",
+  "id": "386ab8a3e1f65fdc922932f9d4e95166",
+  "monitor_ids": [
+    342481052
+  ],
+  "monitor_tags": [],
+  "name": "POC Benchmark Agent — eval quality held",
+  "tags": [
+    "generated:manual",
+    "kind:quality",
+    "rc1:683",
+    "service:poc-benchmark-agent"
+  ],
+  "target_threshold": 90.0,
+  "thresholds": [
+    {
+      "target": 90.0,
+      "target_display": "90.",
+      "timeframe": "30d"
+    }
+  ],
+  "timeframe": "30d",
+  "type": "monitor",
+  "type_id": 0
+}

@@ -1,0 +1,257 @@
+{
+  "description": "RC1-683. Quality gauges posted per eval run.",
+  "experience_type": "default",
+  "id": "93n-dye-w9m",
+  "layout_type": "ordered",
+  "notify_list": null,
+  "reflow_type": "auto",
+  "restricted_roles": [],
+  "template_variables": null,
+  "title": "Customer Install Kit — eval quality",
+  "widgets": [
+    {
+      "definition": {
+        "background_color": "transparent",
+        "content": "**The triage agent's eval results** (RC1-683). These gauges are posted once per eval run, so gaps are runs that did not happen. The eval-failure monitor deliberately does not alert on no data; `agent_evals.scheduled_run.*` watches whether runs happen. Traces stay metadata-only (ADR 0009), so nothing from a bundle appears here.",
+        "font_size": "14",
+        "has_padding": true,
+        "text_align": "left",
+        "type": "note"
+      },
+      "id": 2732445519947836
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Latest run",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:cik.evals.cases_passed{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Cases passed",
+              "type": "query_value"
+            },
+            "id": 3987744049510500
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:cik.evals.cases_failed{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Cases failed (alerting)",
+              "type": "query_value"
+            },
+            "id": 1351057421649198
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:cik.evals.advisory_failures{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Advisory failures",
+              "type": "query_value"
+            },
+            "id": 8326841680998081
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 1,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:cik.evals.rounds{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Average agent rounds",
+              "type": "query_value"
+            },
+            "id": 4076333104216433
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 3,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:cik.evals.model_usd{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Model spend, USD",
+              "type": "query_value"
+            },
+            "id": 1809648920620986
+          }
+        ]
+      },
+      "id": 6235611318345171
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Over time",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:cik.evals.cases_failed{*}.rollup(avg, 86400)"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": false,
+              "title": "Cases failed",
+              "type": "timeseries"
+            },
+            "id": 4690513906337950
+          },
+          {
+            "definition": {
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:cik.evals.rounds{*}.rollup(avg, 86400)"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": false,
+              "title": "Average agent rounds",
+              "type": "timeseries"
+            },
+            "id": 6345268638451754
+          },
+          {
+            "definition": {
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:cik.evals.model_usd{*}.rollup(avg, 86400)"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": false,
+              "title": "Model spend, USD",
+              "type": "timeseries"
+            },
+            "id": 5819777489692563
+          }
+        ]
+      },
+      "id": 1850645624371341
+    }
+  ]
+}

@@ -14,6 +14,8 @@ metadata:
   tags:
     - repo:customer-install-kit
     - ml-app:cik-triage
+    # A library customers install themselves: CI only, nothing is deployed.
+    - deploy:none
   links:
     - name: Repository
       type: repo

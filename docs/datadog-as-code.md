@@ -239,6 +239,12 @@ is waiting on RC1-455 to say whether anyone actually uses it, and
 `stale-ticket-bot` is dormant and emits nothing to watch or measure. The number
 is meant to climb as those close — not because a rule was softened.
 
+**Declared non-applicability (RC1-679).** A rule can say it does not apply,
+based on tags the entity declares, and the outcome is published as `skip`.
+`activity:dormant` skips the SLO and monitor rules. `deploy:none` and
+`deploy:manual-import` skip the DORA rule. A skip is never a pass, its remark
+states the reason, and every other rule still scores that service.
+
 ### Choosing an SLI the denominator can support (RC1-456)
 
 Three SLOs were added for the services that had none, and the shape differs per

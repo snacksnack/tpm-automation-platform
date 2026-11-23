@@ -320,11 +320,39 @@ def reports_code_coverage(entity: dict, facts: Facts) -> tuple[bool, str]:
     )
 
 
+def _tags(entity: dict) -> set[str]:
+    return set(entity.get("metadata", {}).get("tags") or [])
+
+
+def _always_applies(_: dict) -> str:
+    return ""
+
+
+def no_running_service(entity: dict) -> str:
+    """Why a runtime rule does not apply, or "" (RC1-679)."""
+    if "activity:dormant" in _tags(entity):
+        return "dormant by decision, so it has nothing running to watch or measure"
+    return ""
+
+
+def no_observable_deploy(entity: dict) -> str:
+    """Why the DORA rule does not apply, or "" (RC1-679)."""
+    tags = _tags(entity)
+    if "deploy:none" in tags:
+        return "has no deploy path, so there is no deployment to report"
+    if "deploy:manual-import" in tags:
+        return "deploys by manual import, so no pipeline can emit a deployment event"
+    return ""
+
+
 @dataclass(frozen=True)
 class Rule:
     name: str
     description: str
     evaluate: Callable[[dict, Facts], tuple[bool, str]]
+    #: Returns why the rule does not apply to an entity, or "" when it does.
+    #: Read from declared entity tags, and published as `skip`, never `pass`.
+    not_applicable: Callable[[dict], str] = _always_applies
 
 
 RULES: tuple[Rule, ...] = (
@@ -354,18 +382,21 @@ RULES: tuple[Rule, ...] = (
         f"An SLO tagged {SERVICE_TAG}<service> exists. Tagged, not named: what an "
         "SLO covers should be stated by the SLO, not inferred from its title.",
         has_an_slo,
+        no_running_service,
     ),
     Rule(
         "Has a monitor",
         f"A monitor tagged {SERVICE_TAG}<service> exists, so a failure is noticed "
         "while it is happening rather than measured afterwards by the SLO.",
         has_a_monitor,
+        no_running_service,
     ),
     Rule(
         "Deploys report to DORA",
         f"A deployment event reached DORA within {DORA_WINDOW_DAYS} days, so the "
         "service's change rate is measured rather than remembered (RC1-469).",
         reports_deploys_to_dora,
+        no_observable_deploy,
     ),
     Rule(
         "Security posture clean",
@@ -571,14 +602,23 @@ def gather(http: httpx.Client) -> Facts:
     )
 
 
-def evaluate(facts: Facts) -> list[tuple[str, Rule, bool, str]]:
-    """Score every entity against every rule. Returns (service, rule, ok, why)."""
-    out = []
+def evaluate(facts: Facts) -> list[tuple[str, Rule, bool | None, str]]:
+    """Score every entity against every rule. Returns (service, rule, ok, why),
+    where `ok` is None for a rule that does not apply (RC1-679)."""
+    out: list[tuple[str, Rule, bool | None, str]] = []
     for name, entity in sorted(load().items()):
         for rule in RULES:
+            reason = rule.not_applicable(entity)
+            if reason:
+                out.append((name, rule, None, f"not applicable: {reason}"))
+                continue
             ok, why = rule.evaluate(entity, facts)
             out.append((name, rule, ok, why))
     return out
+
+
+def _state(ok: bool | None) -> str:
+    return "skip" if ok is None else "pass" if ok else "fail"
 
 
 def sync_rules(http: httpx.Client) -> dict[str, str]:
@@ -618,10 +658,10 @@ def sync_rules(http: httpx.Client) -> dict[str, str]:
     return existing
 
 
-def push() -> tuple[int, int]:
+def push() -> tuple[int, int, int]:
     """Create any missing rules, evaluate, and push every outcome.
 
-    Returns (passing, total). Outcomes go up in one batch: a partial scorecard
+    Returns (passing, applicable, skipped). Outcomes go up in one batch: a partial scorecard
     is worse than a stale one, because the rows that did land look current.
     """
     with client() as http:
@@ -631,7 +671,7 @@ def push() -> tuple[int, int]:
             {
                 "rule_id": rule_ids[rule.name],
                 "service_name": service,
-                "state": "pass" if ok else "fail",
+                "state": _state(ok),
                 "remarks": why[:500],
             }
             for service, rule, ok, why in scored
@@ -642,21 +682,28 @@ def push() -> tuple[int, int]:
         )
         if resp.status_code >= 300:
             raise SystemExit(f"outcomes: HTTP {resp.status_code} {resp.text[:300]}")
-    return sum(1 for _, _, ok, _ in scored if ok), len(scored)
+    skipped = sum(1 for _, _, ok, _ in scored if ok is None)
+    return sum(1 for _, _, ok, _ in scored if ok), len(scored) - skipped, skipped
 
 
-def render(scored: list[tuple[str, Rule, bool, str]]) -> str:
-    """The scorecard as a table, per rule, failures spelled out."""
+def render(scored: list[tuple[str, Rule, bool | None, str]]) -> str:
+    """The scorecard as a table, per rule, failures and skips spelled out.
+    A skip leaves the denominator: it is neither a pass nor a failure."""
     lines = []
     for rule in RULES:
         rows = [(s, ok, why) for s, r, ok, why in scored if r.name == rule.name]
         passing = sum(1 for _, ok, _ in rows if ok)
-        lines.append(f"{rule.name}: {passing}/{len(rows)}")
+        applicable = sum(1 for _, ok, _ in rows if ok is not None)
+        lines.append(f"{rule.name}: {passing}/{applicable}")
         for service, ok, why in rows:
-            if not ok:
+            if ok is None:
+                lines.append(f"    SKIP {service} — {why}")
+            elif not ok:
                 lines.append(f"    FAIL {service} — {why}")
     total = sum(1 for _, _, ok, _ in scored if ok)
-    lines.append(f"\n{total}/{len(scored)} outcomes passing")
+    skipped = sum(1 for _, _, ok, _ in scored if ok is None)
+    summary = f"\n{total}/{len(scored) - skipped} outcomes passing"
+    lines.append(f"{summary}, {skipped} not applicable" if skipped else summary)
     return "\n".join(lines)
 
 
@@ -673,8 +720,11 @@ def main(argv: list[str] | None = None) -> int:
             print(render(evaluate(gather(http))))
         return 0
 
-    passing, total = push()
-    print(f"pushed — {passing}/{total} outcomes passing across {len(RULES)} rules")
+    passing, applicable, skipped = push()
+    print(
+        f"pushed — {passing}/{applicable} outcomes passing across {len(RULES)} rules, "
+        f"{skipped} not applicable"
+    )
     return 0
 
 

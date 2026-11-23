@@ -396,6 +396,51 @@ def test_render_prints_a_count_per_rule_and_spells_out_failures():
     assert "alpha" not in out
 
 
+def test_render_takes_a_skip_out_of_the_denominator():
+    rule = scorecard.RULES[0]
+    scored = [
+        ("alpha", rule, True, "fine"),
+        ("beta", rule, None, "not applicable: dormant"),
+    ]
+    out = scorecard.render(scored)
+    assert f"{rule.name}: 1/1" in out
+    assert "SKIP beta — not applicable: dormant" in out
+    assert "1/1 outcomes passing, 1 not applicable" in out
+
+
+def test_a_skip_is_published_as_skip_never_pass():
+    assert scorecard._state(None) == "skip"
+    assert scorecard._state(True) == "pass"
+    assert scorecard._state(False) == "fail"
+
+
+def _tagged(*tags: str) -> dict:
+    return entity(metadata=dict(entity()["metadata"], tags=list(tags)))
+
+
+def test_only_the_runtime_rules_skip_a_dormant_service():
+    rules = {r.name: r for r in scorecard.RULES}
+    dormant = _tagged("repo:svc-repo", "activity:dormant")
+    assert rules["Has an SLO"].not_applicable(dormant)
+    assert rules["Has a monitor"].not_applicable(dormant)
+    assert not rules["Has an owner"].not_applicable(dormant)
+    assert not rules["Reports test results"].not_applicable(dormant)
+    assert not rules["Security posture clean"].not_applicable(dormant)
+    assert not rules["Deploys report to DORA"].not_applicable(dormant)
+
+
+@pytest.mark.parametrize("tag", ["deploy:none", "deploy:manual-import"])
+def test_dora_skips_only_a_declared_unobservable_deploy(tag):
+    rules = {r.name: r for r in scorecard.RULES}
+    assert rules["Deploys report to DORA"].not_applicable(_tagged(tag))
+    assert not rules["Has a monitor"].not_applicable(_tagged(tag))
+
+
+def test_a_workflow_driven_deploy_still_owes_dora():
+    rules = {r.name: r for r in scorecard.RULES}
+    assert not rules["Deploys report to DORA"].not_applicable(_tagged("deploy:github-actions"))
+
+
 def test_rule_names_are_unique():
     """Rules are matched to Datadog by name, so a duplicate would silently
     overwrite the other's outcomes."""

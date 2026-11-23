@@ -16,6 +16,8 @@ data at all.
 | ai-incident-summarizer | `incident-summarizer` | Datadog webhook without its secret answers 401, three times: the ingest function's own reply |
 | ai-incident-summarizer | `incidents-hihelloreid` | `/api/incidents` answers 200 three times: the dashboard reads DynamoDB through its OIDC role |
 | stale-ticket-bot | `stale-ticket-bot` | `{"dry_run": true}` invoke: both secrets and the real Jira query, then return before the metric and the Slack post |
+| api-compatibility-lab | `api-compatibility-lab` | live Pages site answers 200 three times (RC1-682) |
+| poc-benchmark-agent | `poc-benchmark-agent` | same (RC1-682) |
 
 The three new services each recorded their first deployment on 2026-09-21
 (summarizer `b65fbf6`, stale-ticket-bot `28c6691`). Datadog listed the event

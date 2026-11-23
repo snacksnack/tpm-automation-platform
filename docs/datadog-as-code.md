@@ -245,6 +245,12 @@ based on tags the entity declares, and the outcome is published as `skip`.
 `deploy:manual-import` skip the DORA rule. A skip is never a pass, its remark
 states the reason, and every other rule still scores that service.
 
+**Eval-quality SLOs (RC1-683).** The lab, POC benchmark, and install kit have no
+production request stream, so their SLOs measure eval quality over their existing
+failure monitors. They are not availability claims. Their gauges are per run, so
+the SLOs are monitor-based, and no data counts as up. The scheduled-run monitors
+watch whether the evals actually ran.
+
 ### Choosing an SLI the denominator can support (RC1-456)
 
 Three SLOs were added for the services that had none, and the shape differs per

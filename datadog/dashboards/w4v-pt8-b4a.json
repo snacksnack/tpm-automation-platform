@@ -1,0 +1,321 @@
+{
+  "description": "RC1-683. Quality gauges posted per eval run.",
+  "experience_type": "default",
+  "id": "w4v-pt8-b4a",
+  "layout_type": "ordered",
+  "notify_list": null,
+  "reflow_type": "auto",
+  "restricted_roles": [],
+  "template_variables": null,
+  "title": "POC Benchmark Agent — eval quality",
+  "widgets": [
+    {
+      "definition": {
+        "background_color": "transparent",
+        "content": "**The benchmark measuring itself** (RC1-683). These gauges are posted once per eval run, so gaps are runs that did not happen. The eval-failure monitor deliberately does not alert on no data; `agent_evals.scheduled_run.*` watches whether runs happen.",
+        "font_size": "14",
+        "has_padding": true,
+        "text_align": "left",
+        "type": "note"
+      },
+      "id": 2683105455634662
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Latest run",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:pocbench.evals.cases_passed{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Cases passed",
+              "type": "query_value"
+            },
+            "id": 6074823646684070
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:pocbench.evals.cases_failed{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Cases failed (alerting)",
+              "type": "query_value"
+            },
+            "id": 749127318334591
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 0,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:pocbench.evals.advisory_failures{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Advisory failures",
+              "type": "query_value"
+            },
+            "id": 5613612757257238
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 3,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:pocbench.evals.model_usd{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Model spend, USD",
+              "type": "query_value"
+            },
+            "id": 3094867553856014
+          }
+        ]
+      },
+      "id": 2374342766301720
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Prediction and recommendation",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 3,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:pocbench.prediction.verdict_agreement{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Verdict agreement",
+              "type": "query_value"
+            },
+            "id": 1602416152325046
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 3,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:pocbench.prediction.interval_coverage{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Interval coverage",
+              "type": "query_value"
+            },
+            "id": 3747079482746187
+          },
+          {
+            "definition": {
+              "autoscale": false,
+              "precision": 3,
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "aggregator": "last",
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:pocbench.evals.recommendation.cost_ratio{*}"
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "title": "Recommendation cost ratio",
+              "type": "query_value"
+            },
+            "id": 6191257200577688
+          }
+        ]
+      },
+      "id": 527019830178076
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "Over time",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:pocbench.evals.cases_failed{*}.rollup(avg, 86400)"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": false,
+              "title": "Cases failed",
+              "type": "timeseries"
+            },
+            "id": 6711839688145863
+          },
+          {
+            "definition": {
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:pocbench.prediction.verdict_agreement{*}.rollup(avg, 86400)"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": false,
+              "title": "Verdict agreement",
+              "type": "timeseries"
+            },
+            "id": 4635334660474268
+          },
+          {
+            "definition": {
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "formula": "q0"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "data_source": "metrics",
+                      "name": "q0",
+                      "query": "avg:pocbench.evals.model_usd{*}.rollup(avg, 86400)"
+                    }
+                  ],
+                  "response_format": "timeseries"
+                }
+              ],
+              "show_legend": false,
+              "title": "Model spend, USD",
+              "type": "timeseries"
+            },
+            "id": 6222627817001815
+          }
+        ]
+      },
+      "id": 5478971572502722
+    }
+  ]
+}

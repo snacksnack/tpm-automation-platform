@@ -14,6 +14,9 @@ metadata:
     - repo:poc-benchmark-agent
     - ml-app:poc-benchmark-agent
   links:
+    - name: Eval quality
+      type: dashboard
+      url: https://app.datadoghq.com/dashboard/w4v-pt8-b4a
     - name: Repository
       type: repo
       provider: GitHub

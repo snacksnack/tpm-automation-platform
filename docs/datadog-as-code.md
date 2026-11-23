@@ -234,10 +234,10 @@ SLO` went 0/8 → 2/8 in the change that introduced it, by tagging the two site
 availability SLOs with the service they actually cover; RC1-456 took it to 6/8.
 `Has a monitor` opens at the same 6/8 and stops at the same two services.
 
-Both remaining reds are correct rather than unfinished: `launch-planner-agent`
-is waiting on RC1-455 to say whether anyone actually uses it, and
-`stale-ticket-bot` is dormant and emits nothing to watch or measure. The number
-is meant to climb as those close — not because a rule was softened.
+Those reds were correct rather than unfinished. RC1-455 showed that
+`launch-planner-agent` has real production traffic, and RC1-681 gave it a 5xx
+monitor and a 30-day request-success SLO. `stale-ticket-bot` is dormant and emits
+nothing to watch or measure, so RC1-679 scores those rules as not applicable.
 
 **Declared non-applicability (RC1-679).** A rule can say it does not apply,
 based on tags the entity declares, and the outcome is published as `skip`.

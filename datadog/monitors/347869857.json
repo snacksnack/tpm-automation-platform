@@ -1,0 +1,27 @@
+{
+  "draft_status": "published",
+  "id": 347869857,
+  "message": "The deployed launch planner returned a 5xx in the last hour. launch_planner.request is tagged by endpoint, so group by endpoint to find the route. No-data is off: this service has sparse traffic, so silence is normal. RC1-681. @webhook-incident-summarizer",
+  "multi": false,
+  "name": "Launch Planner — production server errors",
+  "options": {
+    "include_tags": true,
+    "new_host_delay": 300,
+    "notify_audit": false,
+    "notify_no_data": false,
+    "renotify_interval": 0,
+    "thresholds": {
+      "critical": 0.0
+    }
+  },
+  "priority": null,
+  "query": "sum(last_1h):sum:launch_planner.request{service:launch-planner-agent,env:prod,outcome:server_error}.as_count() > 0",
+  "restricted_roles": null,
+  "tags": [
+    "rc1:681",
+    "service:launch-planner-agent",
+    "kind:reliability",
+    "generated:manual"
+  ],
+  "type": "query alert"
+}
